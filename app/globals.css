@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+
+  /* Saranath College & Agradhi Media Brand Colors */
+  --color-sara-navy: #0f172a;
+  --color-sara-dark: #020617;
+  --color-sara-amber: #d97706;
+  --color-sara-amber-light: #f59e0b;
+  --color-sara-cream: #fffbeb;
+  --color-sara-slate: #f8fafc;
+}
+
+@layer base {
+  :root {
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --college-amber: #d97706;
+    --college-navy: #0f172a;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #f8fafc;
+    color: #334155;
+    font-family: var(--font-body);
+    margin: 0;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: var(--font-serif);
+  }
+}
+
+@layer utilities {
+  .college-shadow {
+    box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.06);
+  }
+
+  .college-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  }
+
+  /* Marquee ticker — exactly as in sara-by-keshan */
+  .marquee-container {
+    overflow: hidden;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  .marquee-content {
+    display: inline-flex;
+    white-space: nowrap;
+    animation: marquee-scroll 35s linear infinite;
+  }
+
+  .marquee-container:hover .marquee-content {
+    animation-play-state: paused;
+  }
+
+  @keyframes marquee-scroll {
+    0% {
+      transform: translateX(0%);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Scrollbar hide utility */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
