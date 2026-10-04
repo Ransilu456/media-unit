@@ -9,9 +9,17 @@ import {
   AlertCircle,
   CheckCircle2,
   Film,
+  User,
+  Calendar,
+  Phone,
+  Globe,
+  FileText,
+  Info,
+  Mic,
+  AlertTriangle,
 } from 'lucide-react';
 
-interface EntrySubmissionModalProps {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
   competition: Competition;
@@ -19,259 +27,413 @@ interface EntrySubmissionModalProps {
   onSubmitted?: () => void;
 }
 
-export function EntrySubmissionModal({
-  isOpen,
-  onClose,
-  competition,
-  school,
-  onSubmitted,
-}: EntrySubmissionModalProps) {
+// ── Grade → typical age range lookup ─────────────────────────────────────────
+const GRADE_AGE_MAP: Record<string, { min: number; max: number }> = {
+  'Grade 6':  { min: 10, max: 13 },
+  'Grade 7':  { min: 11, max: 14 },
+  'Grade 8':  { min: 12, max: 15 },
+  'Grade 9':  { min: 13, max: 16 },
+  'Grade 10': { min: 14, max: 17 },
+  'Grade 11': { min: 15, max: 18 },
+  'Grade 12': { min: 16, max: 19 },
+  'Grade 13': { min: 17, max: 20 },
+};
+
+const ALL_GRADES = ['Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12','Grade 13'];
+
+function calculateAge(birthdayStr: string): number | null {
+  if (!birthdayStr) return null;
+  const birthday = new Date(birthdayStr);
+  if (isNaN(birthday.getTime())) return null;
+  const today = new Date();
+  const age = Math.floor(
+    (today.getTime() - birthday.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+  );
+  return age;
+}
+
+function getMediumBadge(medium: string) {
+  if (medium === 'Sinhala') return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200', label: 'Sinhala Medium' };
+  if (medium === 'English') return { bg: 'bg-violet-100', text: 'text-violet-800', border: 'border-violet-200', label: 'English Medium' };
+  return { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-200', label: 'Any Medium' };
+}
+
+const inputCls = 'w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 focus:bg-white transition-all placeholder:text-slate-400';
+const labelCls = 'block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide';
+
+export function EntrySubmissionModal({ isOpen, onClose, competition, school, onSubmitted }: Props) {
   const { submitEntry } = useMediaStore();
 
-  const [studentName, setStudentName] = useState('');
-  const [studentGrade, setStudentGrade] = useState('Grade 12');
-  const [studentContact, setStudentContact] = useState('');
-  const [entryTitle, setEntryTitle] = useState('');
-  const [submissionLink, setSubmissionLink] = useState('');
-  const [synopsis, setSynopsis] = useState('');
+  const [form, setForm] = useState({
+    studentName: '',
+    studentGrade: ALL_GRADES[5], // Grade 11 default
+    studentBirthday: '',
+    studentContact: '',
+    entryTitle: '',
+    submissionLink: '',
+    synopsis: '',
+  });
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const [certified, setCertified] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  if (!isOpen) return null;
+  // Derived state
+  const calculatedAge = calculateAge(form.studentBirthday);
+  const expectedAgeRange = form.studentGrade ? GRADE_AGE_MAP[form.studentGrade] : null;
+  const ageWarning = calculatedAge !== null && expectedAgeRange
+    ? (calculatedAge < expectedAgeRange.min - 2 || calculatedAge > expectedAgeRange.max + 2)
+      ? `Age ${calculatedAge} seems unusual for ${form.studentGrade}. Expected ${expectedAgeRange.min}–${expectedAgeRange.max}.`
+      : null
+    : null;
 
-  const handleCustomChange = (fieldId: string, value: string) => {
+  const ageEligibilityError =
+    calculatedAge !== null && competition.ageCategory
+      ? (calculatedAge < competition.ageCategory.minAge || calculatedAge > competition.ageCategory.maxAge)
+        ? `Student age ${calculatedAge} is outside this competition's eligibility (${competition.ageCategory.minAge}–${competition.ageCategory.maxAge} years).`
+        : null
+      : null;
+
+  // Filter grades to eligible ones based on competition ageCategory
+  const eligibleGrades = competition.ageCategory
+    ? ALL_GRADES.filter((g) => competition.ageCategory!.grades.includes(g))
+    : ALL_GRADES;
+
+  const synopsisWords = form.synopsis.trim() ? form.synopsis.trim().split(/\s+/).length : 0;
+  const medium = competition.medium;
+
+  const set = <K extends keyof typeof form>(k: K, v: string) =>
+    setForm((f) => ({ ...f, [k]: v }));
+
+  const handleCustomChange = (fieldId: string, value: string) =>
     setCustomValues((prev) => ({ ...prev, [fieldId]: value }));
-  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!entryTitle.trim()) {
-      setError('Please provide the title of your competition project.');
-      return;
-    }
-    if (!studentName.trim()) {
-      setError('Please provide the primary student contestant / director name.');
-      return;
-    }
-    if (!submissionLink.trim() || (!submissionLink.startsWith('http://') && !submissionLink.startsWith('https://'))) {
-      setError('Please provide a valid accessible URL (Google Drive, YouTube, Vimeo, OneDrive).');
-      return;
-    }
-    if (!synopsis.trim()) {
-      setError('Please write a brief synopsis or description of your work.');
-      return;
-    }
-    if (!certified) {
-      setError('You must check the certification declaration box to submit.');
-      return;
-    }
-
+  const validate = (): string | null => {
+    if (!form.entryTitle.trim()) return 'Entry title is required.';
+    if (!form.studentName.trim()) return 'Student name is required.';
+    if (!form.studentGrade) return 'Student grade is required.';
+    if (!form.studentBirthday) return 'Student birthday is required.';
+    if (calculatedAge === null) return 'Invalid birthday date.';
+    if (calculatedAge < 5 || calculatedAge > 25) return `Age ${calculatedAge} seems incorrect. Please check the birthday.`;
+    if (ageEligibilityError) return ageEligibilityError;
+    if (!form.studentContact.trim()) return 'Student contact phone is required.';
+    const phoneClean = form.studentContact.replace(/[\s\-+()]/g, '');
+    if (!/^\d{9,12}$/.test(phoneClean)) return 'Enter a valid Sri Lankan phone number (e.g. +94 77 123 4567).';
+    if (!form.submissionLink.trim()) return 'Submission link is required.';
+    try { new URL(form.submissionLink); } catch { return 'Submission link must be a valid URL (https://...).'; }
+    if (!form.synopsis.trim()) return 'Synopsis is required.';
+    if (synopsisWords < 20) return `Synopsis must be at least 20 words (currently ${synopsisWords}).`;
     for (const field of competition.customFields) {
       if (field.required && !customValues[field.id]?.trim()) {
-        setError(`Please fill in required field: ${field.label}`);
-        return;
+        return `"${field.label}" is required.`;
       }
     }
+    if (!certified) return 'You must check the certification declaration.';
+    return null;
+  };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const validationError = validate();
+    if (validationError) { setError(validationError); return; }
+
+    setSubmitting(true);
     try {
-      submitEntry({
+      await submitEntry({
         competitionId: competition.id,
         competitionTitle: competition.title,
+        competitionMedium: competition.medium,
         schoolId: school.id,
         schoolName: school.name,
         category: competition.category,
-        studentName: studentName.trim(),
-        studentGrade,
-        studentContact: studentContact.trim(),
-        entryTitle: entryTitle.trim(),
-        submissionLink: submissionLink.trim(),
-        synopsis: synopsis.trim(),
+        studentName: form.studentName.trim(),
+        studentGrade: form.studentGrade,
+        studentBirthday: form.studentBirthday,
+        studentContact: form.studentContact.trim(),
+        entryTitle: form.entryTitle.trim(),
+        submissionLink: form.submissionLink.trim(),
+        synopsis: form.synopsis.trim(),
         customValues,
       });
-
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
         if (onSubmitted) onSubmitted();
         onClose();
-      }, 1500);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to submit entry.');
+      }, 1800);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Submission failed. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 my-8 shadow-2xl">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors"
-        >
-          <X size={18} />
-        </button>
+  if (!isOpen) return null;
 
-        {/* Modal Header */}
-        <div className="mb-6">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-mono uppercase mb-2">
-            <Film size={13} /> {competition.category}
+  const mediumBadge = getMediumBadge(medium);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 bg-slate-900/80 backdrop-blur-sm overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-3xl shadow-2xl my-4">
+        
+        {/* ── Header ── */}
+        <div className="sticky top-0 z-10 bg-white rounded-t-3xl border-b border-slate-100 px-6 pt-6 pb-4">
+          <button
+            onClick={onClose}
+            className="absolute top-5 right-5 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-all"
+          >
+            <X size={18} />
+          </button>
+
+          {/* Competition badge */}
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${mediumBadge.bg} ${mediumBadge.text} ${mediumBadge.border}`}>
+              <Mic size={10} />
+              {mediumBadge.label}
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-mono">
+              <Film size={10} />
+              {competition.category}
+            </span>
           </div>
-          <h2 className="text-2xl font-serif font-bold text-slate-900 tracking-tight">
-            {competition.title}
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 font-light">
-            Submitting on behalf of: <span className="text-amber-800 font-semibold">{school.name}</span>
+
+          <h2 className="text-xl font-bold text-slate-900 pr-10 leading-tight">{competition.title}</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            For: <span className="font-semibold text-amber-700">{school.name}</span>
+            {competition.ageCategory && (
+              <span className="ml-2 text-slate-400">
+                · Eligible ages: {competition.ageCategory.minAge}–{competition.ageCategory.maxAge} yrs
+              </span>
+            )}
           </p>
         </div>
 
-        {error && (
-          <div className="flex items-center gap-2 p-3 mb-6 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
-            <AlertCircle size={15} className="shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+        {/* ── Alerts ── */}
+        <div className="px-6 pt-4">
+          {error && (
+            <div className="flex items-start gap-2.5 p-3.5 mb-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+              <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+          {success && (
+            <div className="flex items-center gap-2.5 p-3.5 mb-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
+              <CheckCircle2 size={16} className="shrink-0" />
+              <span>Entry submitted and registered in the jury docket!</span>
+            </div>
+          )}
+        </div>
 
-        {success && (
-          <div className="flex items-center gap-2 p-3 mb-6 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
-            <CheckCircle2 size={15} className="shrink-0" />
-            <span>Submission received and registered in jury docket!</span>
-          </div>
-        )}
+        {/* ── Form ── */}
+        <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-5">
 
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-          {/* Entry Title */}
+          {/* ── Section: Entry Details ── */}
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              Entry / Artwork / Project Title *
-            </label>
+            <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-3 pb-1.5 border-b border-amber-100">
+              📝 Entry Details
+            </p>
+            <label className={labelCls}>Entry / Project Title *</label>
             <input
               type="text"
-              required
-              value={entryTitle}
-              onChange={(e) => setEntryTitle(e.target.value)}
+              value={form.entryTitle}
+              onChange={(e) => set('entryTitle', e.target.value)}
               placeholder="e.g. Whispers of the Galle Fort / Sound of Rain"
-              className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
+              className={inputCls}
             />
           </div>
 
-          {/* Student Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                Lead Student Contestant / Director *
-              </label>
-              <input
-                type="text"
-                required
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                placeholder="Full student name"
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                Grade / Class *
-              </label>
-              <select
-                value={studentGrade}
-                onChange={(e) => setStudentGrade(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              >
-                {['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11 (O/L)', 'Grade 12 (A/L)', 'Grade 13 (A/L)'].map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              Contestant Contact Phone (Optional)
-            </label>
-            <input
-              type="tel"
-              value={studentContact}
-              onChange={(e) => setStudentContact(e.target.value)}
-              placeholder="+94 7X XXX XXXX"
-              className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-            />
-          </div>
-
-          {/* Submission URL */}
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              Cloud Submission Link (Google Drive / YouTube / Vimeo) *
-            </label>
-            <div className="relative">
-              <input
-                type="url"
-                required
-                value={submissionLink}
-                onChange={(e) => setSubmissionLink(e.target.value)}
-                placeholder="https://drive.google.com/drive/folders/... or https://youtu.be/..."
-                className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
-              <LinkIcon size={15} className="absolute left-3 top-3 text-slate-400" />
-            </div>
-            <p className="text-[10px] text-amber-700 mt-1">
-              Ensure Google Drive sharing permission is set to "Anyone with the link can view".
+          {/* ── Section: Student Details ── */}
+          <div className="space-y-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 pb-1.5 border-b border-amber-100">
+              👤 Student Information
             </p>
+
+            {/* Name */}
+            <div>
+              <label className={labelCls}>Full Name *</label>
+              <div className="relative">
+                <User size={14} className="absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  value={form.studentName}
+                  onChange={(e) => set('studentName', e.target.value)}
+                  placeholder="Full student name (as in school records)"
+                  className={`${inputCls} pl-9`}
+                />
+              </div>
+            </div>
+
+            {/* Grade & Birthday row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Grade / Class *</label>
+                <select
+                  value={form.studentGrade}
+                  onChange={(e) => set('studentGrade', e.target.value)}
+                  className={inputCls}
+                >
+                  {eligibleGrades.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={labelCls}>Date of Birth *</label>
+                <div className="relative">
+                  <Calendar size={14} className="absolute left-3.5 top-3 text-slate-400" />
+                  <input
+                    type="date"
+                    value={form.studentBirthday}
+                    onChange={(e) => set('studentBirthday', e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    className={`${inputCls} pl-9`}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Age display card */}
+            {form.studentBirthday && (
+              <div className={`flex items-center gap-3 p-3 rounded-xl border text-sm ${
+                ageEligibilityError
+                  ? 'bg-red-50 border-red-200'
+                  : ageWarning
+                  ? 'bg-amber-50 border-amber-200'
+                  : 'bg-emerald-50 border-emerald-200'
+              }`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-black shrink-0 ${
+                  ageEligibilityError ? 'bg-red-100 text-red-700' :
+                  ageWarning ? 'bg-amber-100 text-amber-700' :
+                  'bg-emerald-100 text-emerald-700'
+                }`}>
+                  {calculatedAge ?? '?'}
+                </div>
+                <div>
+                  <p className={`font-semibold text-xs ${
+                    ageEligibilityError ? 'text-red-800' : ageWarning ? 'text-amber-800' : 'text-emerald-800'
+                  }`}>
+                    {ageEligibilityError
+                      ? `⛔ Age ${calculatedAge} — Not Eligible`
+                      : ageWarning
+                      ? `⚠️ Age ${calculatedAge} — Please verify`
+                      : `✓ Age ${calculatedAge} — Eligible`
+                    }
+                  </p>
+                  <p className={`text-[11px] mt-0.5 ${
+                    ageEligibilityError ? 'text-red-600' : ageWarning ? 'text-amber-600' : 'text-emerald-600'
+                  }`}>
+                    {ageEligibilityError || ageWarning || `Within eligible range for ${competition.ageCategory?.label ?? 'this competition'}`}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Contact */}
+            <div>
+              <label className={labelCls}>Student Contact Phone *</label>
+              <div className="relative">
+                <Phone size={14} className="absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="tel"
+                  value={form.studentContact}
+                  onChange={(e) => set('studentContact', e.target.value)}
+                  placeholder="+94 77 123 4567"
+                  className={`${inputCls} pl-9`}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Synopsis */}
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              Synopsis & Description (100 - 200 Words) *
-            </label>
-            <textarea
-              required
-              rows={3}
-              value={synopsis}
-              onChange={(e) => setSynopsis(e.target.value)}
-              placeholder="Provide context, storyline synopsis, or artistic statement..."
-              className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white resize-none"
-            />
+          {/* ── Section: Submission ── */}
+          <div className="space-y-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 pb-1.5 border-b border-amber-100">
+              🔗 Submission Details
+            </p>
+
+            {/* Medium auto-filled (read-only) */}
+            {medium !== 'None' && (
+              <div>
+                <label className={labelCls}>Competition Medium (Auto-filled)</label>
+                <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${mediumBadge.bg} ${mediumBadge.border}`}>
+                  <Mic size={14} className={mediumBadge.text} />
+                  <span className={`text-sm font-semibold ${mediumBadge.text}`}>{medium} Medium</span>
+                  <span className="ml-auto text-[10px] text-slate-400 font-mono">auto</span>
+                </div>
+              </div>
+            )}
+
+            {/* Submission link */}
+            <div>
+              <label className={labelCls}>Cloud Submission Link *</label>
+              <div className="relative">
+                <Globe size={14} className="absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="url"
+                  value={form.submissionLink}
+                  onChange={(e) => set('submissionLink', e.target.value)}
+                  placeholder="https://drive.google.com/... or https://youtu.be/..."
+                  className={`${inputCls} pl-9`}
+                />
+              </div>
+              <p className="mt-1.5 text-[11px] text-amber-700 flex items-center gap-1">
+                <Info size={10} />
+                Google Drive: set sharing to "Anyone with the link can view"
+              </p>
+            </div>
+
+            {/* Synopsis */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className={labelCls.replace('mb-1.5', '')}>Synopsis & Description *</label>
+                <span className={`text-[11px] font-mono ${synopsisWords < 20 ? 'text-red-500' : 'text-emerald-600'}`}>
+                  {synopsisWords} / 20+ words
+                </span>
+              </div>
+              <div className="relative">
+                <FileText size={14} className="absolute left-3.5 top-3 text-slate-400" />
+                <textarea
+                  rows={4}
+                  value={form.synopsis}
+                  onChange={(e) => set('synopsis', e.target.value)}
+                  placeholder="Provide context, storyline synopsis, or artistic statement (min. 20 words)..."
+                  className={`${inputCls} pl-9 resize-none`}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Dynamic Competition Custom Fields */}
+          {/* ── Section: Competition-specific fields ── */}
           {competition.customFields && competition.customFields.length > 0 && (
-            <div className="pt-3 border-t border-slate-100 space-y-3">
-              <p className="text-xs font-mono uppercase tracking-wider text-amber-700 font-semibold">
-                Category-Specific Parameters:
+            <div className="space-y-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 pb-1.5 border-b border-amber-100">
+                ⚙️ Category-Specific Fields
               </p>
               {competition.customFields.map((field) => (
                 <div key={field.id}>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                  <label className={labelCls}>
                     {field.label} {field.required && '*'}
                   </label>
                   {field.type === 'select' ? (
                     <select
                       value={customValues[field.id] || ''}
                       onChange={(e) => handleCustomChange(field.id, e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
+                      className={inputCls}
                     >
-                      <option value="">Select option...</option>
+                      <option value="">— Select option —</option>
                       {field.options?.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
+                        <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
                   ) : field.type === 'textarea' ? (
                     <textarea
-                      rows={2}
+                      rows={3}
                       value={customValues[field.id] || ''}
                       onChange={(e) => handleCustomChange(field.id, e.target.value)}
                       placeholder={field.placeholder}
-                      className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white resize-none"
+                      className={`${inputCls} resize-none`}
                     />
                   ) : (
                     <input
@@ -279,38 +441,59 @@ export function EntrySubmissionModal({
                       value={customValues[field.id] || ''}
                       onChange={(e) => handleCustomChange(field.id, e.target.value)}
                       placeholder={field.placeholder}
-                      className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
+                      className={inputCls}
                     />
+                  )}
+                  {field.helperText && (
+                    <p className="text-[11px] text-slate-500 mt-1">{field.helperText}</p>
                   )}
                 </div>
               ))}
             </div>
           )}
 
-          {/* Declaration Checkbox */}
-          <div className="pt-2">
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={certified}
-                onChange={(e) => setCertified(e.target.checked)}
-                className="mt-1 accent-amber-600 rounded"
-              />
-              <span className="text-[11px] text-slate-600 leading-normal">
-                I hereby declare that this entry represents the original work of student(s) at {school.name}. We confirm that the cloud link is public and complies with Agradhi Media Unit competition bylaws.
+          {/* ── Declaration ── */}
+          <div className="pt-1">
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <div className="relative mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={certified}
+                  onChange={(e) => setCertified(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                  certified ? 'bg-amber-600 border-amber-600' : 'border-slate-300 bg-white group-hover:border-amber-400'
+                }`}>
+                  {certified && <CheckCircle2 size={12} className="text-white" />}
+                </div>
+              </div>
+              <span className="text-[12px] text-slate-600 leading-relaxed">
+                I hereby declare that this entry represents the <strong>original work</strong> of student(s) at{' '}
+                <span className="text-amber-700 font-semibold">{school.name}</span>. I confirm that all provided
+                information is accurate, the cloud link is public, and this submission complies with{' '}
+                <strong>Agradhi Media Unit 2026</strong> competition bylaws.
               </span>
             </label>
           </div>
 
-          {/* Action */}
-          <div className="pt-3">
-            <button
-              type="submit"
-              className="w-full py-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs sm:text-sm transition-all shadow-sm"
-            >
-              Confirm Official Entry Submission
-            </button>
-          </div>
+          {/* ── Submit button ── */}
+          <button
+            type="submit"
+            disabled={submitting || success || !!ageEligibilityError}
+            className="w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-sm transition-all shadow-sm hover:shadow-md disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {submitting ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Submitting…
+              </>
+            ) : success ? (
+              <><CheckCircle2 size={16} /> Submitted!</>
+            ) : (
+              'Confirm Official Entry Submission'
+            )}
+          </button>
         </form>
       </div>
     </div>

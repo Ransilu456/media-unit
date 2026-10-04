@@ -123,10 +123,23 @@ export function AdminSubmissionsReview() {
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/60 space-y-1">
                   <p className="text-slate-400">Student Contestant:</p>
                   <p className="text-slate-900 font-medium">{sub.studentName} ({sub.studentGrade})</p>
-                  {sub.studentContact && (
-                    <p className="text-slate-600 font-mono">{sub.studentContact}</p>
+                  {sub.studentAge !== undefined && (
+                    <p className="text-amber-700 font-semibold">Age: {sub.studentAge} yrs</p>
                   )}
+                  {sub.studentBirthday && (
+                    <p className="text-slate-500 font-mono">DOB: {sub.studentBirthday}</p>
+                  )}
+                  <p className="text-slate-600 font-mono">{sub.studentContact}</p>
                   <p className="text-slate-400 pt-1">Lodged: {sub.submittedAt}</p>
+                  {sub.competitionMedium && sub.competitionMedium !== 'None' && (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                      sub.competitionMedium === 'Sinhala'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : 'bg-violet-50 text-violet-700 border-violet-200'
+                    }`}>
+                      {sub.competitionMedium} Medium
+                    </span>
+                  )}
                 </div>
 
                 <div className="md:col-span-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200/60">

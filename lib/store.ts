@@ -8,102 +8,99 @@ import {
   AuthSession,
   SubmissionStatus,
 } from './types';
-import {
-  INITIAL_COMPETITIONS,
-  INITIAL_SCHOOLS,
-  INITIAL_SUBMISSIONS,
-} from './constants';
+import { INITIAL_COMPETITIONS } from './constants';
 
-const STORAGE_KEYS = {
-  COMPETITIONS: 'agradhi_competitions_v1',
-  SCHOOLS: 'agradhi_schools_v1',
-  SUBMISSIONS: 'agradhi_submissions_v1',
-  SESSION: 'agradhi_auth_session_v1',
-};
+const SESSION_KEY = 'agradhi_auth_session_v2';
 
-export function getStoredData<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
+// ─── session helpers ────────────────────────────────────────────────────────
+
+function getSession(): AuthSession {
+  if (typeof window === 'undefined') return { type: 'guest' };
   try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : { type: 'guest' };
   } catch {
-    return fallback;
+    return { type: 'guest' };
   }
 }
 
-export function setStoredData<T>(key: string, value: T): void {
+function saveSession(sess: AuthSession) {
   if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.error('Storage write error', e);
-  }
+  localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
 }
+
+// ─── main hook ──────────────────────────────────────────────────────────────
 
 export function useMediaStore() {
-  const [competitions, setCompetitions] = useState<Competition[]>([]);
+  const [competitions] = useState<Competition[]>(INITIAL_COMPETITIONS);
   const [schools, setSchools] = useState<RegisteredSchool[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [session, setSession] = useState<AuthSession>({ type: 'guest' });
+  const [session, setSessionState] = useState<AuthSession>({ type: 'guest' });
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Hydrate session from localStorage, then fetch API data
   useEffect(() => {
-    const comps = getStoredData<Competition[]>(STORAGE_KEYS.COMPETITIONS, INITIAL_COMPETITIONS);
-    const schs = getStoredData<RegisteredSchool[]>(STORAGE_KEYS.SCHOOLS, INITIAL_SCHOOLS);
-    const subs = getStoredData<Submission[]>(STORAGE_KEYS.SUBMISSIONS, INITIAL_SUBMISSIONS);
-    const sess = getStoredData<AuthSession>(STORAGE_KEYS.SESSION, { type: 'guest' });
+    const sess = getSession();
+    setSessionState(sess);
 
-    setCompetitions(comps);
-    setSchools(schs);
-    setSubmissions(subs);
-    setSession(sess);
-    setIsLoaded(true);
+    Promise.all([
+      fetch('/api/schools').then((r) => r.json()),
+      sess.type === 'school' && sess.school
+        ? fetch(`/api/submissions?schoolId=${sess.school.id}`).then((r) => r.json())
+        : Promise.resolve({ data: [] }),
+    ])
+      .then(([schoolsRes, subsRes]) => {
+        if (schoolsRes.success) setSchools(schoolsRes.data);
+        if (subsRes.success) setSubmissions(subsRes.data);
+      })
+      .catch(console.error)
+      .finally(() => setIsLoaded(true));
   }, []);
 
-  const saveCompetitions = (newComps: Competition[]) => {
-    setCompetitions(newComps);
-    setStoredData(STORAGE_KEYS.COMPETITIONS, newComps);
+  const _persistSession = (s: AuthSession) => {
+    setSessionState(s);
+    saveSession(s);
   };
 
-  const saveSchools = (newSchools: RegisteredSchool[]) => {
-    setSchools(newSchools);
-    setStoredData(STORAGE_KEYS.SCHOOLS, newSchools);
+  // ── Actions ──────────────────────────────────────────────────────────────
+
+  const registerSchool = async (
+    data: Omit<RegisteredSchool, 'id' | 'registeredAt' | 'badgeCode' | 'status'>
+  ): Promise<RegisteredSchool> => {
+    const res = await fetch('/api/schools', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Registration failed.');
+
+    const school: RegisteredSchool = json.data;
+    setSchools((prev) => [school, ...prev]);
+    _persistSession({ type: 'school', school });
+    return school;
   };
 
-  const saveSubmissions = (newSubs: Submission[]) => {
-    setSubmissions(newSubs);
-    setStoredData(STORAGE_KEYS.SUBMISSIONS, newSubs);
-  };
+  const loginSchool = async (
+    email: string,
+    pass: string
+  ): Promise<RegisteredSchool | null> => {
+    const res = await fetch('/api/schools/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+    const json = await res.json();
+    if (!json.success) return null;
 
-  const saveSession = (newSess: AuthSession) => {
-    setSession(newSess);
-    setStoredData(STORAGE_KEYS.SESSION, newSess);
-  };
+    const school: RegisteredSchool = json.data;
+    _persistSession({ type: 'school', school });
 
-  // Actions
-  const registerSchool = (data: Omit<RegisteredSchool, 'id' | 'registeredAt' | 'badgeCode' | 'status'>) => {
-    const newSchool: RegisteredSchool = {
-      ...data,
-      id: `scl-${Date.now().toString(36)}`,
-      status: 'active',
-      registeredAt: new Date().toISOString().split('T')[0],
-      badgeCode: `AMU-SCL-${String(schools.length + 18).padStart(3, '0')}`,
-    };
-    const updated = [newSchool, ...schools];
-    saveSchools(updated);
-    saveSession({ type: 'school', school: newSchool });
-    return newSchool;
-  };
+    // Load this school's submissions
+    const subsRes = await fetch(`/api/submissions?schoolId=${school.id}`).then((r) => r.json());
+    if (subsRes.success) setSubmissions(subsRes.data);
 
-  const loginSchool = (email: string, pass: string): RegisteredSchool | null => {
-    const found = schools.find(
-      (s) => s.email.toLowerCase() === email.toLowerCase() && (!s.password || s.password === pass)
-    );
-    if (found) {
-      saveSession({ type: 'school', school: found });
-      return found;
-    }
-    return null;
+    return school;
   };
 
   const loginAdmin = (usernameOrEmail: string, pass: string): boolean => {
@@ -111,78 +108,79 @@ export function useMediaStore() {
       (usernameOrEmail === 'admin@saranath.lk' || usernameOrEmail === 'admin') &&
       (pass === 'admin123' || pass === 'admin')
     ) {
-      saveSession({ type: 'admin', adminName: 'Agradhi Executive Board' });
+      _persistSession({ type: 'admin', adminName: 'Agradhi Executive Board' });
       return true;
     }
     return false;
   };
 
   const logout = () => {
-    saveSession({ type: 'guest' });
+    _persistSession({ type: 'guest' });
+    setSubmissions([]);
   };
 
-  const submitEntry = (entry: Omit<Submission, 'id' | 'submittedAt' | 'status'>) => {
-    const newSub: Submission = {
-      ...entry,
-      id: `sub-${Date.now().toString(36)}`,
-      submittedAt: new Date().toISOString().split('T')[0],
-      status: 'submitted',
-    };
-    const updated = [newSub, ...submissions];
-    saveSubmissions(updated);
+  const submitEntry = async (
+    entry: Omit<Submission, 'id' | 'submittedAt' | 'status' | 'studentAge'>
+  ): Promise<Submission> => {
+    // Find competition to pass maxEntries for server validation
+    const comp = competitions.find((c) => c.id === entry.competitionId);
+
+    const res = await fetch('/api/submissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...entry,
+        maxEntriesPerSchool: comp?.maxEntriesPerSchool,
+        requiredCustomFields: comp?.customFields
+          .filter((f) => f.required)
+          .map((f) => f.id) ?? [],
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Submission failed.');
+
+    const newSub: Submission = json.data;
+    setSubmissions((prev) => [newSub, ...prev]);
     return newSub;
   };
 
-  const addCompetition = (comp: Omit<Competition, 'id'>) => {
-    const newComp: Competition = {
-      ...comp,
-      id: `comp-${Date.now().toString(36)}`,
-    };
-    const updated = [newComp, ...competitions];
-    saveCompetitions(updated);
-    return newComp;
-  };
-
-  const updateCompetition = (id: string, updates: Partial<Competition>) => {
-    const updated = competitions.map((c) => (c.id === id ? { ...c, ...updates } : c));
-    saveCompetitions(updated);
-  };
-
-  const deleteCompetition = (id: string) => {
-    const updated = competitions.filter((c) => c.id !== id);
-    saveCompetitions(updated);
-  };
-
+  // Stub for admin status update — would call a PATCH API in production
   const updateSubmissionStatus = (
     id: string,
     status: SubmissionStatus,
     score?: number,
     feedback?: string
   ) => {
-    const updated = submissions.map((s) => {
-      if (s.id === id) {
-        return {
-          ...s,
-          status,
-          ...(score !== undefined ? { score } : {}),
-          ...(feedback !== undefined ? { judgeFeedback: feedback } : {}),
-        };
-      }
-      return s;
-    });
-    saveSubmissions(updated);
+    setSubmissions((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? { ...s, status, ...(score !== undefined ? { score } : {}), ...(feedback !== undefined ? { judgeFeedback: feedback } : {}) }
+          : s
+      )
+    );
   };
 
   const updateSchoolStatus = (id: string, status: 'active' | 'pending' | 'suspended') => {
-    const updated = schools.map((s) => (s.id === id ? { ...s, status } : s));
-    saveSchools(updated);
+    setSchools((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+  };
+
+  // Admin competition management stubs (competitions are currently read-only from constants)
+  const addCompetition = (comp: Omit<Competition, 'id'>): Competition => {
+    const newComp: Competition = { ...comp, id: `comp-${Date.now().toString(36)}` };
+    return newComp;
+  };
+
+  const updateCompetition = (_id: string, _updates: Partial<Competition>) => {
+    // No-op: competitions are loaded from constants
+  };
+
+  const deleteCompetition = (_id: string) => {
+    // No-op: competitions are loaded from constants
   };
 
   const resetToDefaults = () => {
-    saveCompetitions(INITIAL_COMPETITIONS);
-    saveSchools(INITIAL_SCHOOLS);
-    saveSubmissions(INITIAL_SUBMISSIONS);
-    saveSession({ type: 'guest' });
+    _persistSession({ type: 'guest' });
+    setSubmissions([]);
   };
 
   return {
@@ -202,6 +200,6 @@ export function useMediaStore() {
     updateSubmissionStatus,
     updateSchoolStatus,
     resetToDefaults,
-    setSession: saveSession,
+    setSession: _persistSession,
   };
 }

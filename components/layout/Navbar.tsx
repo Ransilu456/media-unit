@@ -5,221 +5,208 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
-import { Phone, Mail, LogOut, Menu, X, ShieldCheck, Bell } from 'lucide-react';
+import { Bell, LogOut, Menu, X, ShieldCheck } from 'lucide-react';
 
 export function Navbar() {
   const pathname = usePathname();
   const { session, logout, isLoaded } = useMediaStore();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const navLinks = [
-    { label: 'Home', href: '/' },
-    { label: 'Competitions', href: '/competitions' },
-    { label: 'School Portal', href: '/dashboard' },
-    { label: 'Admin Panel', href: '/admin' },
-  ];
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isHome = pathname === '/';
+  const isGuest = !isLoaded || session.type === 'guest';
+  const isSchool = isLoaded && session.type === 'school';
+  const isAdmin  = isLoaded && session.type === 'admin';
 
   const notices = [
-    'Inter-School Media Competitions 2026 submissions are officially open',
-    'Delegation registration deadline: November 15th, 2026',
-    'Short Film, Photography, Announcing, Radio Play & Graphic Design tracks open',
+    'Inter-School Media Competitions 2026 submissions are now open',
+    'Registration deadline: November 15, 2026',
+    'Categories: News Presenting, Radio, Photography, Announcing & more',
     'Grand Assembly & Awards Ceremony at Saranath College Auditorium',
-    'Inter-School Media Competitions 2026 submissions are officially open',
-    'Delegation registration deadline: November 15th, 2026',
-    'Short Film, Photography, Announcing, Radio Play & Graphic Design tracks open',
+    'Inter-School Media Competitions 2026 submissions are now open',
+    'Registration deadline: November 15, 2026',
+    'Categories: News Presenting, Radio, Photography, Announcing & more',
     'Grand Assembly & Awards Ceremony at Saranath College Auditorium',
   ];
 
   return (
     <>
-      <div className="bg-slate-900 text-slate-300 text-xs py-2 border-b border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-2">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <Phone className="w-3 h-3" aria-hidden="true" /> +94 11 234 5678
-            </span>
-            <span className="flex items-center gap-1">
-              <Mail className="w-3 h-3" aria-hidden="true" /> agradhimedia@saranath.edu.lk
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-slate-400">Saranath College</span>
-          </div>
+      {/* Thin top info bar */}
+      <div className="bg-slate-900 text-slate-400 text-xs py-1.5 border-b border-slate-800 hidden sm:block">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <span>agradhimedia@saranath.edu.lk</span>
+          <span>Saranath College · Kuliyapitiya</span>
         </div>
       </div>
 
-      <header className="bg-white sticky top-0 z-50 border-t-4 border-amber-600 transition-all duration-300 shadow-sm">
+      {/* Main header — compact */}
+      <header className="bg-white sticky top-0 z-50 border-t-4 border-amber-600 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20 md:h-24">
+          <div className="flex justify-between items-center h-16">
 
-            {/* Brand Logo */}
-            <Link href="/" className="flex items-center gap-4 group">
-              <div className="relative">
-                <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden bg-slate-900 border-2 border-amber-500 shadow-md transition-transform group-hover:scale-105 p-1 shrink-0">
-                  <Image
-                    src="/Agradhi.png"
-                    alt="Agradhi Media Unit Crest"
-                    width={56}
-                    height={56}
-                    className="object-contain w-full h-full"
-                    priority
-                  />
-                </div>
+            {/* Brand */}
+            <Link href="/" className="flex items-center gap-3 group shrink-0">
+              <div className="w-9 h-9 rounded-full bg-slate-900 border-2 border-amber-500 p-0.5 shrink-0 transition-transform group-hover:scale-105">
+                <Image src="/Agradhi.png" alt="Agradhi" width={32} height={32} className="object-contain w-full h-full" priority />
               </div>
-              <div className="flex flex-col">
-                <span className="text-2xl md:text-3xl font-semibold text-slate-900 font-serif leading-none tracking-tight group-hover:text-amber-700 transition-colors">
+              <div className="flex flex-col leading-tight">
+                <span className="text-base md:text-lg font-serif font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
                   Agradhi Media Unit
                 </span>
-                <span className="text-[10px] md:text-xs font-medium text-amber-600 uppercase tracking-widest mt-1">
-                  Saranath College • Est. 1883
+                <span className="text-[9px] font-medium text-amber-600 uppercase tracking-widest hidden sm:block">
+                  Saranath College
                 </span>
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
+            {/* Desktop nav — dynamic per role */}
             <nav className="hidden lg:flex items-center gap-1">
-              <div className="flex items-center gap-1 mr-4">
-                {navLinks.map((link) => {
-                  const isActive = pathname === link.href;
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        isActive
-                          ? 'text-amber-700 font-semibold bg-amber-50'
-                          : 'text-slate-700 hover:text-amber-700 rounded-md transition-colors'
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  );
-                })}
-              </div>
 
-              {/* Auth Section */}
-              {isLoaded && session.type === 'school' && session.school ? (
-                <div className="flex items-center gap-2 pl-2">
-                  <span className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1.5 rounded font-medium">
-                    {session.school.name}
+              {/* Common links always visible */}
+              <NavLink href="/" label="Home" active={pathname === '/'} />
+              <NavLink href="/competitions" label="Competitions" active={pathname === '/competitions'} />
+
+              {/* Guest: show Apply & auth buttons */}
+              {isGuest && (
+                <>
+                  <NavLink href="/apply" label="Apply for Competition" active={pathname === '/apply'} highlight />
+                  <div className="ml-3 flex items-center gap-2 pl-3 border-l border-slate-200">
+                    <Link href="/login" className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-amber-700 transition-colors">
+                      Teacher Login
+                    </Link>
+                    <Link href="/register" className="px-4 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded hover:bg-slate-800 transition-colors border-b-2 border-amber-600">
+                      Register School
+                    </Link>
+                  </div>
+                </>
+              )}
+
+              {/* School teacher logged in */}
+              {isSchool && session.school && (
+                <>
+                  <NavLink href="/apply" label="Apply for Competition" active={pathname === '/apply'} highlight />
+                  <div className="ml-3 flex items-center gap-2 pl-3 border-l border-slate-200">
+                    <span className="text-xs text-slate-500 font-medium truncate max-w-[120px]" title={session.school.name}>
+                      {session.school.name}
+                    </span>
+                    <Link href="/dashboard" className="px-4 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded hover:bg-amber-500 transition-colors">
+                      My Dashboard
+                    </Link>
+                    <button onClick={logout} title="Sign Out" className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                      <LogOut size={14} />
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Admin logged in */}
+              {isAdmin && (
+                <div className="ml-3 flex items-center gap-2 pl-3 border-l border-slate-200">
+                  <span className="text-xs bg-slate-900 text-amber-400 px-2.5 py-1 rounded font-medium flex items-center gap-1">
+                    <ShieldCheck size={12} /> Admin
                   </span>
-                  <Link
-                    href="/dashboard"
-                    className="px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded hover:bg-slate-800 transition-colors border-b-2 border-amber-600"
-                  >
-                    Dashboard
-                  </Link>
-                  <button
-                    onClick={logout}
-                    title="Sign Out"
-                    className="text-slate-400 hover:text-red-600 p-2 rounded"
-                  >
-                    <LogOut size={16} />
-                  </button>
-                </div>
-              ) : isLoaded && session.type === 'admin' ? (
-                <div className="flex items-center gap-2 pl-2">
-                  <span className="text-xs bg-slate-900 text-amber-400 px-3 py-1.5 rounded font-medium flex items-center gap-1">
-                    <ShieldCheck size={14} /> Admin Board
-                  </span>
-                  <Link
-                    href="/admin"
-                    className="px-4 py-2 bg-amber-600 text-white text-xs font-semibold rounded hover:bg-amber-500 transition-colors"
-                  >
+                  <Link href="/admin" className="px-4 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded hover:bg-slate-800 transition-colors border-b-2 border-amber-600">
                     Console
                   </Link>
-                  <button
-                    onClick={logout}
-                    title="Sign Out"
-                    className="text-slate-400 hover:text-red-600 p-2 rounded"
-                  >
-                    <LogOut size={16} />
+                  <button onClick={logout} title="Sign Out" className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                    <LogOut size={14} />
                   </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/login"
-                    className="px-3 py-2 text-sm font-medium text-slate-700 hover:text-amber-700"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="ml-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-medium rounded hover:bg-slate-800 transition-colors border-b-2 border-amber-600 shadow-sm"
-                  >
-                    Register School
-                  </Link>
                 </div>
               )}
             </nav>
 
-            {/* Mobile Hamburger */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 hover:text-slate-900"
-            >
-              {mobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
+            {/* Mobile hamburger */}
+            <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 text-slate-600 hover:text-slate-900">
+              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
       </header>
 
-      <div className="bg-amber-50 border-b border-amber-100 py-2.5 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-4">
-          <span className="flex items-center gap-1.5 text-[10px] font-semibold bg-amber-600 text-white px-2 py-0.5 rounded border border-amber-700/20 shrink-0 uppercase tracking-wide shadow-sm">
-            <Bell className="w-2.5 h-2.5" aria-hidden="true" /> Latest
-          </span>
-          <div className="marquee-container w-full">
-            <div className="marquee-content text-xs md:text-sm font-medium text-slate-800 flex gap-8">
-              {notices.map((notice, i) => (
-                <span key={i} className="shrink-0">
-                  {notice}
-                  {i < notices.length - 1 && (
-                    <span className="text-amber-400 ml-4 mr-2">•</span>
-                  )}
-                </span>
-              ))}
+      {/* Scrolling notice ticker — homepage only */}
+      {isHome && (
+        <div className="bg-amber-50 border-b border-amber-100 py-2 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-3">
+            <span className="flex items-center gap-1 text-[10px] font-semibold bg-amber-600 text-white px-2 py-0.5 rounded shrink-0 uppercase tracking-wide">
+              <Bell className="w-2.5 h-2.5" /> Latest
+            </span>
+            <div className="marquee-container w-full">
+              <div className="marquee-content text-xs font-medium text-slate-700 flex gap-8">
+                {notices.map((n, i) => (
+                  <span key={i} className="shrink-0">
+                    {n}
+                    {i < notices.length - 1 && <span className="text-amber-400 mx-3">•</span>}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-6 space-y-3 shadow-xl">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileMenuOpen(false)}
-              className={`block px-3 py-2.5 rounded-lg text-sm font-medium ${
-                pathname === link.href
-                  ? 'bg-amber-50 text-amber-800 font-semibold'
-                  : 'text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-          <div className="pt-4 border-t border-slate-100 flex gap-2">
-            <Link
-              href="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex-1 text-center py-2.5 rounded border border-slate-300 text-xs font-semibold text-slate-700"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex-1 text-center py-2.5 rounded bg-amber-600 text-white text-xs font-semibold shadow-sm"
-            >
-              Register School
-            </Link>
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-5 space-y-2 shadow-xl z-40 relative">
+          <MobileLink href="/" label="Home" active={pathname === '/'} onClick={() => setMobileOpen(false)} />
+          <MobileLink href="/competitions" label="Competitions" active={pathname === '/competitions'} onClick={() => setMobileOpen(false)} />
+          <MobileLink href="/apply" label="Apply for Competition" active={pathname === '/apply'} onClick={() => setMobileOpen(false)} highlight />
+
+          {isSchool && session.school && (
+            <MobileLink href="/dashboard" label={`${session.school.name} — Dashboard`} active={pathname === '/dashboard'} onClick={() => setMobileOpen(false)} />
+          )}
+          {isAdmin && (
+            <MobileLink href="/admin" label="Admin Console" active={pathname === '/admin'} onClick={() => setMobileOpen(false)} />
+          )}
+
+          <div className="pt-3 border-t border-slate-100 flex gap-2">
+            {isGuest ? (
+              <>
+                <Link href="/login" onClick={() => setMobileOpen(false)} className="flex-1 text-center py-2 rounded border border-slate-200 text-xs font-semibold text-slate-700">
+                  Teacher Login
+                </Link>
+                <Link href="/register" onClick={() => setMobileOpen(false)} className="flex-1 text-center py-2 rounded bg-amber-600 text-white text-xs font-semibold">
+                  Register School
+                </Link>
+              </>
+            ) : (
+              <button onClick={() => { logout(); setMobileOpen(false); }} className="flex-1 py-2 rounded border border-slate-200 text-xs font-semibold text-red-600">
+                Sign Out
+              </button>
+            )}
           </div>
         </div>
       )}
     </>
+  );
+}
+
+function NavLink({ href, label, active, highlight }: { href: string; label: string; active: boolean; highlight?: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+        active
+          ? 'bg-amber-50 text-amber-700 font-semibold'
+          : highlight
+          ? 'text-amber-700 hover:bg-amber-50 font-semibold'
+          : 'text-slate-600 hover:text-amber-700 hover:bg-slate-50'
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function MobileLink({ href, label, active, onClick, highlight }: { href: string; label: string; active: boolean; onClick: () => void; highlight?: boolean }) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+        active ? 'bg-amber-50 text-amber-800 font-semibold' :
+        highlight ? 'text-amber-700 bg-amber-50/50' :
+        'text-slate-700 hover:bg-slate-50'
+      }`}
+    >
+      {label}
+    </Link>
   );
 }

@@ -2,290 +2,259 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
 import { SRI_LANKA_PROVINCES } from '@/lib/constants';
-import { Building2, User, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Building2, User, KeyRound, CheckCircle2, AlertCircle, ChevronRight, ChevronLeft, Info } from 'lucide-react';
+
+const STEPS = [
+  { num: 1, label: 'School', icon: Building2 },
+  { num: 2, label: 'Teacher', icon: User },
+  { num: 3, label: 'Account', icon: KeyRound },
+];
+
+const input = 'w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-colors';
+const label = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5';
 
 export function SchoolRegisterForm() {
   const router = useRouter();
   const { registerSchool } = useMediaStore();
-
-  const [formData, setFormData] = useState({
-    name: '',
-    registrationNumber: '',
-    province: SRI_LANKA_PROVINCES[0],
-    district: 'Colombo',
-    teacherInCharge: '',
-    teacherPhone: '',
-    mediaPresident: '',
-    presidentPhone: '',
-    email: '',
-    password: '',
-  });
-
+  const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const [form, setForm] = useState({
+    schoolName: '',
+    province: SRI_LANKA_PROVINCES[0],
+    district: '',
+    registrationNumber: '',
+    teacherName: '',
+    teacherPhone: '',
+    teacherAddress: '',
+    presidentName: '',
+    presidentPhone: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const validate = (): boolean => {
     setError(null);
+    if (step === 1) {
+      if (!form.schoolName.trim()) { setError('Please enter the school name.'); return false; }
+      if (!form.district.trim()) { setError('Please enter the district.'); return false; }
+    }
+    if (step === 2) {
+      if (!form.teacherName.trim()) { setError('Teacher name is required.'); return false; }
+      if (!form.teacherPhone.trim()) { setError('Teacher contact number is required.'); return false; }
+    }
+    if (step === 3) {
+      if (!form.email.trim() || !form.email.includes('@')) { setError('Please enter a valid email address.'); return false; }
+      if (form.password.length < 4) { setError('Password must be at least 4 characters long.'); return false; }
+      if (form.password !== form.confirmPassword) { setError('Passwords do not match.'); return false; }
+    }
+    return true;
+  };
 
-    if (!formData.name.trim()) {
-      setError('Please provide the official school name.');
-      return;
-    }
-    if (!formData.email.trim() || !formData.email.includes('@')) {
-      setError('Please provide a valid official email address.');
-      return;
-    }
-    if (!formData.teacherInCharge.trim() || !formData.teacherPhone.trim()) {
-      setError('Teacher-in-Charge details are required for institutional verification.');
-      return;
-    }
-    if (!formData.password || formData.password.length < 4) {
-      setError('Password must be at least 4 characters long.');
-      return;
-    }
+  const next = () => { if (validate()) setStep((s) => Math.min(s + 1, STEPS.length)); };
+  const back = () => { setError(null); setStep((s) => Math.max(s - 1, 1)); };
 
+  const submit = async () => {
+    if (!validate()) return;
     try {
-      registerSchool({
-        name: formData.name.trim(),
-        registrationNumber: formData.registrationNumber.trim() || `SCH-${Date.now().toString(36).toUpperCase()}`,
-        province: formData.province,
-        district: formData.district.trim(),
-        teacherInCharge: formData.teacherInCharge.trim(),
-        teacherPhone: formData.teacherPhone.trim(),
-        mediaPresident: formData.mediaPresident.trim(),
-        presidentPhone: formData.presidentPhone.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
+      await registerSchool({
+        name: form.schoolName.trim(),
+        registrationNumber: form.registrationNumber.trim() || `SCH-${Date.now().toString(36).toUpperCase()}`,
+        province: form.province,
+        district: form.district.trim(),
+        teacherInCharge: form.teacherName.trim(),
+        teacherPhone: form.teacherPhone.trim(),
+        mediaPresident: form.presidentName.trim(),
+        presidentPhone: form.presidentPhone.trim(),
+        email: form.email.trim(),
+        password: form.password,
       });
-
       setSuccess(true);
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1200);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to complete registration.');
+      setTimeout(() => router.push('/dashboard'), 1500);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     }
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-8 sm:p-10 rounded-3xl bg-white border border-slate-200 shadow-xl">
-      {/* Header with Agradhi Logo */}
-      <div className="text-center mb-8">
-        <div className="relative w-16 h-16 mx-auto mb-3 bg-slate-900 rounded-full border-2 border-amber-500 p-1 flex items-center justify-center shadow-md">
-          <Image
-            src="/Agradhi.png"
-            alt="Agradhi Media Unit"
-            width={52}
-            height={52}
-            className="object-contain"
-          />
+    <div className="w-full max-w-lg mx-auto">
+      {/* Header */}
+      <div className="text-center mb-7">
+        <div className="w-14 h-14 mx-auto mb-3 bg-slate-900 rounded-full border-2 border-amber-500 p-1 flex items-center justify-center shadow">
+          <Image src="/Agradhi.png" alt="Agradhi" width={44} height={44} className="object-contain" />
         </div>
-        <h2 className="text-2xl sm:text-3xl font-serif font-bold text-slate-900 tracking-tight">
-          Outer School Delegation Registration
-        </h2>
-        <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-md mx-auto font-light">
-          Register your school media circle for the 2026 Inter-School Competitions. Official credentials will grant access to the submission portal.
-        </p>
+        <h1 className="text-xl font-serif font-bold text-slate-900">Register Your School</h1>
+        <p className="text-xs text-slate-500 mt-1">Agradhi Media Competitions 2026</p>
       </div>
 
-      {error && (
-        <div className="flex items-center gap-3 p-4 mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
-          <AlertCircle size={16} className="shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {/* Student notice */}
+      <div className="flex items-start gap-2.5 p-3 mb-5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs">
+        <Info size={14} className="shrink-0 mt-0.5" />
+        <span>
+          <strong>Are you a student?</strong> You don't need to register here.{' '}
+          <Link href="/apply" className="underline font-semibold hover:text-blue-900">Apply for a competition directly →</Link>
+        </span>
+      </div>
 
-      {success && (
-        <div className="flex items-center gap-3 p-4 mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
-          <CheckCircle2 size={16} className="shrink-0" />
-          <span>Registration successful! Launching your School Dashboard...</span>
-        </div>
-      )}
+      {/* Step indicators */}
+      <div className="flex items-center justify-between mb-7 px-4">
+        {STEPS.map((s, i) => {
+          const Icon = s.icon;
+          const done = step > s.num;
+          const active = step === s.num;
+          return (
+            <React.Fragment key={s.num}>
+              <div className="flex flex-col items-center gap-1">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all text-sm ${
+                  done ? 'bg-amber-600 border-amber-600 text-white' :
+                  active ? 'bg-white border-amber-600 text-amber-600' :
+                  'bg-white border-slate-200 text-slate-400'
+                }`}>
+                  {done ? <CheckCircle2 size={15} /> : <Icon size={15} />}
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-wide ${active ? 'text-amber-700' : done ? 'text-slate-500' : 'text-slate-300'}`}>
+                  {s.label}
+                </span>
+              </div>
+              {i < STEPS.length - 1 && (
+                <div className={`flex-1 h-px mx-2 ${step > s.num ? 'bg-amber-500' : 'bg-slate-200'}`} />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* School Information */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-amber-700 font-semibold border-b border-slate-100 pb-2 flex items-center gap-2">
-            <Building2 size={14} /> School Credentials
-          </h3>
+      {/* Card */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-7">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                Official School Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Nalanda College, Colombo or St. Anthony's College"
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
-              />
-            </div>
+        {error && (
+          <div className="flex items-center gap-2 p-3 mb-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+            <AlertCircle size={13} className="shrink-0" /> {error}
+          </div>
+        )}
+        {success && (
+          <div className="flex items-center gap-2 p-3 mb-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
+            <CheckCircle2 size={13} className="shrink-0" /> Registration successful! Taking you to your dashboard...
+          </div>
+        )}
 
+        {/* ── STEP 1: School Info ── */}
+        {step === 1 && (
+          <div className="space-y-4">
+            <StepHeader title="School Information" desc="Enter the official name and location of your school." />
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                Province *
-              </label>
-              <select
-                value={formData.province}
-                onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              >
-                {SRI_LANKA_PROVINCES.map((prov) => (
-                  <option key={prov} value={prov}>
-                    {prov}
-                  </option>
-                ))}
-              </select>
+              <label className={label}>School Name *</label>
+              <input className={input} value={form.schoolName} onChange={(e) => set('schoolName', e.target.value)} placeholder="e.g. Nalanda College, Colombo" />
             </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                District / Town *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.district}
-                onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                placeholder="e.g. Colombo, Kandy, Galle"
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                School Registration No. (Optional)
-              </label>
-              <input
-                type="text"
-                value={formData.registrationNumber}
-                onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
-                placeholder="e.g. NCMC/2026/019"
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                Portal Access Password *
-              </label>
-              <input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Create secret password"
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={label}>Province *</label>
+                <select className={input} value={form.province} onChange={(e) => set('province', e.target.value)}>
+                  {SRI_LANKA_PROVINCES.map((p) => <option key={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={label}>District / Town *</label>
+                <input className={input} value={form.district} onChange={(e) => set('district', e.target.value)} placeholder="e.g. Colombo" />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Teacher-in-Charge */}
-        <div className="space-y-4 pt-2">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-amber-700 font-semibold border-b border-slate-100 pb-2 flex items-center gap-2">
-            <User size={14} /> Teacher-in-Charge (Verification)
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* ── STEP 2: Teacher Info ── */}
+        {step === 2 && (
+          <div className="space-y-4">
+            <StepHeader title="Teacher-in-Charge" desc="The teacher who manages this school's media delegation. They will receive all official communication." />
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                Teacher-in-Charge Full Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.teacherInCharge}
-                onChange={(e) => setFormData({ ...formData, teacherInCharge: e.target.value })}
-                placeholder="e.g. Mr. K. A. Jayasekara"
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
+              <label className={label}>Full Name *</label>
+              <input className={input} value={form.teacherName} onChange={(e) => set('teacherName', e.target.value)} placeholder="e.g. Mr. K. A. Jayasekara" />
             </div>
-
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                Teacher Contact Mobile *
-              </label>
-              <input
-                type="tel"
-                required
-                value={formData.teacherPhone}
-                onChange={(e) => setFormData({ ...formData, teacherPhone: e.target.value })}
-                placeholder="+94 7X XXX XXXX"
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
+              <label className={label}>Contact Mobile *</label>
+              <input className={input} type="tel" value={form.teacherPhone} onChange={(e) => set('teacherPhone', e.target.value)} placeholder="+94 7X XXX XXXX" />
+            </div>
+            <div>
+              <label className={label}>School Address</label>
+              <textarea className={`${input} resize-none h-16`} value={form.teacherAddress} onChange={(e) => set('teacherAddress', e.target.value)} placeholder="School mailing address" />
+            </div>
+            <div className="pt-2 border-t border-slate-100">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Student Media President</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={label}>President Name</label>
+                  <input className={input} value={form.presidentName} onChange={(e) => set('presidentName', e.target.value)} placeholder="e.g. Kasun Perera" />
+                </div>
+                <div>
+                  <label className={label}>President Mobile</label>
+                  <input className={input} type="tel" value={form.presidentPhone} onChange={(e) => set('presidentPhone', e.target.value)} placeholder="+94 7X XXX XXXX" />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Student Media President */}
-        <div className="space-y-4 pt-2">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-amber-700 font-semibold border-b border-slate-100 pb-2 flex items-center gap-2">
-            <User size={14} /> School Media Unit President / Coordinator
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* ── STEP 3: Account ── */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <StepHeader title="Portal Login Account" desc="Create your school's login credentials for the teacher dashboard." />
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                President / Secretary Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.mediaPresident}
-                onChange={(e) => setFormData({ ...formData, mediaPresident: e.target.value })}
-                placeholder="e.g. Kasun Samarasinghe"
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
+              <label className={label}>Official Email *</label>
+              <input className={input} type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="media@yourschool.lk" />
             </div>
-
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                Student President Contact Mobile *
-              </label>
-              <input
-                type="tel"
-                required
-                value={formData.presidentPhone}
-                onChange={(e) => setFormData({ ...formData, presidentPhone: e.target.value })}
-                placeholder="+94 7X XXX XXXX"
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
+              <label className={label}>Password *</label>
+              <input className={input} type="password" value={form.password} onChange={(e) => set('password', e.target.value)} placeholder="Min. 4 characters" />
             </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                Official Media Unit Email (Login Username) *
-              </label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="media@yourschool.sch.lk or president.media@gmail.com"
-                className="w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:bg-white"
-              />
+            <div>
+              <label className={label}>Confirm Password *</label>
+              <input className={input} type="password" value={form.confirmPassword} onChange={(e) => set('confirmPassword', e.target.value)} placeholder="Repeat password" />
             </div>
+            <p className="text-xs text-slate-400 bg-slate-50 rounded-xl p-3 border border-slate-100">
+              After registration, you can log in and <strong className="text-slate-600">add your students' competition entries</strong> from your dashboard.
+            </p>
           </div>
-        </div>
+        )}
 
-        {/* Submit Button */}
-        <div className="pt-4">
-          <button
-            type="submit"
-            className="w-full py-3.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs sm:text-sm tracking-wide shadow-md shadow-amber-900/20 transition-all"
-          >
-            Submit Official Registration & Enter Portal
-          </button>
+        {/* Navigation */}
+        <div className={`flex items-center mt-6 pt-5 border-t border-slate-100 ${step > 1 ? 'justify-between' : 'justify-end'}`}>
+          {step > 1 && (
+            <button onClick={back} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">
+              <ChevronLeft size={14} /> Back
+            </button>
+          )}
+          {step < STEPS.length ? (
+            <button onClick={next} className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition-colors">
+              Continue <ChevronRight size={14} />
+            </button>
+          ) : (
+            <button onClick={submit} className="flex items-center gap-1.5 px-6 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-colors border-b-2 border-amber-600">
+              <CheckCircle2 size={14} /> Complete Registration
+            </button>
+          )}
         </div>
-      </form>
+      </div>
+
+      <p className="text-center text-xs text-slate-400 mt-5">
+        Already registered?{' '}
+        <Link href="/login" className="text-amber-700 font-semibold hover:underline">Sign in to your portal →</Link>
+      </p>
+    </div>
+  );
+}
+
+function StepHeader({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="mb-5">
+      <h2 className="text-base font-bold text-slate-800">{title}</h2>
+      <p className="text-xs text-slate-500 mt-1 font-light">{desc}</p>
     </div>
   );
 }

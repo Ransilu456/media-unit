@@ -14,7 +14,7 @@ function LoginContent() {
   return (
     <>
       <Navbar />
-      <main className="flex-1 py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
+      <main className="flex-1 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center min-h-[calc(100vh-200px)]">
         <LoginForm initialTab={initialTab} />
       </main>
       <Footer />
@@ -24,7 +24,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <React.Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-600">Loading...</div>}>
+    <React.Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">Loading...</div>}>
       <LoginContent />
     </React.Suspense>
   );

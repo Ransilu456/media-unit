@@ -1,0 +1,44 @@
+{
+  "schools": [
+    {
+      "id": "scl-mut6jlw4-ahpd",
+      "name": "skadaksd",
+      "registrationNumber": "SCH-MUT6JLV3",
+      "province": "Western Province",
+      "district": "asdasd",
+      "teacherInCharge": "asdasd",
+      "teacherPhone": "asdas",
+      "mediaPresident": "asdas",
+      "presidentPhone": "asd",
+      "email": "ad@ad.ad",
+      "password": "1234",
+      "status": "active",
+      "registeredAt": "2026-10-04",
+      "badgeCode": "AMU-SCL-018"
+    }
+  ],
+  "submissions": [
+    {
+      "id": "sub-mut6lsgj-vwhg",
+      "competitionId": "agr-news-presenting-s",
+      "competitionTitle": "News Presenting — Sinhala Medium",
+      "competitionMedium": "Sinhala",
+      "schoolId": "scl-mut6jlw4-ahpd",
+      "schoolName": "skadaksd",
+      "category": "News Reading & Announcing",
+      "studentName": "asdasd",
+      "studentGrade": "Grade 11",
+      "studentBirthday": "2007-11-04",
+      "studentAge": 18,
+      "studentContact": "0767639484",
+      "entryTitle": "asdsad",
+      "submissionLink": "https://asdasd",
+      "synopsis": "jkdibdiabsa wiaodiawd o oiaj idiqww98que 12e id e8u3dwehw3 yr 3ee 3h3be 3r 3j 3jh 3je je j3j j3d 3dj 3d j3bdh3",
+      "customValues": {
+        "level": "A/L"
+      },
+      "status": "submitted",
+      "submittedAt": "2026-10-04"
+    }
+  ]
+}

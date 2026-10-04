@@ -6,6 +6,8 @@ export type CategoryType =
   | 'Radio Play & Audio Production'
   | 'Live Media Reporting';
 
+export type MediumType = 'Sinhala' | 'English' | 'None';
+
 export type SubmissionStatus =
   | 'submitted'
   | 'under_review'
@@ -26,13 +28,22 @@ export interface FormField {
   options?: string[];
 }
 
+export interface AgeCategory {
+  label: string;
+  minAge: number;
+  maxAge: number;
+  grades: string[]; // e.g. ['Grade 6','Grade 7', ...]
+}
+
 export interface Competition {
   id: string;
   title: string;
   category: CategoryType;
+  medium: MediumType;
   slug: string;
   description: string;
   eligibility: string;
+  ageCategory?: AgeCategory;
   deadline: string;
   maxEntriesPerSchool: number;
   status: CompetitionStatus;
@@ -62,14 +73,17 @@ export interface Submission {
   id: string;
   competitionId: string;
   competitionTitle: string;
+  competitionMedium: MediumType;
   schoolId: string;
   schoolName: string;
   category: CategoryType;
   studentName: string;
   studentGrade: string;
-  studentContact?: string;
+  studentBirthday: string; // ISO date string YYYY-MM-DD
+  studentAge: number;     // auto-calculated from birthday
+  studentContact: string;
   entryTitle: string;
-  submissionLink: string; // Google Drive / YouTube / Vimeo
+  submissionLink: string;
   synopsis: string;
   customValues?: Record<string, string>;
   status: SubmissionStatus;
@@ -82,4 +96,11 @@ export interface AuthSession {
   type: 'guest' | 'school' | 'admin';
   school?: RegisteredSchool;
   adminName?: string;
+}
+
+// API Response types
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }
