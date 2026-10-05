@@ -1,7 +1,3 @@
-/**
- * Server-side JSON persistence. Keep this module out of client components.
- * Writes use a private temporary file and atomic rename to avoid partial JSON.
- */
 import path from 'node:path';
 import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -85,7 +81,6 @@ export function writeDb(data: DbData): void {
   }
 }
 
-/** Convenience: read, mutate, validate, and atomically persist. */
 export function mutateDb(fn: (db: DbData) => void): DbData {
   const db = readDb();
   fn(db);
@@ -93,5 +88,4 @@ export function mutateDb(fn: (db: DbData) => void): DbData {
   return db;
 }
 
-// Keep the initial competition catalogue available for database migration and defaults.
 export { INITIAL_COMPETITIONS as competitions };
