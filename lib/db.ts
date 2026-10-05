@@ -5,7 +5,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import type { RegisteredSchool, Submission } from './types';
+import type { Competition, RegisteredSchool, Submission } from './types';
 import { validateDatabase } from './validation';
 import { INITIAL_COMPETITIONS } from './constants';
 
@@ -18,6 +18,7 @@ export type JsonValue =
   | { [key: string]: JsonValue };
 
 export interface DbData {
+  competitions: Competition[];
   schools: RegisteredSchool[];
   submissions: Submission[];
   admin?: JsonValue[];
@@ -33,6 +34,17 @@ export function readDb(): DbData {
       throw new Error(`Database file is not a regular file or exceeds ${MAX_DATABASE_BYTES} bytes.`);
     }
     const parsed: unknown = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    if (
+      typeof parsed === 'object'
+      && parsed !== null
+      && !Array.isArray(parsed)
+      && !Object.hasOwn(parsed, 'competitions')
+    ) {
+      (parsed as Record<string, unknown>).competitions = structuredClone(INITIAL_COMPETITIONS);
+      validateDatabase(parsed);
+      writeDb(parsed);
+      return parsed;
+    }
     validateDatabase(parsed);
     return parsed;
   } catch (error: unknown) {
@@ -81,5 +93,5 @@ export function mutateDb(fn: (db: DbData) => void): DbData {
   return db;
 }
 
-// Re-export competitions from constants (they don't need persistence)
+// Keep the initial competition catalogue available for database migration and defaults.
 export { INITIAL_COMPETITIONS as competitions };

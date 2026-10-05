@@ -16,10 +16,10 @@ export function ConcentricOrbitalChart({
   const rings = [35, 50, 65, 80, 95, 110];
 
   return (
-    <div className="p-6 rounded-3xl bg-[#10172d]/90 border border-slate-800 shadow-xl relative overflow-hidden flex flex-col items-center justify-between">
+    <div className="p-5 rounded-xl bg-white border border-slate-200 relative overflow-hidden flex flex-col items-center justify-between">
       <div className="w-full text-left mb-2">
-        <h4 className="text-base font-semibold text-white tracking-tight">{label}</h4>
-        <p className="text-xs text-slate-400 mt-0.5">{sublabel}</p>
+        <h4 className="text-sm font-semibold text-slate-900 tracking-tight">{label}</h4>
+        <p className="text-xs text-slate-500 mt-0.5">{sublabel}</p>
       </div>
 
       {/* Concentric Orbital Radar SVG */}
@@ -33,7 +33,7 @@ export function ConcentricOrbitalChart({
               cy="130"
               r={r}
               fill="none"
-              stroke="#1e2b52"
+              stroke="#e2e8f0"
               strokeWidth="1.2"
               strokeDasharray={i % 2 === 0 ? '4 5' : '2 4'}
               opacity={0.7}
@@ -71,12 +71,9 @@ export function ConcentricOrbitalChart({
             cx="130"
             cy="130"
             r="30"
-            fill="#090d1a"
+            fill="#ffffff"
             stroke="url(#gradient-orbit)"
             strokeWidth="5"
-            style={{
-              filter: 'drop-shadow(0 0 10px rgba(217, 70, 239, 0.5))',
-            }}
           />
 
           <defs>
@@ -90,15 +87,15 @@ export function ConcentricOrbitalChart({
 
         {/* Center Percentage Display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="font-mono text-sm font-bold text-white tracking-tight">
+          <span className="text-sm font-semibold text-slate-900 tracking-tight">
             {percentage}%
           </span>
-          <span className="text-[8px] font-mono uppercase text-slate-400">Clear</span>
+          <span className="text-[8px] uppercase text-slate-500">Clear</span>
         </div>
       </div>
 
       {/* Footer Legend */}
-      <div className="w-full flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+      <div className="w-full flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[#f43f5e]" /> Short Film
         </span>

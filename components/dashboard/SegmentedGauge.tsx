@@ -42,13 +42,13 @@ export function SegmentedGauge({
   ];
 
   return (
-    <div className="p-6 rounded-3xl bg-[#10172d]/90 border border-slate-800 shadow-xl relative overflow-hidden">
+    <div className="p-5 rounded-xl bg-white border border-slate-200 relative overflow-hidden">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h4 className="text-base font-semibold text-white tracking-tight">{title}</h4>
-          <p className="text-xs text-emerald-400 flex items-center gap-1 mt-0.5">
-            <span>↑</span> {subtitle}
+          <h4 className="text-sm font-semibold text-slate-900 tracking-tight">{title}</h4>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {subtitle}
           </p>
         </div>
       </div>
@@ -92,25 +92,25 @@ export function SegmentedGauge({
 
         {/* Center Readout */}
         <div className="absolute bottom-1 text-center">
-          <span className="font-mono text-2xl font-bold text-white tracking-tight">
+          <span className="text-2xl font-semibold text-slate-900 tracking-tight">
             {totalCount}
           </span>
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">
             {countLabel}
           </p>
         </div>
       </div>
 
       {/* Category Legend & Breakdown */}
-      <div className="pt-4 border-t border-slate-800/80 mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
+      <div className="pt-4 border-t border-slate-100 mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
         {categories.map((cat) => (
           <div key={cat.name} className="flex items-center gap-1.5">
             <span
               className="w-2.5 h-2.5 rounded-full shrink-0"
               style={{ backgroundColor: cat.color }}
             />
-            <span className="text-slate-300 text-[11px] font-medium">{cat.name}</span>
-            <span className="text-slate-500 font-mono text-[10px]">({cat.percentage}%)</span>
+            <span className="text-slate-600 text-[11px] font-medium">{cat.name}</span>
+            <span className="text-slate-500 text-[10px]">({cat.percentage}%)</span>
           </div>
         ))}
       </div>

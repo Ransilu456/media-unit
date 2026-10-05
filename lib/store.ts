@@ -8,13 +8,15 @@ import {
   Submission,
   AuthSession,
   SubmissionStatus,
+  NewSubmissionInput,
 } from './types';
 import { INITIAL_COMPETITIONS } from './constants';
+import { validateSubmissionInput } from './validation';
 
 // ─── main hook ──────────────────────────────────────────────────────────────
 
 export function useMediaStore() {
-  const [competitions] = useState<Competition[]>(INITIAL_COMPETITIONS);
+  const [competitions, setCompetitions] = useState<Competition[]>(INITIAL_COMPETITIONS);
   const [schools, setSchools] = useState<RegisteredSchool[]>([]);
   const [publicSchools, setPublicSchools] = useState<PublicSchool[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -33,11 +35,18 @@ export function useMediaStore() {
 
         const currentSession: AuthSession = sessionResult.data;
         setSessionState(currentSession);
-        const [publicSchoolsResponse, schoolsResponse, submissionsResponse] = await Promise.all([
+        const [competitionsResponse, publicSchoolsResponse, schoolsResponse, submissionsResponse] = await Promise.all([
+          fetch('/api/competitions', { cache: 'no-store' }),
           fetch('/api/schools/public'),
           currentSession.type === 'admin' ? fetch('/api/schools') : null,
           currentSession.type !== 'guest' ? fetch('/api/submissions') : null,
         ]);
+
+        const competitionsResult = await competitionsResponse.json();
+        if (!competitionsResponse.ok || !competitionsResult.success) {
+          throw new Error(competitionsResult.error || 'Unable to load competitions.');
+        }
+        setCompetitions(competitionsResult.data);
 
         const publicSchoolsResult = await publicSchoolsResponse.json();
         if (publicSchoolsResponse.ok && publicSchoolsResult.success) {
@@ -182,8 +191,13 @@ export function useMediaStore() {
   };
 
   const submitEntry = async (
-    entry: Omit<Submission, 'id' | 'submittedAt' | 'status' | 'studentAge'>
+    entry: NewSubmissionInput
   ): Promise<Submission> => {
+    const validationErrors = validateSubmissionInput(entry, competitions);
+    if (Object.keys(validationErrors).length > 0) {
+      throw new Error(Object.values(validationErrors)[0]);
+    }
+
     const res = await fetch('/api/submissions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -198,37 +212,92 @@ export function useMediaStore() {
   };
 
   // Stub for admin status update — would call a PATCH API in production
-  const updateSubmissionStatus = (
+  const updateSubmissionStatus = async (
     id: string,
     status: SubmissionStatus,
     score?: number,
     feedback?: string
-  ) => {
+  ): Promise<void> => {
+    const response = await fetch('/api/submissions', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status, score, feedback }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Unable to save the submission update.');
+    }
+
     setSubmissions((prev) =>
       prev.map((s) =>
-        s.id === id
-          ? { ...s, status, ...(score !== undefined ? { score } : {}), ...(feedback !== undefined ? { judgeFeedback: feedback } : {}) }
-          : s
+        s.id === id ? result.data : s
       )
     );
   };
 
-  const updateSchoolStatus = (id: string, status: 'active' | 'pending' | 'suspended') => {
-    setSchools((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+  const updateSchoolStatus = async (
+    id: string,
+    status: 'active' | 'pending' | 'suspended'
+  ): Promise<void> => {
+    const response = await fetch('/api/schools', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Unable to save the school status.');
+    }
+
+    setSchools((prev) => prev.map((school) => (school.id === id ? result.data : school)));
   };
 
-  // Admin competition management stubs (competitions are currently read-only from constants)
-  const addCompetition = (comp: Omit<Competition, 'id'>): Competition => {
-    const newComp: Competition = { ...comp, id: `comp-${Date.now().toString(36)}` };
+  const addCompetition = async (comp: Omit<Competition, 'id'>): Promise<Competition> => {
+    const response = await fetch('/api/competitions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(comp),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Unable to create the competition.');
+    }
+    const newComp: Competition = result.data;
+    setCompetitions((previous) => [...previous, newComp]);
     return newComp;
   };
 
-  const updateCompetition = (_id: string, _updates: Partial<Competition>) => {
-    // No-op: competitions are loaded from constants
+  const updateCompetition = async (
+    id: string,
+    updates: Partial<Omit<Competition, 'id'>>
+  ): Promise<void> => {
+    const current = competitions.find((competition) => competition.id === id);
+    if (!current) throw new Error('Competition not found.');
+    const response = await fetch('/api/competitions', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...current, ...updates, id }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Unable to save the competition.');
+    }
+    setCompetitions((previous) =>
+      previous.map((competition) => competition.id === id ? result.data : competition)
+    );
   };
 
-  const deleteCompetition = (_id: string) => {
-    // No-op: competitions are loaded from constants
+  const deleteCompetition = async (id: string): Promise<void> => {
+    const response = await fetch('/api/competitions', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Unable to delete the competition.');
+    }
+    setCompetitions((previous) => previous.filter((competition) => competition.id !== id));
   };
 
   const resetToDefaults = () => {

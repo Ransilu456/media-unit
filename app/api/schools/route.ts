@@ -15,6 +15,8 @@ import {
   validateSchoolRegistration,
 } from '@/lib/validation';
 
+const SCHOOL_STATUSES = ['active', 'pending', 'suspended'] as const;
+
 // GET /api/schools  — list all registered schools
 export async function GET(request: NextRequest) {
   const session = getRequestSession(request.headers.get('cookie'));
@@ -98,6 +100,52 @@ export async function POST(request: NextRequest) {
       return Response.json({ success: false, error: err.message }, { status: 400 });
     }
     console.error('[POST /api/schools]', err);
+    return Response.json(
+      { success: false, error: 'Internal server error.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const session = getRequestSession(request.headers.get('cookie'));
+  if (session?.role !== 'admin') {
+    return Response.json(
+      { success: false, error: 'Admin access required.' },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const body = await readJsonRequest(request);
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return Response.json({ success: false, error: 'Invalid school update.' }, { status: 400 });
+    }
+    const input = body as Record<string, unknown>;
+    if (
+      Object.keys(input).some((key) => key !== 'id' && key !== 'status')
+      || typeof input.id !== 'string'
+      || input.id.trim().length === 0
+      || !SCHOOL_STATUSES.some((status) => status === input.status)
+    ) {
+      return Response.json({ success: false, error: 'Invalid school update.' }, { status: 400 });
+    }
+
+    const updatedDb = mutateDb((database) => {
+      const record = database.schools.find((entry) => entry.id === input.id);
+      if (record) record.status = input.status as RegisteredSchool['status'];
+    });
+    const school = updatedDb.schools.find((record) => record.id === input.id);
+    if (!school) {
+      return Response.json({ success: false, error: 'School not found.' }, { status: 404 });
+    }
+
+    return Response.json({ success: true, data: stripSchoolPassword(school) });
+  } catch (error: unknown) {
+    if (error instanceof InvalidRequestError) {
+      return Response.json({ success: false, error: error.message }, { status: 400 });
+    }
+    console.error('[PATCH /api/schools]', error);
     return Response.json(
       { success: false, error: 'Internal server error.' },
       { status: 500 }

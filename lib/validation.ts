@@ -4,6 +4,7 @@ import type {
   CategoryType,
   Competition,
   MediumType,
+  NewSubmissionInput,
   RegisteredSchool,
   Submission,
   SubmissionStatus,
@@ -62,7 +63,7 @@ const ALLOWED_SUBMISSION_FIELDS = new Set([
   'schoolName', 'category', 'studentName', 'studentGrade', 'studentBirthday',
   'studentContact', 'entryTitle', 'submissionLink', 'synopsis', 'customValues',
 ]);
-const ALLOWED_DATABASE_FIELDS = new Set(['schools', 'submissions', 'admin']);
+const ALLOWED_DATABASE_FIELDS = new Set(['competitions', 'schools', 'submissions', 'admin']);
 const ALLOWED_STORED_SCHOOL_FIELDS = new Set([
   'id', 'name', 'registrationNumber', 'district', 'province', 'teacherInCharge',
   'teacherPhone', 'mediaPresident', 'presidentPhone', 'email', 'password',
@@ -126,6 +127,89 @@ function validDate(value: unknown): value is string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+export function validateCompetitionInput(value: unknown): ValidationErrors {
+  if (!isRecord(value)) return { form: 'Competition data must be an object.' };
+
+  const errors: ValidationErrors = {};
+  const allowedFields = new Set([
+    'title', 'category', 'medium', 'slug', 'description', 'eligibility',
+    'ageCategory', 'deadline', 'maxEntriesPerSchool', 'status', 'prizePool',
+    'guidelines', 'customFields',
+  ]);
+  if (!hasOnlyFields(value, allowedFields)) errors.form = 'Competition contains unsupported fields.';
+  if (!isText(value.title, 2, 160)) errors.title = 'Title must be between 2 and 160 characters.';
+  if (!(CATEGORIES as readonly unknown[]).includes(value.category)) errors.category = 'Select a valid category.';
+  if (!(MEDIUMS as readonly unknown[]).includes(value.medium)) errors.medium = 'Select a valid medium.';
+  if (typeof value.slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.slug) || value.slug.length > 180) {
+    errors.slug = 'Enter a valid competition slug.';
+  }
+  if (!isText(value.description, 1, 2000)) errors.description = 'Description must be at most 2,000 characters.';
+  if (!isText(value.eligibility, 1, 200)) errors.eligibility = 'Eligibility must be at most 200 characters.';
+  if (!validDate(value.deadline)) errors.deadline = 'Enter a valid deadline.';
+  if (!Number.isInteger(value.maxEntriesPerSchool) || (value.maxEntriesPerSchool as number) < 1 || (value.maxEntriesPerSchool as number) > 10) {
+    errors.maxEntriesPerSchool = 'Maximum entries must be between 1 and 10.';
+  }
+  if (!(['open', 'closed', 'judging', 'upcoming'] as readonly unknown[]).includes(value.status)) {
+    errors.status = 'Select a valid competition status.';
+  }
+  if (!isText(value.prizePool, 1, 200)) errors.prizePool = 'Prize details must be at most 200 characters.';
+
+  if (!Array.isArray(value.guidelines) || value.guidelines.length > 30
+    || value.guidelines.some((guideline) => !isText(guideline, 1, 500))) {
+    errors.guidelines = 'Guidelines must be a list of up to 30 rules, each at most 500 characters.';
+  }
+
+  if (!Array.isArray(value.customFields) || value.customFields.length > 20) {
+    errors.customFields = 'Add no more than 20 custom fields.';
+  } else {
+    const fieldIds = new Set<string>();
+    value.customFields.forEach((field, index) => {
+      if (!isRecord(field)) {
+        errors.customFields = `Custom field ${index + 1} is invalid.`;
+        return;
+      }
+      const allowedFieldKeys = new Set(['id', 'label', 'type', 'required', 'placeholder', 'helperText', 'options']);
+      if (!hasOnlyFields(field, allowedFieldKeys)
+        || !isText(field.id, 1, 100)
+        || !isText(field.label, 1, 120)
+        || !(['text', 'textarea', 'url', 'select', 'number'] as readonly unknown[]).includes(field.type)
+        || typeof field.required !== 'boolean'
+        || (field.placeholder !== undefined && !isText(field.placeholder, 0, 200, true))
+        || (field.helperText !== undefined && !isText(field.helperText, 0, 500, true))
+        || (field.options !== undefined
+          && (!Array.isArray(field.options) || field.options.length > 30
+            || field.options.some((option) => !isText(option, 1, 120))))) {
+        errors.customFields = `Custom field ${index + 1} is invalid.`;
+        return;
+      }
+      if (fieldIds.has(field.id)) errors.customFields = 'Custom field IDs must be unique.';
+      fieldIds.add(field.id);
+      if (field.type === 'select' && (!Array.isArray(field.options) || field.options.length === 0)) {
+        errors.customFields = `Select field "${field.label}" needs at least one option.`;
+      }
+    });
+  }
+
+  if (value.ageCategory !== undefined) {
+    const ageCategory = value.ageCategory;
+    if (!isRecord(ageCategory)
+      || !hasOnlyFields(ageCategory, new Set(['label', 'minAge', 'maxAge', 'grades']))
+      || !isText(ageCategory.label, 1, 100)
+      || !Number.isInteger(ageCategory.minAge)
+      || !Number.isInteger(ageCategory.maxAge)
+      || (ageCategory.minAge as number) < 5
+      || (ageCategory.maxAge as number) > 25
+      || (ageCategory.minAge as number) > (ageCategory.maxAge as number)
+      || !Array.isArray(ageCategory.grades)
+      || ageCategory.grades.length === 0
+      || ageCategory.grades.some((grade) => typeof grade !== 'string' || !/^Grade (?:[6-9]|1[0-3])$/.test(grade))) {
+      errors.ageCategory = 'Age category must include valid ages and eligible grades.';
+    }
+  }
+
+  return errors;
 }
 
 export function calculateAge(birthday: string, now = new Date()): number | null {
@@ -238,7 +322,10 @@ export function validateSchoolRegistration(value: unknown): ValidationErrors {
   return errors;
 }
 
-export function validateSubmissionInput(value: unknown): ValidationErrors {
+export function validateSubmissionInput(
+  value: unknown,
+  competitions: Competition[] = INITIAL_COMPETITIONS
+): ValidationErrors {
   const errors: ValidationErrors = {};
   if (!isRecord(value)) return { form: 'Submission data must be an object.' };
   if (!hasOnlyFields(value, ALLOWED_SUBMISSION_FIELDS)) {
@@ -246,7 +333,7 @@ export function validateSubmissionInput(value: unknown): ValidationErrors {
   }
 
   const competition = typeof value.competitionId === 'string'
-    ? INITIAL_COMPETITIONS.find((item) => item.id === value.competitionId)
+    ? competitions.find((item) => item.id === value.competitionId)
     : undefined;
   if (!competition) errors.competitionId = 'Select a valid competition.';
   if (value.competitionTitle !== undefined
@@ -341,6 +428,33 @@ export function validateSubmissionInput(value: unknown): ValidationErrors {
   return errors;
 }
 
+export function isSubmissionInput(value: unknown): value is NewSubmissionInput {
+  if (!isRecord(value) || !hasOnlyFields(value, ALLOWED_SUBMISSION_FIELDS)) return false;
+
+  const requiredTextFields = [
+    'competitionId',
+    'schoolId',
+    'studentName',
+    'studentGrade',
+    'studentBirthday',
+    'studentContact',
+    'entryTitle',
+    'submissionLink',
+    'synopsis',
+  ];
+  if (requiredTextFields.some((field) => typeof value[field] !== 'string')) return false;
+  if (value.competitionTitle !== undefined && typeof value.competitionTitle !== 'string') return false;
+  if (value.schoolName !== undefined && typeof value.schoolName !== 'string') return false;
+  if (value.competitionMedium !== undefined
+    && !(MEDIUMS as readonly unknown[]).includes(value.competitionMedium)) return false;
+  if (!(CATEGORIES as readonly unknown[]).includes(value.category)) return false;
+
+  const customValues = value.customValues;
+  return customValues === undefined
+    || (isRecord(customValues)
+      && Object.values(customValues).every((item) => typeof item === 'string'));
+}
+
 function assertText(value: unknown, path: string, min = 1, max = 10000): asserts value is string {
   if (!isText(value, min, max)) throw new Error(`Invalid database field ${path}.`);
 }
@@ -379,7 +493,30 @@ function validateStoredSchool(value: unknown, index: number): asserts value is R
   assertDate(value.registeredAt, `${path}.registeredAt`);
 }
 
-function validateStoredSubmission(value: unknown, index: number): asserts value is Submission {
+function validateStoredCompetition(value: unknown, index: number): asserts value is Competition {
+  const path = `competitions[${index}]`;
+  if (!isRecord(value) || !isText(value.id, 1, 100)) {
+    throw new Error(`Invalid database record ${path}.`);
+  }
+  if (!hasOnlyFields(value, new Set([
+    'id', 'title', 'category', 'medium', 'slug', 'description', 'eligibility',
+    'ageCategory', 'deadline', 'maxEntriesPerSchool', 'status', 'prizePool',
+    'guidelines', 'customFields',
+  ]))) {
+    throw new Error(`Unexpected database fields in ${path}.`);
+  }
+  const input = Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'id'));
+  const errors = validateCompetitionInput(input);
+  if (Object.keys(errors).length > 0) {
+    throw new Error(`Invalid database competition ${path}: ${Object.values(errors)[0]}`);
+  }
+}
+
+function validateStoredSubmission(
+  value: unknown,
+  index: number,
+  competitions: Competition[]
+): asserts value is Submission {
   const path = `submissions[${index}]`;
   if (!isRecord(value)) throw new Error(`Invalid database record ${path}.`);
   if (!hasOnlyFields(value, ALLOWED_STORED_SUBMISSION_FIELDS)) {
@@ -397,17 +534,13 @@ function validateStoredSubmission(value: unknown, index: number): asserts value 
   assertText(value.entryTitle, `${path}.entryTitle`, 2, 160);
   assertText(value.submissionLink, `${path}.submissionLink`, 8, 2048);
   assertText(value.synopsis, `${path}.synopsis`, 20, 10000);
-  if (!INITIAL_COMPETITIONS.some((item) => item.id === value.competitionId)) {
+  const competition = competitions.find((item) => item.id === value.competitionId);
+  if (!competition) {
     throw new Error(`Invalid database field ${path}.competitionId.`);
   }
   if (!(CATEGORIES as readonly unknown[]).includes(value.category)
     || !(MEDIUMS as readonly unknown[]).includes(value.competitionMedium)) {
     throw new Error(`Invalid database category or medium at ${path}.`);
-  }
-  const competition = INITIAL_COMPETITIONS.find((item) => item.id === value.competitionId);
-  if (!competition || competition.category !== value.category || competition.medium !== value.competitionMedium
-    || competition.title !== value.competitionTitle) {
-    throw new Error(`Competition data does not match at ${path}.`);
   }
   if (!(SUBMISSION_STATUSES as readonly unknown[]).includes(value.status)) {
     throw new Error(`Invalid database field ${path}.status.`);
@@ -417,9 +550,6 @@ function validateStoredSubmission(value: unknown, index: number): asserts value 
   }
   if (!/^Grade (?:[6-9]|1[0-3])$/.test(value.studentGrade as string)) {
     throw new Error(`Invalid database field ${path}.studentGrade.`);
-  }
-  if (competition.ageCategory && !competition.ageCategory.grades.includes(value.studentGrade as string)) {
-    throw new Error(`Ineligible student grade stored at ${path}.`);
   }
   assertDate(value.studentBirthday, `${path}.studentBirthday`);
   assertDate(value.submittedAt, `${path}.submittedAt`);
@@ -433,9 +563,10 @@ function validateStoredSubmission(value: unknown, index: number): asserts value 
       throw new Error(`Invalid database synopsis at ${path}.`);
     }
   }
-  const customValuesError = validateCustomValues(value.customValues ?? {}, competition);
-  if (customValuesError) {
-    throw new Error(`Invalid database custom fields at ${path}: ${customValuesError}`);
+  const customValues = value.customValues ?? {};
+  if (!isRecord(customValues)
+    || Object.entries(customValues).some(([key, item]) => !key || typeof item !== 'string' || item.length > 2000)) {
+    throw new Error(`Invalid database custom fields at ${path}.`);
   }
   try {
     const submissionUrl = new URL(value.submissionLink as string);
@@ -456,8 +587,9 @@ function validateStoredSubmission(value: unknown, index: number): asserts value 
 }
 
 export function validateDatabase(value: unknown): asserts value is DbData {
-  if (!isRecord(value) || !Array.isArray(value.schools) || !Array.isArray(value.submissions)) {
-    throw new Error('Database file must contain schools and submissions arrays.');
+  if (!isRecord(value) || !Array.isArray(value.competitions)
+    || !Array.isArray(value.schools) || !Array.isArray(value.submissions)) {
+    throw new Error('Database file must contain competitions, schools, and submissions arrays.');
   }
   if (!hasOnlyFields(value, ALLOWED_DATABASE_FIELDS)) {
     throw new Error('Database file contains unsupported top-level fields.');
@@ -468,8 +600,20 @@ export function validateDatabase(value: unknown): asserts value is DbData {
   if (Array.isArray(value.admin)) {
     value.admin.forEach((entry, index) => validateJsonValue(entry, `admin[${index}]`));
   }
+  value.competitions.forEach(validateStoredCompetition);
   value.schools.forEach(validateStoredSchool);
-  value.submissions.forEach(validateStoredSubmission);
+  value.submissions.forEach((submission, index) =>
+    validateStoredSubmission(submission, index, value.competitions as Competition[])
+  );
+
+  const competitionIds = new Set<string>();
+  const competitionSlugs = new Set<string>();
+  for (const competition of value.competitions as Competition[]) {
+    if (competitionIds.has(competition.id)) throw new Error(`Duplicate competition id ${competition.id}.`);
+    if (competitionSlugs.has(competition.slug)) throw new Error(`Duplicate competition slug ${competition.slug}.`);
+    competitionIds.add(competition.id);
+    competitionSlugs.add(competition.slug);
+  }
 
   const schoolIds = new Set<string>();
   const schoolEmails = new Set<string>();
@@ -486,6 +630,9 @@ export function validateDatabase(value: unknown): asserts value is DbData {
     if (submissionIds.has(submission.id)) throw new Error(`Duplicate submission id ${submission.id}.`);
     if (!schoolIds.has(submission.schoolId)) {
       throw new Error(`Submission ${submission.id} refers to an unknown school.`);
+    }
+    if (!competitionIds.has(submission.competitionId)) {
+      throw new Error(`Submission ${submission.id} refers to an unknown competition.`);
     }
     submissionIds.add(submission.id);
   }

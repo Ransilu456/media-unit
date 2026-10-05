@@ -10,6 +10,17 @@ export function AdminSchoolsManager() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'suspended'>('all');
 
+  const handleSchoolStatusUpdate = async (
+    id: string,
+    status: 'active' | 'pending' | 'suspended'
+  ) => {
+    try {
+      await updateSchoolStatus(id, status);
+    } catch (error: unknown) {
+      window.alert(error instanceof Error ? error.message : 'Unable to save the school status.');
+    }
+  };
+
   const filtered = schools.filter((s) => {
     const matchesSearch =
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -19,9 +30,35 @@ export function AdminSchoolsManager() {
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+  const pendingCount = schools.filter((school) => school.status === 'pending').length;
+  const activeCount = schools.filter((school) => school.status === 'active').length;
+  const suspendedCount = schools.filter((school) => school.status === 'suspended').length;
 
   return (
     <div className="space-y-6">
+      <section>
+        <h1 className="text-xl font-semibold text-slate-950">School accounts</h1>
+        <p className="mt-1 text-sm text-slate-600">
+          Activate a school to allow sign-in and submissions. Pending and suspended accounts cannot submit entries.
+        </p>
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="School account status counts">
+        {[
+          { label: 'Pending approval', value: pendingCount, detail: 'Review registration details', tone: 'text-amber-800 bg-amber-50' },
+          { label: 'Active accounts', value: activeCount, detail: 'Can sign in and submit', tone: 'text-emerald-800 bg-emerald-50' },
+          { label: 'Suspended accounts', value: suspendedCount, detail: 'Sign-in and submissions blocked', tone: 'text-rose-800 bg-rose-50' },
+        ].map(({ label, value, detail, tone }) => (
+          <div key={label} className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-slate-600">{label}</p>
+              <span className={`rounded-md px-2 py-1 text-xs font-semibold ${tone}`}>{value}</span>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">{detail}</p>
+          </div>
+        ))}
+      </section>
+
       {/* Search & Filter Toolbar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
         <div className="relative w-full sm:w-80">
@@ -108,7 +145,7 @@ export function AdminSchoolsManager() {
               <div className="flex flex-wrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                 <span className="text-[11px] text-slate-400 w-full lg:w-auto">Status:</span>
                 <button
-                  onClick={() => updateSchoolStatus(school.id, 'active')}
+                  onClick={() => void handleSchoolStatusUpdate(school.id, 'active')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                     school.status === 'active'
                       ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
@@ -118,7 +155,7 @@ export function AdminSchoolsManager() {
                   Approve / Active
                 </button>
                 <button
-                  onClick={() => updateSchoolStatus(school.id, 'pending')}
+                  onClick={() => void handleSchoolStatusUpdate(school.id, 'pending')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                     school.status === 'pending'
                       ? 'bg-amber-50 text-amber-800 border border-amber-300'
@@ -128,7 +165,7 @@ export function AdminSchoolsManager() {
                   Pending
                 </button>
                 <button
-                  onClick={() => updateSchoolStatus(school.id, 'suspended')}
+                  onClick={() => void handleSchoolStatusUpdate(school.id, 'suspended')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                     school.status === 'suspended'
                       ? 'bg-red-50 text-red-800 border border-red-300'

@@ -21,7 +21,8 @@ export default function ApplyPage() {
               Apply for a Competition
             </h1>
             <p className="text-slate-400 text-sm max-w-lg mx-auto">
-              Fill in the form below to enter any competition at the Agradhi Media Assembly 2026. No login needed — just complete the form!
+              Choose an open competition and submit a complete entry through your school&apos;s
+              registered account.
             </p>
           </div>
         </div>
@@ -31,8 +32,8 @@ export default function ApplyPage() {
           <div className="max-w-3xl mx-auto flex items-center gap-2 text-xs text-amber-800">
             <Info size={13} className="shrink-0" />
             <span>
-              <strong>Important:</strong> Your school must be registered before you can apply. If your school is not in the list,{' '}
-              ask your teacher to{' '}
+              <strong>Important:</strong> Entries must be submitted by an active school account.
+              Ask your teacher-in-charge to sign in, or{' '}
               <a href="/register" className="underline font-semibold">register the school first</a>.
             </span>
           </div>

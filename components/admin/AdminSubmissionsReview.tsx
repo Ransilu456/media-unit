@@ -1,262 +1,498 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { SubmissionStatus } from '@/lib/types';
 import { useMediaStore } from '@/lib/store';
-import { Submission, SubmissionStatus } from '@/lib/types';
-import { StatusBadge } from '@/components/ui/Badge';
-import { Search, ExternalLink, Save } from 'lucide-react';
+import { EntryStatusGuide } from '@/components/dashboard/EntryStatusGuide';
+import {
+  BadgeCheck,
+  Check,
+  Clock3,
+  ExternalLink,
+  FileCheck2,
+  FileText,
+  Search,
+  Save,
+  Sparkles,
+  Trophy,
+} from 'lucide-react';
+
+type QueueFilter = 'all' | 'needs-review' | 'in-progress' | 'decided';
+
+const statusLabels: Record<SubmissionStatus, string> = {
+  submitted: 'Awaiting review',
+  under_review: 'Under review',
+  verified: 'Accepted',
+  shortlisted: 'Shortlisted',
+  winner: 'Winner',
+  disqualified: 'Rejected',
+};
+
+const statusTone: Record<SubmissionStatus, string> = {
+  submitted: 'border-blue-200 bg-blue-50 text-blue-800',
+  under_review: 'border-amber-200 bg-amber-50 text-amber-800',
+  verified: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  shortlisted: 'border-violet-200 bg-violet-50 text-violet-800',
+  winner: 'border-sky-200 bg-sky-50 text-sky-800',
+  disqualified: 'border-rose-200 bg-rose-50 text-rose-800',
+};
+
+function getDecisionHelp(status: SubmissionStatus): string {
+  switch (status) {
+    case 'submitted':
+      return 'Leave in the queue until review begins.';
+    case 'under_review':
+      return 'Let the school know adjudication is in progress.';
+    case 'verified':
+      return 'Confirm that the entry is eligible and accepted.';
+    case 'shortlisted':
+      return 'Mark the entry as a finalist.';
+    case 'winner':
+      return 'Record the final competition result.';
+    case 'disqualified':
+      return 'A clear rejection reason is required and visible to the school.';
+  }
+}
 
 export function AdminSubmissionsReview() {
   const { submissions, updateSubmissionStatus } = useMediaStore();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('All');
-
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>('needs-review');
   const [editingScores, setEditingScores] = useState<Record<string, number>>({});
   const [editingFeedback, setEditingFeedback] = useState<Record<string, string>>({});
+  const [editingStatuses, setEditingStatuses] = useState<Record<string, SubmissionStatus>>({});
+  const [savingIds, setSavingIds] = useState<string[]>([]);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [saveErrors, setSaveErrors] = useState<Record<string, string>>({});
 
-  const categories = ['All', ...Array.from(new Set(submissions.map((s) => s.category)))];
-  const statuses = ['All', 'submitted', 'under_review', 'verified', 'shortlisted', 'winner', 'disqualified'];
+  const categories = [...new Set(submissions.map((submission) => submission.category))];
+  const awaitingReviewCount = submissions.filter(
+    (submission) => submission.status === 'submitted'
+  ).length;
+  const inProgressCount = submissions.filter(
+    (submission) => submission.status === 'under_review'
+  ).length;
+  const decidedCount = submissions.filter(
+    (submission) => !['submitted', 'under_review'].includes(submission.status)
+  ).length;
 
-  const filtered = submissions.filter((sub) => {
-    const matchesSearch =
-      sub.entryTitle.toLowerCase().includes(search.toLowerCase()) ||
-      sub.studentName.toLowerCase().includes(search.toLowerCase()) ||
-      sub.schoolName.toLowerCase().includes(search.toLowerCase());
-
-    const matchesCategory = categoryFilter === 'All' || sub.category === categoryFilter;
-    const matchesStatus = statusFilter === 'All' || sub.status === statusFilter;
-
-    return matchesSearch && matchesCategory && matchesStatus;
+  const filtered = submissions.filter((submission) => {
+    const query = search.trim().toLowerCase();
+    const matchesSearch = !query || [
+      submission.entryTitle,
+      submission.studentName,
+      submission.schoolName,
+      submission.competitionTitle,
+    ].some((value) => value.toLowerCase().includes(query));
+    const matchesCategory = categoryFilter === 'All' || submission.category === categoryFilter;
+    const matchesQueue = queueFilter === 'all'
+      || (queueFilter === 'needs-review' && submission.status === 'submitted')
+      || (queueFilter === 'in-progress' && submission.status === 'under_review')
+      || (queueFilter === 'decided' && !['submitted', 'under_review'].includes(submission.status));
+    return matchesSearch && matchesCategory && matchesQueue;
   });
 
-  const handleSaveScoring = (id: string, currentStatus: SubmissionStatus) => {
+  const handleSaveReview = async (id: string, originalStatus: SubmissionStatus) => {
+    const status = editingStatuses[id] ?? originalStatus;
     const score = editingScores[id];
-    const feedback = editingFeedback[id];
-    updateSubmissionStatus(id, currentStatus, score, feedback);
+    const feedback = editingFeedback[id] ?? '';
+    if (status === 'disqualified' && !feedback.trim()) {
+      setSaveErrors((previous) => ({
+        ...previous,
+        [id]: 'Add a clear rejection reason before rejecting this entry.',
+      }));
+      return;
+    }
+
+    setSavingIds((previous) => [...previous, id]);
+    setSavedIds((previous) => previous.filter((savedId) => savedId !== id));
+    setSaveErrors((previous) => ({ ...previous, [id]: '' }));
+    try {
+      await updateSubmissionStatus(id, status, score, feedback);
+      setSavedIds((previous) => [...previous, id]);
+    } catch (error: unknown) {
+      setSaveErrors((previous) => ({
+        ...previous,
+        [id]: error instanceof Error ? error.message : 'Unable to save the review.',
+      }));
+    } finally {
+      setSavingIds((previous) => previous.filter((savingId) => savingId !== id));
+    }
   };
 
+  const clearSaveMessage = (id: string) => {
+    setSavedIds((previous) => previous.filter((savedId) => savedId !== id));
+    setSaveErrors((previous) => {
+      if (!previous[id]) return previous;
+      const next = { ...previous };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const queueOptions: Array<{ id: QueueFilter; label: string; count: number }> = [
+    { id: 'needs-review', label: 'Awaiting review', count: awaitingReviewCount },
+    { id: 'in-progress', label: 'In progress', count: inProgressCount },
+    { id: 'decided', label: 'Decided', count: decidedCount },
+    { id: 'all', label: 'All entries', count: submissions.length },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-3 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3.5 top-3 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by entry title, student, or school..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
-          />
+    <div className="mx-auto max-w-7xl space-y-6">
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
+        <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full bg-amber-50" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Adjudication workspace
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+              Submission review
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+              Review the work and eligibility, choose an outcome, then share a clear note with the school.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 sm:min-w-[360px]">
+            <div className="rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-3">
+              <p className="text-xl font-semibold tabular-nums text-blue-950">{awaitingReviewCount}</p>
+              <p className="mt-0.5 text-[10px] font-medium leading-4 text-blue-800">Awaiting</p>
+            </div>
+            <div className="rounded-xl border border-amber-100 bg-amber-50/70 px-3 py-3">
+              <p className="text-xl font-semibold tabular-nums text-amber-950">{inProgressCount}</p>
+              <p className="mt-0.5 text-[10px] font-medium leading-4 text-amber-800">In progress</p>
+            </div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-3">
+              <p className="text-xl font-semibold tabular-nums text-emerald-950">{decidedCount}</p>
+              <p className="mt-0.5 text-[10px] font-medium leading-4 text-emerald-800">Decided</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <EntryStatusGuide />
+
+      <section aria-label="Submission queue" className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter review queue">
+          {queueOptions.map((option) => {
+            const active = queueFilter === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setQueueFilter(option.id)}
+                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                  active
+                    ? 'border-slate-900 bg-slate-900 text-white'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                {option.label}
+                <span className={`rounded-md px-1.5 py-0.5 text-[10px] tabular-nums ${
+                  active ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {option.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="flex gap-2">
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white"
-          >
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-amber-500 focus:bg-white capitalize"
-          >
-            {statuses.map((st) => (
-              <option key={st} value={st}>
-                Status: {st}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Submissions List */}
-      <div className="space-y-4">
-        {filtered.map((sub) => {
-          const currentScore = editingScores[sub.id] !== undefined ? editingScores[sub.id] : (sub.score ?? '');
-          const currentFeedback = editingFeedback[sub.id] !== undefined ? editingFeedback[sub.id] : (sub.judgeFeedback ?? '');
-
-          return (
-            <div
-              key={sub.id}
-              className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm hover:border-amber-300 transition-all space-y-4"
+        <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row">
+          <label className="relative min-w-0 flex-1">
+            <Search size={15} className="absolute left-3.5 top-3 text-slate-400" />
+            <span className="sr-only">Search entries</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search entry, student, school, or competition"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400"
+            />
+          </label>
+          <label>
+            <span className="sr-only">Filter by category</span>
+            <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-slate-400 sm:w-56"
             >
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-mono text-amber-700 font-semibold">
-                      {sub.schoolName}
-                    </span>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-xs text-slate-500">{sub.category}</span>
-                  </div>
-                  <h3 className="text-2xl font-serif font-bold text-slate-900 tracking-tight">
-                    {sub.entryTitle}
-                  </h3>
-                </div>
+              <option value="All">All categories</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </label>
+        </div>
 
-                <div className="flex items-center gap-3">
-                  <StatusBadge status={sub.status} />
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs font-medium text-slate-500" aria-live="polite">
+            {filtered.length
+              ? `Showing ${filtered.length} of ${submissions.length} ${submissions.length === 1 ? 'entry' : 'entries'}`
+              : 'No matching entries'}
+          </p>
+          {(search || categoryFilter !== 'All') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setCategoryFilter('All');
+              }}
+              className="text-xs font-medium text-amber-800 underline underline-offset-2"
+            >
+              Clear search
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          {filtered.map((submission) => {
+            const currentStatus = editingStatuses[submission.id] ?? submission.status;
+            const currentScore = editingScores[submission.id] !== undefined
+              ? editingScores[submission.id]
+              : submission.score ?? '';
+            const currentFeedback = editingFeedback[submission.id] !== undefined
+              ? editingFeedback[submission.id]
+              : submission.judgeFeedback ?? '';
+            const isSaving = savingIds.includes(submission.id);
+            const isSaved = savedIds.includes(submission.id);
+
+            return (
+              <article
+                key={submission.id}
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+              >
+                <div className="h-1 bg-gradient-to-r from-amber-500 via-amber-400 to-slate-200" />
+
+                <header className="flex flex-col gap-4 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5 sm:py-5">
+                  <div className="flex min-w-0 gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-800">
+                      <FileText size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="truncate text-xs font-semibold text-slate-800">{submission.schoolName}</span>
+                        <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:block" />
+                        <span className="text-xs text-slate-500">{submission.category}</span>
+                        <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${statusTone[submission.status]}`}>
+                          {statusLabels[submission.status]}
+                        </span>
+                      </div>
+                      <h2 className="break-words text-lg font-semibold tracking-tight text-slate-950 sm:text-xl">
+                        {submission.entryTitle}
+                      </h2>
+                      <p className="mt-1 text-xs text-slate-500">{submission.competitionTitle}</p>
+                    </div>
+                  </div>
                   <a
-                    href={sub.submissionLink}
+                    href={submission.submissionLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-medium transition-colors"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
                   >
-                    <ExternalLink size={13} />
-                    <span>Open Drive / Media</span>
+                    <ExternalLink size={14} />
+                    Open submitted work
                   </a>
-                </div>
-              </div>
+                </header>
 
-              {/* Contestant Meta & Synopsis */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/60 space-y-1">
-                  <p className="text-slate-400">Student Contestant:</p>
-                  <p className="text-slate-900 font-medium">{sub.studentName} ({sub.studentGrade})</p>
-                  {sub.studentAge !== undefined && (
-                    <p className="text-amber-700 font-semibold">Age: {sub.studentAge} yrs</p>
-                  )}
-                  {sub.studentBirthday && (
-                    <p className="text-slate-500 font-mono">DOB: {sub.studentBirthday}</p>
-                  )}
-                  <p className="text-slate-600 font-mono">{sub.studentContact}</p>
-                  <p className="text-slate-400 pt-1">Lodged: {sub.submittedAt}</p>
-                  {sub.competitionMedium && sub.competitionMedium !== 'None' && (
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                      sub.competitionMedium === 'Sinhala'
-                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                        : 'bg-violet-50 text-violet-700 border-violet-200'
-                    }`}>
-                      {sub.competitionMedium} Medium
-                    </span>
-                  )}
-                </div>
+                <div className="grid gap-4 px-4 py-4 sm:px-5 md:grid-cols-[minmax(180px,0.75fr)_minmax(0,1.8fr)]">
+                  <section aria-label="Student details" className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                    <div className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      <BadgeCheck size={13} className="text-slate-400" /> Student
+                    </div>
+                    <p className="text-sm font-semibold text-slate-900">{submission.studentName}</p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      {submission.studentGrade} · Age {submission.studentAge}
+                    </p>
+                    <div className="mt-3 space-y-1.5 border-t border-slate-200/80 pt-3 text-xs text-slate-500">
+                      <p>{submission.studentContact}</p>
+                      <p>Submitted {submission.submittedAt}</p>
+                    </div>
+                  </section>
 
-                <div className="md:col-span-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200/60">
-                  <p className="text-slate-400 mb-1">Synopsis / Project Statement:</p>
-                  <p className="text-slate-700 leading-relaxed font-light">{sub.synopsis}</p>
-                </div>
-              </div>
+                  <section className="min-w-0">
+                    <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      <FileCheck2 size={13} className="text-slate-400" /> Project statement
+                    </div>
+                    <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
+                      {submission.synopsis}
+                    </p>
+                  </section>
 
-              {/* Custom Parameter Values */}
-              {sub.customValues && Object.keys(sub.customValues).length > 0 && (
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs font-mono">
-                  <p className="text-slate-400 mb-1 uppercase text-[10px]">
-                    Category Specifications:
-                  </p>
-                  <div className="flex flex-wrap gap-4">
-                    {Object.entries(sub.customValues).map(([k, v]) => (
-                      <div key={k}>
-                        <span className="text-slate-500 capitalize">{k.replace('_', ' ')}: </span>
-                        <span className="text-slate-900 font-medium">{v}</span>
+                  {submission.customValues && Object.keys(submission.customValues).length > 0 && (
+                    <section className="md:col-span-2 rounded-xl border border-slate-100 bg-white p-4">
+                      <div className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                        <Sparkles size={13} className="text-amber-700" /> Competition details
                       </div>
-                    ))}
-                  </div>
+                      <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                        {Object.entries(submission.customValues).map(([key, value]) => (
+                          <div key={key} className="min-w-0">
+                            <dt className="text-[11px] text-slate-500">{key.replaceAll('_', ' ')}</dt>
+                            <dd className="mt-0.5 break-words text-sm font-medium text-slate-800">{value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </section>
+                  )}
                 </div>
+
+                <section aria-label={`Review ${submission.entryTitle}`} className="border-t border-amber-100 bg-amber-50/45 px-4 py-4 sm:px-5 sm:py-5">
+                  <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-amber-800">
+                        <Trophy size={14} />
+                      </span>
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-900">Review decision</h3>
+                        <p className="text-[11px] text-slate-500">Changes are shared with the school when saved.</p>
+                      </div>
+                    </div>
+                    {isSaved && (
+                      <span role="status" className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-800">
+                        <Check size={14} /> Review saved
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid gap-3 lg:grid-cols-[minmax(180px,0.8fr)_minmax(240px,1.6fr)_minmax(190px,0.9fr)]">
+                    <div>
+                      <label htmlFor={`status-${submission.id}`} className="mb-1.5 block text-xs font-semibold text-slate-700">
+                        Decision
+                      </label>
+                      <select
+                        id={`status-${submission.id}`}
+                        value={currentStatus}
+                        onChange={(event) => {
+                          setEditingStatuses((previous) => ({
+                            ...previous,
+                            [submission.id]: event.target.value as SubmissionStatus,
+                          }));
+                          clearSaveMessage(submission.id);
+                        }}
+                        aria-describedby={`decision-help-${submission.id}`}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-amber-500"
+                      >
+                        {(Object.keys(statusLabels) as SubmissionStatus[]).map((status) => (
+                          <option key={status} value={status}>{statusLabels[status]}</option>
+                        ))}
+                      </select>
+                      <p id={`decision-help-${submission.id}`} className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-4 text-slate-500">
+                        {currentStatus === 'submitted' || currentStatus === 'under_review'
+                          ? <Clock3 size={12} className="mt-0.5 shrink-0" />
+                          : <BadgeCheck size={12} className="mt-0.5 shrink-0" />}
+                        {getDecisionHelp(currentStatus)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label htmlFor={`feedback-${submission.id}`} className="mb-1.5 flex items-center justify-between gap-2 text-xs font-semibold text-slate-700">
+                        <span>{currentStatus === 'disqualified' ? 'Rejection reason' : 'Feedback for school'}</span>
+                        <span className="font-normal text-slate-400">Visible to school</span>
+                      </label>
+                      <textarea
+                        id={`feedback-${submission.id}`}
+                        rows={3}
+                        value={currentFeedback}
+                        maxLength={2000}
+                        onChange={(event) => {
+                          setEditingFeedback((previous) => ({ ...previous, [submission.id]: event.target.value }));
+                          clearSaveMessage(submission.id);
+                        }}
+                        placeholder={currentStatus === 'disqualified'
+                          ? 'Explain why this entry was not accepted…'
+                          : 'Share a clear, constructive note…'}
+                        className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm leading-5 text-slate-900 outline-none placeholder:text-slate-400 focus:border-amber-500"
+                      />
+                      <p className="mt-1 text-right text-[10px] text-slate-400">{currentFeedback.length}/2,000</p>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <label htmlFor={`score-${submission.id}`} className="mb-1.5 block text-xs font-semibold text-slate-700">
+                        Score <span className="font-normal text-slate-500">/ 100</span>
+                      </label>
+                      <div className="flex items-stretch gap-2">
+                        <input
+                          id={`score-${submission.id}`}
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={currentScore}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setEditingScores((previous) => {
+                              if (value === '') {
+                                const next = { ...previous };
+                                delete next[submission.id];
+                                return next;
+                              }
+                              return { ...previous, [submission.id]: Number(value) };
+                            });
+                            clearSaveMessage(submission.id);
+                          }}
+                          placeholder="Not scored"
+                          className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-amber-500"
+                        />
+                        <button
+                          type="button"
+                          disabled={isSaving}
+                          onClick={() => void handleSaveReview(submission.id, submission.status)}
+                          className="inline-flex min-w-[106px] items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          {isSaving ? (
+                            <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Saving</>
+                          ) : isSaved ? (
+                            <><Check size={14} /> Saved</>
+                          ) : (
+                            <><Save size={14} /> Save review</>
+                          )}
+                        </button>
+                      </div>
+                      <p className="mt-1.5 text-[11px] leading-4 text-slate-500">
+                        Optional. Leave blank if the entry has not been scored.
+                      </p>
+                    </div>
+                  </div>
+
+                  {saveErrors[submission.id] && (
+                    <p role="alert" className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800">
+                      {saveErrors[submission.id]}
+                    </p>
+                  )}
+                </section>
+              </article>
+            );
+          })}
+
+          {filtered.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+              <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                <Search size={18} />
+              </span>
+              <h2 className="mt-3 text-sm font-semibold text-slate-900">
+                {submissions.length === 0 ? 'No submissions yet' : 'No entries in this view'}
+              </h2>
+              <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-slate-500">
+                {submissions.length === 0
+                  ? 'When schools send in their entries, they will appear here for review.'
+                  : 'Try another queue, remove the search term, or choose a different category.'}
+              </p>
+              {queueFilter !== 'all' && submissions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setQueueFilter('all')}
+                  className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700"
+                >
+                  View all entries
+                </button>
               )}
-
-              {/* Adjudication Score & Comments Panel */}
-              <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/70 space-y-3">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="w-full sm:w-36">
-                    <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-600 mb-1">
-                      Score (0 - 100)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={currentScore}
-                      onChange={(e) =>
-                        setEditingScores({ ...editingScores, [sub.id]: Number(e.target.value) })
-                      }
-                      placeholder="e.g. 92"
-                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-900 font-mono font-bold text-sm focus:outline-none focus:border-amber-600"
-                    />
-                  </div>
-
-                  <div className="flex-1">
-                    <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-600 mb-1">
-                      Jury Notes & Adjudicator Critique
-                    </label>
-                    <input
-                      type="text"
-                      value={currentFeedback}
-                      onChange={(e) =>
-                        setEditingFeedback({ ...editingFeedback, [sub.id]: e.target.value })
-                      }
-                      placeholder="Remark on lighting, vocal dynamics, color grading..."
-                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs text-slate-800 focus:outline-none focus:border-amber-600"
-                    />
-                  </div>
-
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() => handleSaveScoring(sub.id, sub.status)}
-                      className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-sm flex items-center gap-1.5"
-                    >
-                      <Save size={13} />
-                      <span>Save Score</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Status Transitions */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-amber-200/60 text-xs">
-                  <span className="text-slate-500 mr-1 text-[11px]">Verdict:</span>
-                  <button
-                    onClick={() => updateSubmissionStatus(sub.id, 'verified')}
-                    className="px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-[11px] font-medium"
-                  >
-                    Verify & Accept
-                  </button>
-                  <button
-                    onClick={() => updateSubmissionStatus(sub.id, 'under_review')}
-                    className="px-2.5 py-1 rounded-md bg-amber-100 border border-amber-300 text-amber-800 hover:bg-amber-200 text-[11px] font-medium"
-                  >
-                    Under Review
-                  </button>
-                  <button
-                    onClick={() => updateSubmissionStatus(sub.id, 'shortlisted')}
-                    className="px-2.5 py-1 rounded-md bg-purple-50 border border-purple-300 text-purple-800 hover:bg-purple-100 text-[11px] font-medium"
-                  >
-                    Shortlist Finalist
-                  </button>
-                  <button
-                    onClick={() => updateSubmissionStatus(sub.id, 'winner')}
-                    className="px-2.5 py-1 rounded-md bg-amber-600 text-white hover:bg-amber-500 font-semibold text-[11px]"
-                  >
-                    Accolade Winner
-                  </button>
-                  <button
-                    onClick={() => updateSubmissionStatus(sub.id, 'disqualified')}
-                    className="px-2.5 py-1 rounded-md bg-red-50 border border-red-300 text-red-800 hover:bg-red-100 text-[11px] font-medium"
-                  >
-                    Disqualify
-                  </button>
-                </div>
-              </div>
             </div>
-          );
-        })}
-
-        {filtered.length === 0 && (
-          <div className="p-8 text-center rounded-2xl bg-white border border-slate-200 text-slate-500 text-xs">
-            No submissions found for the selected filters.
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

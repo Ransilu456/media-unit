@@ -33,11 +33,12 @@ export function StackedBarChart({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left 2 Cols: Stacked Bar Chart */}
-      <div className="lg:col-span-2 p-6 rounded-3xl bg-[#10172d]/90 border border-slate-800 shadow-xl">
+      <div className="lg:col-span-2 p-5 rounded-xl bg-white border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <span className="text-xs font-mono uppercase text-slate-400">Total Delegations</span>
-            <div className="text-2xl sm:text-3xl font-mono font-bold text-white tracking-tight">
+            <h4 className="text-sm font-semibold text-slate-900 mb-2">{title}</h4>
+            <span className="text-xs uppercase text-slate-500">Total Delegations</span>
+            <div className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
               {totalSubmissions}
             </div>
             <span className="text-[11px] text-slate-500">{period}</span>
@@ -45,26 +46,26 @@ export function StackedBarChart({
 
           <div className="flex gap-6 text-xs">
             <div>
-              <span className="text-slate-400 block text-[10px] uppercase font-mono">Participating</span>
-              <span className="font-mono font-bold text-white text-base">42 Schools</span>
-              <span className="text-emerald-400 block text-[10px]">↑ 24% more</span>
+              <span className="text-slate-500 block text-[10px] uppercase">Participating</span>
+              <span className="font-semibold text-slate-900 text-base">42 Schools</span>
+              <span className="text-emerald-700 block text-[10px]">↑ 24% more</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px] uppercase font-mono">New Districts</span>
-              <span className="font-mono font-bold text-white text-base">9 Provinces</span>
-              <span className="text-emerald-400 block text-[10px]">↑ 37% more</span>
+              <span className="text-slate-500 block text-[10px] uppercase">New Districts</span>
+              <span className="font-semibold text-slate-900 text-base">9 Provinces</span>
+              <span className="text-emerald-700 block text-[10px]">↑ 37% more</span>
             </div>
           </div>
         </div>
 
         {/* Stacked Bars */}
-        <div className="h-56 flex items-end justify-between gap-3 pt-6 border-b border-slate-800 pb-2">
+        <div className="h-56 flex items-end justify-between gap-3 pt-6 border-b border-slate-200 pb-2">
           {bars.map((bar, i) => (
             <div key={i} className="flex-1 flex flex-col items-center justify-end h-full group">
-              <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 mb-1 opacity-80 group-hover:opacity-100">
+              <span className="text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 mb-1">
                 {bar.tag}
               </span>
-              <div className="w-full max-w-[42px] flex flex-col-reverse rounded-xl overflow-hidden shadow-md">
+              <div className="w-full max-w-[42px] flex flex-col-reverse rounded-md overflow-hidden">
                 {/* Purple base bar */}
                 <div
                   style={{ height: `${bar.purpleVal * 1.4}px` }}
@@ -76,34 +77,33 @@ export function StackedBarChart({
                   className="w-full bg-[#0284c7] group-hover:bg-[#38bdf8] transition-colors"
                 />
               </div>
-              <span className="text-[11px] font-mono text-slate-400 mt-2">{bar.month}</span>
+              <span className="text-[11px] text-slate-500 mt-2">{bar.month}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Right Col: Top 5 Tracks Progress */}
-      <div className="p-6 rounded-3xl bg-[#10172d]/90 border border-slate-800 shadow-xl flex flex-col justify-between">
+      <div className="p-5 rounded-xl bg-white border border-slate-200 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-semibold text-white">Top 5 Competition Tracks</h4>
-            <span className="text-[11px] text-slate-400 font-mono">All Tracks</span>
+            <h4 className="text-sm font-semibold text-slate-900">Top 5 Competition Tracks</h4>
+            <span className="text-[11px] text-slate-500">All Tracks</span>
           </div>
 
           <div className="space-y-3.5">
             {tracks.map((t) => (
               <div key={t.name} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 font-medium truncate">{t.name}</span>
-                  <span className="font-mono text-white font-bold">{t.value}</span>
+                  <span className="text-slate-600 font-medium truncate">{t.name}</span>
+                  <span className="text-slate-900 font-semibold">{t.value}</span>
                 </div>
-                <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden">
+                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${(t.value / 150) * 100}%`,
                       backgroundColor: t.color,
-                      boxShadow: `0 0 8px ${t.color}60`,
                     }}
                   />
                 </div>
@@ -112,9 +112,9 @@ export function StackedBarChart({
           </div>
         </div>
 
-        <div className="pt-4 mt-4 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+        <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
           <span>Active Adjudication</span>
-          <span className="text-emerald-400 font-medium">94.2% Reviewed</span>
+          <span className="text-emerald-700 font-medium">94.2% Reviewed</span>
         </div>
       </div>
     </div>

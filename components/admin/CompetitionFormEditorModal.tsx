@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Competition, CategoryType, FormField, CompetitionStatus } from '@/lib/types';
-import { X, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { Competition, CategoryType, CompetitionStatus, FormField, MediumType } from '@/lib/types';
+import { X, Trash2, AlertCircle } from 'lucide-react';
 
 interface FormEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   competitionToEdit?: Competition | null;
-  onSave: (comp: Omit<Competition, 'id'> | Competition) => void;
+  onSave: (comp: Omit<Competition, 'id'>) => void | Promise<void>;
 }
 
 export function CompetitionFormEditorModal({
@@ -23,6 +23,7 @@ export function CompetitionFormEditorModal({
   const [category, setCategory] = useState<CategoryType>(
     competitionToEdit?.category || 'Short Film & Cinematography'
   );
+  const [medium, setMedium] = useState<MediumType>(competitionToEdit?.medium || 'None');
   const [description, setDescription] = useState(competitionToEdit?.description || '');
   const [eligibility, setEligibility] = useState(competitionToEdit?.eligibility || 'Grades 9 - 13');
   const [deadline, setDeadline] = useState(competitionToEdit?.deadline || '2026-11-25');
@@ -39,8 +40,8 @@ export function CompetitionFormEditorModal({
 
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldType, setNewFieldType] = useState<FormField['type']>('text');
-  const [newFieldRequired, setNewFieldRequired] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!isOpen) return null;
 
@@ -50,7 +51,7 @@ export function CompetitionFormEditorModal({
       id: `field_${Date.now().toString(36)}`,
       label: newFieldLabel.trim(),
       type: newFieldType,
-      required: newFieldRequired,
+      required: true,
       placeholder: `Enter ${newFieldLabel.trim()}...`,
     };
     setCustomFields([...customFields, newField]);
@@ -61,7 +62,7 @@ export function CompetitionFormEditorModal({
     setCustomFields(customFields.filter((f) => f.id !== id));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       setError('Please provide a competition title.');
@@ -73,13 +74,14 @@ export function CompetitionFormEditorModal({
       .map((g) => g.trim())
       .filter(Boolean);
 
-    const compData = {
-      ...(competitionToEdit ? { id: competitionToEdit.id } : {}),
+    const compData: Omit<Competition, 'id'> = {
       title: title.trim(),
       category,
+      medium,
       slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       description: description.trim(),
       eligibility: eligibility.trim(),
+      ...(competitionToEdit?.ageCategory ? { ageCategory: competitionToEdit.ageCategory } : {}),
       deadline,
       maxEntriesPerSchool: Number(maxEntries),
       status,
@@ -88,8 +90,16 @@ export function CompetitionFormEditorModal({
       customFields,
     };
 
-    onSave(compData as any);
-    onClose();
+    setIsSaving(true);
+    setError(null);
+    try {
+      await onSave(compData);
+      onClose();
+    } catch (saveError: unknown) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to save the competition.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const categories: CategoryType[] = [
@@ -140,7 +150,7 @@ export function CompetitionFormEditorModal({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
                 Category Track *
@@ -155,6 +165,21 @@ export function CompetitionFormEditorModal({
                     {c}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Medium *
+              </label>
+              <select
+                value={medium}
+                onChange={(e) => setMedium(e.target.value as MediumType)}
+                className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
+              >
+                <option value="None">All / None</option>
+                <option value="Sinhala">Sinhala</option>
+                <option value="English">English</option>
               </select>
             </div>
 
@@ -296,7 +321,7 @@ export function CompetitionFormEditorModal({
               />
               <select
                 value={newFieldType}
-                onChange={(e) => setNewFieldType(e.target.value as any)}
+                onChange={(e) => setNewFieldType(e.target.value as FormField['type'])}
                 className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900"
               >
                 <option value="text">Text</option>
@@ -317,9 +342,10 @@ export function CompetitionFormEditorModal({
           <div className="pt-4">
             <button
               type="submit"
+              disabled={isSaving}
               className="w-full py-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs sm:text-sm shadow-sm"
             >
-              {isEditing ? 'Save Form Changes' : 'Publish Competition Track'}
+              {isSaving ? 'Saving...' : isEditing ? 'Save Form Changes' : 'Publish Competition Track'}
             </button>
           </div>
         </form>

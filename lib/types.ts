@@ -97,6 +97,23 @@ export interface Submission {
   judgeFeedback?: string;
 }
 
+export interface NewSubmissionInput {
+  competitionId: string;
+  competitionTitle?: string;
+  competitionMedium?: MediumType;
+  schoolId: string;
+  schoolName?: string;
+  category: CategoryType;
+  studentName: string;
+  studentGrade: string;
+  studentBirthday: string;
+  studentContact: string;
+  entryTitle: string;
+  submissionLink: string;
+  synopsis: string;
+  customValues?: Record<string, string>;
+}
+
 export interface AuthSession {
   type: 'guest' | 'school' | 'admin';
   school?: RegisteredSchool;

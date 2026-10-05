@@ -71,9 +71,9 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
       <div className="flex items-start gap-2.5 p-3 mb-5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs">
         <Info size={14} className="shrink-0 mt-0.5" />
         <span>
-          <strong>Are you a student?</strong> You don't need to log in.{' '}
+          <strong>Are you a student?</strong> Ask your teacher-in-charge to submit your entry using the school account.{' '}
           <Link href="/apply" className="underline font-semibold hover:text-blue-900">
-            Apply for a competition here →
+            View open competitions →
           </Link>
         </span>
       </div>
@@ -146,7 +146,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
             <div className="relative">
               <Mail size={14} className="absolute left-3 top-2.5 text-slate-400" />
               <input
-                type="text" required value={email} onChange={(e) => setEmail(e.target.value)}
+                type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="Configured admin email"
                 className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:border-slate-600 focus:bg-white"
               />

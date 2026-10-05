@@ -29,13 +29,31 @@ export function AdminCompetitionsManager() {
     setEditorOpen(true);
   };
 
-  const handleSave = (compData: any) => {
+  const handleSave = async (compData: Omit<Competition, 'id'>) => {
     if (compToEdit) {
-      updateCompetition(compToEdit.id, compData);
+      await updateCompetition(compToEdit.id, compData);
     } else {
-      addCompetition(compData);
+      await addCompetition(compData);
     }
   };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCompetition(id);
+    } catch (error: unknown) {
+      window.alert(error instanceof Error ? error.message : 'Unable to delete the competition.');
+    }
+  };
+
+  const handleToggleStatus = async (id: string, status: Competition['status']) => {
+    try {
+      await updateCompetition(id, { status });
+    } catch (error: unknown) {
+      window.alert(error instanceof Error ? error.message : 'Unable to update the competition.');
+    }
+  };
+
+  const openCount = competitions.filter((competition) => competition.status === 'open').length;
 
   return (
     <div className="space-y-6">
@@ -43,10 +61,10 @@ export function AdminCompetitionsManager() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
         <div>
           <h3 className="text-xl font-serif font-bold text-slate-900 tracking-tight">
-            Competition Tracks & Dynamic Forms ({competitions.length})
+            Competitions ({competitions.length})
           </h3>
-          <p className="text-xs text-slate-500 font-light mt-0.5">
-            Configure entry categories, submission quotas, deadlines, and dynamic form questions.
+          <p className="text-xs text-slate-500 mt-1">
+            {openCount} open for entries. Check eligibility, deadline, school entry limit, and form questions before opening a track.
           </p>
         </div>
 
@@ -55,9 +73,15 @@ export function AdminCompetitionsManager() {
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold transition-all shadow-sm"
         >
           <Plus size={15} />
-          <span>Add Competition Track</span>
+          <span>Add competition</span>
         </button>
       </div>
+
+      <section className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-white p-4 text-xs leading-5 text-slate-600 sm:grid-cols-3">
+        <p><strong className="text-slate-900">Open:</strong> schools can submit entries before the deadline.</p>
+        <p><strong className="text-slate-900">Closed:</strong> new entries are not accepted.</p>
+        <p><strong className="text-slate-900">Upcoming / judging:</strong> not accepting entries; set Open when ready to launch.</p>
+      </section>
 
       {/* Competitions Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -87,12 +111,12 @@ export function AdminCompetitionsManager() {
 
                 <div className="space-y-1.5 py-3 border-y border-slate-100 text-xs text-slate-700 mb-4 font-mono">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Deadline:</span>
-                    <span className="text-amber-700 font-semibold">{comp.deadline}</span>
+                    <span className="text-slate-400">Submission deadline:</span>
+                    <span className="text-amber-700 font-semibold">{new Date(`${comp.deadline}T00:00:00`).toLocaleDateString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Entries Lodged:</span>
-                    <span className="text-slate-900 font-bold">{compSubs.length} entries</span>
+                    <span className="text-slate-400">Entries received:</span>
+                    <span className="text-slate-900 font-bold">{compSubs.length}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Form Questions:</span>
@@ -125,14 +149,13 @@ export function AdminCompetitionsManager() {
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() =>
-                      updateCompetition(comp.id, {
-                        status: comp.status === 'open' ? 'closed' : 'open',
-                      })
-                    }
+                    onClick={() => void handleToggleStatus(
+                      comp.id,
+                      comp.status === 'open' ? 'closed' : 'open'
+                    )}
                     className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-medium"
                   >
-                    Toggle {comp.status === 'open' ? 'Close' : 'Open'}
+                    {comp.status === 'open' ? 'Close entries' : 'Open entries'}
                   </button>
                 </div>
 
@@ -148,7 +171,7 @@ export function AdminCompetitionsManager() {
                   <button
                     onClick={() => {
                       if (confirm(`Delete track "${comp.title}"?`)) {
-                        deleteCompetition(comp.id);
+                        void handleDelete(comp.id);
                       }
                     }}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"

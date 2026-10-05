@@ -3,12 +3,12 @@
 import React from 'react';
 
 interface RadialMetricCardProps {
-  percentage: number;
+  percentage?: number;
   label: string;
   value: string;
   trendText?: string;
+  description?: string;
   strokeColor?: string;
-  glowColor?: string;
 }
 
 export function RadialMetricCard({
@@ -16,15 +16,17 @@ export function RadialMetricCard({
   label,
   value,
   trendText,
+  description,
   strokeColor = '#8b5cf6',
-  glowColor = 'rgba(139, 92, 246, 0.4)',
 }: RadialMetricCardProps) {
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  const hasPercentage = percentage !== undefined;
+  const progress = percentage ?? 0;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#131b34]/90 border border-slate-800/80 shadow-lg hover:border-slate-700 transition-all">
+    <div className="flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-200">
       {/* Circular Progress Ring */}
       <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 70 70">
@@ -34,7 +36,7 @@ export function RadialMetricCard({
             cy="35"
             r={radius}
             fill="transparent"
-            stroke="#1e2b52"
+            stroke="#e2e8f0"
             strokeWidth="6"
           />
           {/* Progress Arc */}
@@ -43,34 +45,37 @@ export function RadialMetricCard({
             cy="35"
             r={radius}
             fill="transparent"
-            stroke={strokeColor}
+            stroke={hasPercentage ? strokeColor : '#cbd5e1'}
             strokeWidth="6"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
             style={{
-              filter: `drop-shadow(0 0 6px ${glowColor})`,
               transition: 'stroke-dashoffset 0.8s ease',
             }}
           />
         </svg>
 
-        {/* Center Percentage */}
-        <span className="absolute text-xs font-mono font-bold text-white">
-          {percentage}%
+        <span className="absolute text-xs font-semibold text-slate-800" aria-hidden="true">
+          {hasPercentage ? `${progress}%` : value}
         </span>
       </div>
 
       {/* Metric Info */}
       <div className="min-w-0">
-        <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 block truncate">
+        <span className="text-[11px] uppercase tracking-wider text-slate-500 block truncate">
           {label}
         </span>
-        <div className="text-xl font-mono font-bold text-white tracking-tight truncate">
-          {value}
-        </div>
+        {hasPercentage && (
+          <div className="text-xl font-semibold text-slate-900 tracking-tight truncate">
+            {value}
+          </div>
+        )}
+        {description && (
+          <p className="mt-0.5 text-[11px] leading-4 text-slate-500">{description}</p>
+        )}
         {trendText && (
-          <p className="text-[11px] text-emerald-400 font-medium flex items-center gap-1 mt-0.5 truncate">
+          <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-0.5 truncate">
             <span>{trendText}</span>
             <span className="text-xs">↑</span>
           </p>

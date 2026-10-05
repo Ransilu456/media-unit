@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { getRequestSession } from '@/lib/auth';
-import { INITIAL_COMPETITIONS } from '@/lib/constants';
 import { readDb, mutateDb } from '@/lib/db';
-import { Submission } from '@/lib/types';
+import { Submission, SubmissionStatus } from '@/lib/types';
 import {
   InvalidRequestError,
   calculateAge,
+  isSubmissionInput,
   readJsonRequest,
   validateSubmissionInput,
 } from '@/lib/validation';
@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await readJsonRequest(request);
-    const validationErrors = validateSubmissionInput(body);
+    const db = readDb();
+    const validationErrors = validateSubmissionInput(body, db.competitions);
     if (Object.keys(validationErrors).length > 0) {
       return Response.json(
         {
@@ -66,10 +67,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    if (!isSubmissionInput(body)) {
       return Response.json({ success: false, error: 'Invalid submission data.' }, { status: 400 });
     }
-    const input = body as Record<string, unknown>;
+    const input = body;
     if (input.schoolId !== session.schoolId) {
       return Response.json(
         { success: false, error: 'You can only submit entries for your own school.' },
@@ -77,7 +78,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = readDb();
     const school = db.schools.find((record) => record.id === session.schoolId);
     if (!school || school.status !== 'active') {
       return Response.json(
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
-    const competition = INITIAL_COMPETITIONS.find((item) => item.id === input.competitionId);
+    const competition = db.competitions.find((item) => item.id === input.competitionId);
     if (!competition || competition.status !== 'open') {
       return Response.json(
         { success: false, error: 'This competition is not accepting entries.' },
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const studentBirthday = input.studentBirthday as string;
+    const studentBirthday = input.studentBirthday;
     const submittedAt = new Date().toISOString().slice(0, 10);
     const age = calculateAge(studentBirthday, new Date(`${submittedAt}T23:59:59.999Z`));
     if (age === null) {
@@ -124,15 +124,15 @@ export async function POST(request: NextRequest) {
       schoolId: school.id,
       schoolName: school.name,
       category: competition.category,
-      studentName: (input.studentName as string).trim(),
-      studentGrade: (input.studentGrade as string).trim(),
+      studentName: input.studentName.trim(),
+      studentGrade: input.studentGrade.trim(),
       studentBirthday,
       studentAge: age,
-      studentContact: (input.studentContact as string).trim(),
-      entryTitle: (input.entryTitle as string).trim(),
-      submissionLink: (input.submissionLink as string).trim(),
-      synopsis: (input.synopsis as string).trim(),
-      customValues: (input.customValues ?? {}) as Record<string, string>,
+      studentContact: input.studentContact.trim(),
+      entryTitle: input.entryTitle.trim(),
+      submissionLink: input.submissionLink.trim(),
+      synopsis: input.synopsis.trim(),
+      customValues: input.customValues ?? {},
       status: 'submitted',
       submittedAt,
     };
@@ -144,6 +144,71 @@ export async function POST(request: NextRequest) {
       return Response.json({ success: false, error: error.message }, { status: 400 });
     }
     console.error('[POST /api/submissions]', error);
+    return Response.json(
+      { success: false, error: 'Internal server error.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const session = getRequestSession(request.headers.get('cookie'));
+  if (session?.role !== 'admin') {
+    return Response.json(
+      { success: false, error: 'Admin access required.' },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const body = await readJsonRequest(request);
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return Response.json({ success: false, error: 'Invalid submission update.' }, { status: 400 });
+    }
+    const input = body as Record<string, unknown>;
+    const allowedFields = new Set(['id', 'status', 'score', 'feedback']);
+    const statuses: readonly SubmissionStatus[] = [
+      'submitted',
+      'under_review',
+      'verified',
+      'shortlisted',
+      'winner',
+      'disqualified',
+    ];
+    if (
+      Object.keys(input).some((key) => !allowedFields.has(key))
+      || typeof input.id !== 'string'
+      || input.id.trim().length === 0
+      || (input.status !== undefined && !statuses.some((status) => status === input.status))
+      || (input.score !== undefined
+        && (typeof input.score !== 'number' || !Number.isFinite(input.score) || input.score < 0 || input.score > 100))
+      || (input.feedback !== undefined
+        && (typeof input.feedback !== 'string' || input.feedback.length > 2000))
+      || (input.status === 'disqualified'
+        && (typeof input.feedback !== 'string' || !input.feedback.trim()))
+      || (input.status === undefined && input.score === undefined && input.feedback === undefined)
+    ) {
+      return Response.json({ success: false, error: 'Invalid submission update.' }, { status: 400 });
+    }
+
+    const updatedDb = mutateDb((database) => {
+      const record = database.submissions.find((entry) => entry.id === input.id);
+      if (!record) return;
+      if (input.status !== undefined) record.status = input.status as SubmissionStatus;
+      if (input.score !== undefined) record.score = input.score as number;
+      if (input.feedback !== undefined) record.judgeFeedback = input.feedback as string;
+    });
+    const submission = updatedDb.submissions.find((record) => record.id === input.id);
+    if (!submission) {
+      return Response.json({ success: false, error: 'Submission not found.' }, { status: 404 });
+    }
+
+    return Response.json({ success: true, data: submission });
+  } catch (error: unknown) {
+    if (error instanceof InvalidRequestError) {
+      return Response.json({ success: false, error: error.message }, { status: 400 });
+    }
+    console.error('[PATCH /api/submissions]', error);
     return Response.json(
       { success: false, error: 'Internal server error.' },
       { status: 500 }

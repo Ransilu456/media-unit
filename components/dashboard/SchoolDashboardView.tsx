@@ -6,12 +6,14 @@ import Image from 'next/image';
 import { useMediaStore } from '@/lib/store';
 import { Competition } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/Badge';
+import { RadialMetricCard } from '@/components/dashboard/RadialMetricCard';
+import { EntryStatusGuide } from '@/components/dashboard/EntryStatusGuide';
 import { EntrySubmissionModal } from '@/components/forms/EntrySubmissionModal';
 import { SchoolTab } from '@/components/layout/SchoolPortalLayout';
 import {
   Trophy, ExternalLink, Calendar,
-  ShieldCheck, Users, CheckCircle2, Sparkles,
-  Clock, Star, BarChart3, TrendingUp, AlertCircle,
+  ShieldCheck, Users, Sparkles,
+  Star, AlertCircle,
   Mic, Camera, Radio, Newspaper, ArrowRight, Plus,
 } from 'lucide-react';
 
@@ -42,31 +44,6 @@ function MediumChip({ medium }: { medium: string }) {
   return null;
 }
 
-// ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, val, icon: Icon, gradient, badge }: {
-  label: string; val: number; icon: React.ElementType;
-  gradient: string; badge?: string;
-}) {
-  return (
-    <div className={`relative rounded-2xl p-5 overflow-hidden ${gradient} border`}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-3xl font-black text-white drop-shadow">{val}</p>
-          <p className="text-xs font-semibold text-white/80 mt-1">{label}</p>
-        </div>
-        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-          <Icon size={18} className="text-white" />
-        </div>
-      </div>
-      {badge && (
-        <div className="absolute bottom-3 right-3 text-[10px] font-bold text-white/60 uppercase tracking-wide">{badge}</div>
-      )}
-      {/* Decorative circle */}
-      <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full bg-white/10" />
-    </div>
-  );
-}
-
 export function SchoolDashboardView({ activeTab, onTabChange, initialCompetitionId }: Props) {
   const { session, competitions, submissions, refreshSubmissions } = useMediaStore();
   const school = session.school;
@@ -74,6 +51,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
   const [selectedComp, setSelectedComp] = useState<Competition | null>(() =>
     initialCompetitionId ? competitions.find(c => c.id === initialCompetitionId) ?? null : null
   );
+  const [today] = useState(() => new Date());
 
   if (!school) {
     return (
@@ -82,7 +60,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
           <ShieldCheck size={36} className="text-white" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Required</h2>
-        <p className="text-slate-500 text-sm max-w-sm mb-6">Sign in with your school's registered credentials to access this portal.</p>
+        <p className="text-slate-500 text-sm max-w-sm mb-6">Sign in with your school&apos;s registered credentials to access this portal.</p>
         <Link href="/login" className="px-6 py-3 rounded-xl bg-amber-600 text-white text-sm font-semibold hover:bg-amber-500 transition-all shadow-sm">
           Sign In
         </Link>
@@ -92,13 +70,19 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
 
   const mySubmissions = submissions.filter(s => s.schoolId === school.id);
   const openComps = competitions.filter(c => c.status === 'open');
+  const nearestDeadlines = [...openComps]
+    .sort((first, second) => first.deadline.localeCompare(second.deadline))
+    .slice(0, 3);
 
   const stats = {
-    total:       mySubmissions.length,
-    pending:     mySubmissions.filter(s => s.status === 'submitted' || s.status === 'under_review').length,
-    verified:    mySubmissions.filter(s => s.status === 'verified').length,
-    shortlisted: mySubmissions.filter(s => s.status === 'shortlisted' || s.status === 'winner').length,
+    total: mySubmissions.length,
+    awaitingReview: mySubmissions.filter((submission) => submission.status === 'submitted').length,
+    underReview: mySubmissions.filter((submission) => submission.status === 'under_review').length,
+    advanced: mySubmissions.filter((submission) =>
+      ['verified', 'shortlisted', 'winner'].includes(submission.status)
+    ).length,
   };
+  const feedbackCount = mySubmissions.filter((submission) => submission.judgeFeedback?.trim()).length;
 
   return (
     <>
@@ -107,35 +91,34 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
         <div className="w-full space-y-6">
 
           {/* School Hero Banner */}
-          <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 sm:p-8 overflow-hidden border border-slate-700 shadow-xl">
-            {/* Decorative background */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
-            </div>
-
-            <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="h-1 bg-gradient-to-r from-amber-500 via-amber-300 to-slate-100" />
+            <div className="p-5 sm:p-7">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-800">
+                School workspace · 2026
+              </p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               {/* School avatar */}
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-black text-3xl shadow-lg shadow-amber-900/40 shrink-0">
+              <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 font-semibold text-2xl shrink-0">
                 {school.name[0]}
               </div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="text-xs font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-semibold">
+                  <span className="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md font-semibold tracking-wide">
                     {school.badgeCode}
                   </span>
-                  <span className="text-xs text-slate-400">{school.district} · {school.province}</span>
+                  <span className="text-xs text-slate-500">{school.district} · {school.province}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    school.status === 'active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                    'bg-red-500/20 text-red-400 border border-red-500/30'
+                    school.status === 'active' ? 'bg-emerald-50 text-emerald-700' :
+                    'bg-rose-50 text-rose-700'
                   }`}>{school.status}</span>
                 </div>
-                <h1 className="text-2xl font-bold text-white leading-tight">{school.name}</h1>
-                <p className="text-xs text-slate-400 mt-1">
-                  Teacher: <span className="text-slate-300 font-medium">{school.teacherInCharge}</span>
+                <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-950 leading-tight">{school.name}</h1>
+                <p className="text-xs text-slate-500 mt-1">
+                  Teacher: <span className="text-slate-700 font-medium">{school.teacherInCharge}</span>
                   {school.mediaPresident && (
-                    <> · President: <span className="text-slate-300 font-medium">{school.mediaPresident}</span></>
+                    <> · President: <span className="text-slate-700 font-medium">{school.mediaPresident}</span></>
                   )}
                 </p>
               </div>
@@ -143,68 +126,110 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
               <button
                 onClick={() => openComps[0] && setSelectedComp(openComps[0])}
                 disabled={openComps.length === 0}
-                className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-amber-900/30"
+                className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-700 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Plus size={15} /> New Entry
+                <Plus size={15} /> Add student entry
               </button>
+            </div>
             </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <StatCard
-              label="Total Entries"
-              val={stats.total}
-              icon={BarChart3}
-              gradient="bg-gradient-to-br from-slate-700 to-slate-900 border-slate-700"
-            />
-            <StatCard
-              label="Under Review"
-              val={stats.pending}
-              icon={Clock}
-              gradient="bg-gradient-to-br from-amber-500 to-orange-600 border-amber-400"
-              badge="pending"
-            />
-            <StatCard
-              label="Verified"
-              val={stats.verified}
-              icon={CheckCircle2}
-              gradient="bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400"
-              badge="passed"
-            />
-            <StatCard
-              label="Shortlisted"
-              val={stats.shortlisted}
-              icon={TrendingUp}
-              gradient="bg-gradient-to-br from-blue-500 to-indigo-600 border-blue-400"
-              badge="top"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <RadialMetricCard label="Total entries" value={String(stats.total)} description="Submitted by your school" strokeColor="#2563eb" />
+            <RadialMetricCard label="Awaiting review" value={String(stats.awaitingReview)} percentage={stats.total ? Math.round((stats.awaitingReview / stats.total) * 100) : 0} description="Received; no decision yet" strokeColor="#d97706" />
+            <RadialMetricCard label="Under review" value={String(stats.underReview)} percentage={stats.total ? Math.round((stats.underReview / stats.total) * 100) : 0} description="Being checked by the team" strokeColor="#0f766e" />
+            <RadialMetricCard label="Accepted / advanced" value={String(stats.advanced)} percentage={stats.total ? Math.round((stats.advanced / stats.total) * 100) : 0} description="Accepted, finalist, or winner" strokeColor="#7c3aed" />
           </div>
 
-          {/* Availability notice */}
-          {openComps.length > 0 && (
-            <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-                <Trophy size={18} className="text-amber-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-amber-900">
-                  {openComps.length} competition{openComps.length > 1 ? 's' : ''} open for entries
-                </p>
-                <p className="text-xs text-amber-700 mt-0.5">Submit your students' entries before the deadlines.</p>
-              </div>
-              <button
-                onClick={() => onTabChange('competitions')}
-                className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-500 transition-all"
-              >
-                Browse <ArrowRight size={12} />
-              </button>
+          <section className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-amber-800">
+                Your next step
+              </p>
+              <h2 className="text-sm font-semibold text-slate-900">
+                {feedbackCount
+                  ? 'Administrator feedback is available'
+                  : mySubmissions.length === 0 && openComps.length > 0
+                    ? 'Ready to submit your first entry?'
+                    : stats.awaitingReview || stats.underReview
+                      ? 'Your entries are being processed'
+                      : openComps.length > 0
+                        ? 'More competitions are open'
+                        : 'You are up to date'}
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                {feedbackCount
+                  ? `${feedbackCount} ${feedbackCount === 1 ? 'entry has' : 'entries have'} school-visible feedback. Open Student entries to read it.`
+                  : mySubmissions.length === 0 && openComps.length > 0
+                    ? 'Choose an open competition, check its eligibility and deadline, then add a student entry.'
+                    : stats.awaitingReview || stats.underReview
+                      ? 'You do not need to resubmit. Check Student entries for status updates and feedback.'
+                      : openComps.length > 0
+                        ? `${openComps.length} competitions are accepting entries. Check how many entries your school can still submit.`
+                        : 'There are no open competitions or new review updates to act on right now.'}
+              </p>
             </div>
+            <button
+              type="button"
+              onClick={() => onTabChange(feedbackCount ? 'students' : mySubmissions.length === 0 ? 'competitions' : 'students')}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800"
+            >
+              {feedbackCount ? 'Read feedback' : mySubmissions.length === 0 ? 'Browse competitions' : 'Track entries'} <ArrowRight size={13} />
+            </button>
+          </section>
+
+          {nearestDeadlines.length > 0 && (
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <div className="flex flex-col gap-1 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-amber-800">Plan ahead</p>
+                  <h2 className="mt-1 text-sm font-semibold text-slate-900">Upcoming submission deadlines</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onTabChange('competitions')}
+                  className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-950 sm:mt-0"
+                >
+                  All competitions <ArrowRight size={13} />
+                </button>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {nearestDeadlines.map((competition) => {
+                  const used = mySubmissions.filter((entry) => entry.competitionId === competition.id).length;
+                  const full = used >= competition.maxEntriesPerSchool;
+                  const deadline = new Date(`${competition.deadline}T00:00:00`);
+                  return (
+                    <div key={competition.id} className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-800">
+                        <Calendar size={16} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-slate-900">{competition.title}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Due {deadline.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                          <span className="mx-1.5 text-slate-300">·</span>
+                          {used} of {competition.maxEntriesPerSchool} school entries used
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedComp(competition)}
+                        disabled={full}
+                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-amber-300 hover:bg-amber-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                      >
+                        {full ? 'Limit reached' : 'Add entry'} {!full && <Plus size={13} />}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           )}
 
           {/* Recent entries */}
           {mySubmissions.length > 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center">
@@ -251,7 +276,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
               </div>
               <h3 className="text-base font-bold text-slate-700 mb-1">No Entries Yet</h3>
               <p className="text-xs text-slate-400 mb-5 max-w-xs mx-auto">
-                Use "Add New Entry" to register your students for open competitions.
+                Use &quot;Add New Entry&quot; to register your students for open competitions.
               </p>
               <button
                 onClick={() => onTabChange('competitions')}
@@ -281,11 +306,13 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
             </button>
           </div>
 
+          <EntryStatusGuide />
+
           {mySubmissions.length === 0 ? (
             <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-14 text-center">
               <Users size={32} className="mx-auto text-slate-300 mb-3" />
               <h3 className="text-sm font-bold text-slate-600 mb-1">No entries registered yet</h3>
-              <p className="text-xs text-slate-400 mb-4">Add student entries through the competitions tab.</p>
+              <p className="text-xs text-slate-400 mb-4">Choose an open competition, check the student eligibility and entry limit, then submit the application.</p>
               <button onClick={() => onTabChange('competitions')} className="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors">
                 Browse Open Competitions
               </button>
@@ -295,7 +322,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
               {mySubmissions.map(sub => {
                 const CatIcon = CATEGORY_ICONS[sub.category] ?? Trophy;
                 return (
-                  <div key={sub.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-amber-200 transition-all">
+                  <div key={sub.id} className="bg-white rounded-2xl border border-slate-200 p-5 transition-colors hover:border-slate-300">
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex items-start gap-3 min-w-0">
                         <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
@@ -351,7 +378,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
 
                     {sub.judgeFeedback && (
                       <div className="mt-2 p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-800 italic">
-                        "{sub.judgeFeedback}"
+                        &quot;{sub.judgeFeedback}&quot;
                       </div>
                     )}
                   </div>
@@ -382,7 +409,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
                 const mine = mySubmissions.filter(s => s.competitionId === comp.id).length;
                 const full = mine >= comp.maxEntriesPerSchool;
                 const CatIcon = CATEGORY_ICONS[comp.category] ?? Trophy;
-                const daysLeft = Math.ceil((new Date(comp.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                const daysLeft = Math.ceil((new Date(comp.deadline).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                 return (
                   <div key={comp.id} className={`bg-white rounded-2xl border shadow-sm flex flex-col overflow-hidden transition-all hover:shadow-md ${
                     comp.status === 'open' && !full ? 'border-slate-200 hover:border-amber-200' : 'border-slate-200 opacity-70'

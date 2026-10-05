@@ -2,11 +2,10 @@
 
 import React, { useState } from 'react';
 import { useMediaStore } from '@/lib/store';
-import { Competition, RegisteredSchool } from '@/lib/types';
-import { validateSubmissionInput } from '@/lib/validation';
+import type { Competition, NewSubmissionInput, RegisteredSchool } from '@/lib/types';
+import { calculateAge, validateSubmissionInput } from '@/lib/validation';
 import {
   X,
-  Link as LinkIcon,
   AlertCircle,
   CheckCircle2,
   Film,
@@ -41,17 +40,6 @@ const GRADE_AGE_MAP: Record<string, { min: number; max: number }> = {
 
 const ALL_GRADES = ['Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12','Grade 13'];
 
-function calculateAge(birthdayStr: string): number | null {
-  if (!birthdayStr) return null;
-  const birthday = new Date(birthdayStr);
-  if (isNaN(birthday.getTime())) return null;
-  const today = new Date();
-  const age = Math.floor(
-    (today.getTime() - birthday.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-  );
-  return age;
-}
-
 function getMediumBadge(medium: string) {
   if (medium === 'Sinhala') return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200', label: 'Sinhala Medium' };
   if (medium === 'English') return { bg: 'bg-violet-100', text: 'text-violet-800', border: 'border-violet-200', label: 'English Medium' };
@@ -62,7 +50,7 @@ const inputCls = 'w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-
 const labelCls = 'block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide';
 
 export function EntrySubmissionModal({ isOpen, onClose, competition, school, onSubmitted }: Props) {
-  const { submitEntry } = useMediaStore();
+  const { competitions, submissions, submitEntry } = useMediaStore();
 
   const [form, setForm] = useState({
     studentName: '',
@@ -109,42 +97,33 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
   const handleCustomChange = (fieldId: string, value: string) =>
     setCustomValues((prev) => ({ ...prev, [fieldId]: value }));
 
+  const submissionInput: NewSubmissionInput = {
+    competitionId: competition.id,
+    competitionTitle: competition.title,
+    competitionMedium: competition.medium,
+    schoolId: school.id,
+    schoolName: school.name,
+    category: competition.category,
+    studentName: form.studentName.trim(),
+    studentGrade: form.studentGrade,
+    studentBirthday: form.studentBirthday,
+    studentContact: form.studentContact.trim(),
+    entryTitle: form.entryTitle.trim(),
+    submissionLink: form.submissionLink.trim(),
+    synopsis: form.synopsis.trim(),
+    customValues,
+  };
+
   const validate = (): string | null => {
-    if (!form.entryTitle.trim()) return 'Entry title is required.';
-    if (!form.studentName.trim()) return 'Student name is required.';
-    if (!form.studentGrade) return 'Student grade is required.';
-    if (!form.studentBirthday) return 'Student birthday is required.';
-    if (calculatedAge === null) return 'Invalid birthday date.';
-    if (calculatedAge < 5 || calculatedAge > 25) return `Age ${calculatedAge} seems incorrect. Please check the birthday.`;
-    if (ageEligibilityError) return ageEligibilityError;
-    if (!form.studentContact.trim()) return 'Student contact phone is required.';
-    const phoneClean = form.studentContact.replace(/[\s\-+()]/g, '');
-    if (!/^\d{9,12}$/.test(phoneClean)) return 'Enter a valid Sri Lankan phone number (e.g. +94 77 123 4567).';
-    if (!form.submissionLink.trim()) return 'Submission link is required.';
-    try { new URL(form.submissionLink); } catch { return 'Submission link must be a valid URL (https://...).'; }
-    if (!form.synopsis.trim()) return 'Synopsis is required.';
-    if (synopsisWords < 20) return `Synopsis must be at least 20 words (currently ${synopsisWords}).`;
-    for (const field of competition.customFields) {
-      if (field.required && !customValues[field.id]?.trim()) {
-        return `"${field.label}" is required.`;
-      }
+    if (competition.status !== 'open') return 'This competition is no longer accepting entries.';
+    if (school.status !== 'active') return 'Your school account is not active and cannot submit entries.';
+    const entryCount = submissions.filter(
+      (entry) => entry.competitionId === competition.id && entry.schoolId === school.id
+    ).length;
+    if (entryCount >= competition.maxEntriesPerSchool) {
+      return `Your school has reached the entry limit (${competition.maxEntriesPerSchool}) for this competition.`;
     }
-    const dataErrors = validateSubmissionInput({
-      competitionId: competition.id,
-      competitionTitle: competition.title,
-      competitionMedium: competition.medium,
-      schoolId: school.id,
-      schoolName: school.name,
-      category: competition.category,
-      studentName: form.studentName,
-      studentGrade: form.studentGrade,
-      studentBirthday: form.studentBirthday,
-      studentContact: form.studentContact,
-      entryTitle: form.entryTitle,
-      submissionLink: form.submissionLink,
-      synopsis: form.synopsis,
-      customValues,
-    });
+    const dataErrors = validateSubmissionInput(submissionInput, competitions);
     if (Object.keys(dataErrors).length > 0) return Object.values(dataErrors)[0];
     if (!certified) return 'You must check the certification declaration.';
     return null;
@@ -160,20 +139,7 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
     let entrySaved = false;
     try {
       await submitEntry({
-        competitionId: competition.id,
-        competitionTitle: competition.title,
-        competitionMedium: competition.medium,
-        schoolId: school.id,
-        schoolName: school.name,
-        category: competition.category,
-        studentName: form.studentName.trim(),
-        studentGrade: form.studentGrade,
-        studentBirthday: form.studentBirthday,
-        studentContact: form.studentContact.trim(),
-        entryTitle: form.entryTitle.trim(),
-        submissionLink: form.submissionLink.trim(),
-        synopsis: form.synopsis.trim(),
-        customValues,
+        ...submissionInput,
       });
       entrySaved = true;
       setSuccess(true);
@@ -253,7 +219,7 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
         </div>
 
         {/* ── Form ── */}
-        <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-5">
+        <form noValidate onSubmit={handleSubmit} className="px-6 pb-6 space-y-5">
 
           {/* ── Section: Entry Details ── */}
           <div>
@@ -418,7 +384,7 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
               </div>
               <p className="mt-1.5 text-[11px] text-amber-700 flex items-center gap-1">
                 <Info size={10} />
-                Google Drive: set sharing to "Anyone with the link can view"
+                Google Drive: set sharing to &quot;Anyone with the link can view&quot;
               </p>
             </div>
 
@@ -458,6 +424,7 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
                   </label>
                   {field.type === 'select' ? (
                     <select
+                      required={field.required}
                       value={customValues[field.id] || ''}
                       onChange={(e) => handleCustomChange(field.id, e.target.value)}
                       className={inputCls}
@@ -470,6 +437,8 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
                   ) : field.type === 'textarea' ? (
                     <textarea
                       rows={3}
+                      required={field.required}
+                      maxLength={2000}
                       value={customValues[field.id] || ''}
                       onChange={(e) => handleCustomChange(field.id, e.target.value)}
                       placeholder={field.placeholder}
@@ -478,6 +447,8 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
                   ) : (
                     <input
                       type={field.type}
+                      required={field.required}
+                      maxLength={field.type === 'number' ? undefined : 2000}
                       value={customValues[field.id] || ''}
                       onChange={(e) => handleCustomChange(field.id, e.target.value)}
                       placeholder={field.placeholder}

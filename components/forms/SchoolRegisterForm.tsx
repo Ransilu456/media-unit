@@ -106,8 +106,8 @@ export function SchoolRegisterForm() {
       <div className="flex items-start gap-2.5 p-3 mb-5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs">
         <Info size={14} className="shrink-0 mt-0.5" />
         <span>
-          <strong>Are you a student?</strong> You don't need to register here.{' '}
-          <Link href="/apply" className="underline font-semibold hover:text-blue-900">Apply for a competition directly →</Link>
+          <strong>Are you a student?</strong> You don&apos;t need to register here.{' '}
+          <Link href="/apply" className="underline font-semibold hover:text-blue-900">View competition entry process →</Link>
         </span>
       </div>
 
@@ -225,7 +225,7 @@ export function SchoolRegisterForm() {
               <input className={input} type="password" minLength={12} value={form.confirmPassword} onChange={(e) => set('confirmPassword', e.target.value)} placeholder="Repeat password" />
             </div>
             <p className="text-xs text-slate-400 bg-slate-50 rounded-xl p-3 border border-slate-100">
-              After registration, you can log in and <strong className="text-slate-600">add your students' competition entries</strong> from your dashboard.
+              After registration, you can log in and <strong className="text-slate-600">add your students&apos; competition entries</strong> from your dashboard.
             </p>
           </div>
         )}

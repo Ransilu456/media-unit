@@ -40,22 +40,22 @@ export function DotMatrixChart({
   };
 
   return (
-    <div className="p-6 rounded-3xl bg-[#10172d]/90 border border-slate-800 shadow-xl relative overflow-hidden">
+    <div className="p-5 rounded-xl bg-white border border-slate-200 relative overflow-hidden">
       {/* Chart Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h4 className="text-base font-semibold text-white tracking-tight">{title}</h4>
-          <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+          <h4 className="text-sm font-semibold text-slate-900 tracking-tight">{title}</h4>
+          <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
         </div>
 
-        <div className="flex items-center gap-3 text-xs font-mono">
+        <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#1d4ed8]" />
-            <span className="text-slate-400">Regular</span>
+            <span className="text-slate-500">Regular</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#d946ef]" />
-            <span className="text-slate-400">Peak Rush</span>
+            <span className="text-slate-500">Peak Rush</span>
           </div>
         </div>
       </div>
@@ -63,7 +63,7 @@ export function DotMatrixChart({
       {/* Grid with Y-axis and Dot Columns */}
       <div className="flex items-end gap-3 pt-4">
         {/* Y-axis Labels */}
-        <div className="flex flex-col justify-between h-48 text-[10px] font-mono text-slate-500 pb-5 shrink-0 text-right pr-1">
+        <div className="flex flex-col justify-between h-48 text-[10px] text-slate-500 pb-5 shrink-0 text-right pr-1">
           <span>1000</span>
           <span>800</span>
           <span>600</span>
@@ -73,22 +73,21 @@ export function DotMatrixChart({
         </div>
 
         {/* Columns Grid */}
-        <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 h-48 border-b border-slate-800/80 pb-2">
+        <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 h-48 border-b border-slate-200 pb-2">
           {columns.map((col, cIdx) => (
             <div key={cIdx} className="flex-1 flex flex-col items-center justify-end group">
               <div className="flex flex-col-reverse gap-1.5 mb-2">
                 {Array.from({ length: col.count }).map((_, dIdx) => (
                   <span
                     key={dIdx}
-                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full transition-transform group-hover:scale-125"
+                    className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full transition-transform group-hover:scale-125"
                     style={{
                       backgroundColor: getDotColor(dIdx),
-                      boxShadow: dIdx >= 8 ? '0 0 8px rgba(217, 70, 239, 0.4)' : undefined,
                     }}
                   />
                 ))}
               </div>
-              <span className="text-[10px] font-mono text-slate-400 mt-1">
+              <span className="text-[10px] text-slate-500 mt-1">
                 {months[cIdx]}
               </span>
             </div>
