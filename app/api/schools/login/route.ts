@@ -1,6 +1,13 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { readDb, mutateDb } from '@/lib/db';
-import { RegisteredSchool } from '@/lib/types';
+import {
+  createSessionToken,
+  hashPassword,
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+  stripSchoolPassword,
+  verifyPassword,
+} from '@/lib/auth';
 
 // POST /api/schools/login
 export async function POST(request: NextRequest) {
@@ -22,28 +29,50 @@ export async function POST(request: NextRequest) {
 
     if (!school) {
       return Response.json(
-        { success: false, error: 'No school found with this email address.' },
+        { success: false, error: 'Email or password is incorrect.' },
         { status: 401 }
       );
     }
 
-    if (school.password && school.password !== password) {
+    if (!school.password || typeof password !== 'string') {
       return Response.json(
-        { success: false, error: 'Incorrect password.' },
+        { success: false, error: 'Email or password is incorrect.' },
         { status: 401 }
       );
     }
 
-    if (school.status === 'suspended') {
+    if (school.status !== 'active') {
       return Response.json(
-        { success: false, error: 'This school account has been suspended. Contact Agradhi admin.' },
+        { success: false, error: 'This school account is not active. Contact Agradhi admin.' },
         { status: 403 }
       );
     }
 
-    // Return school data without password
-    const { password: _pw, ...safeSchool } = school;
-    return Response.json({ success: true, data: safeSchool });
+    const passwordCheck = verifyPassword(password, school.password);
+    if (!passwordCheck.valid) {
+      return Response.json(
+        { success: false, error: 'Email or password is incorrect.' },
+        { status: 401 }
+      );
+    }
+    if (passwordCheck.needsRehash) {
+      const upgradedPassword = hashPassword(password);
+      mutateDb((database) => {
+        const record = database.schools.find((entry) => entry.id === school.id);
+        if (record) record.password = upgradedPassword;
+      });
+    }
+
+    const response = NextResponse.json({
+      success: true,
+      data: stripSchoolPassword(school),
+    });
+    response.cookies.set(
+      SESSION_COOKIE_NAME,
+      createSessionToken({ role: 'school', schoolId: school.id }),
+      sessionCookieOptions()
+    );
+    return response;
   } catch (err: unknown) {
     console.error('[POST /api/schools/login]', err);
     return Response.json(

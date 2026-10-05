@@ -8,7 +8,6 @@ import { useMediaStore } from '@/lib/store';
 import {
   LayoutDashboard, Users, Trophy, FilePlus,
   LogOut, Menu, X, ChevronRight, MapPin, ExternalLink,
-  Sparkles,
 } from 'lucide-react';
 
 export type SchoolTab = 'overview' | 'students' | 'competitions' | 'apply';
@@ -40,9 +39,16 @@ export function SchoolPortalLayout({ children, activeTab, onTabChange }: SchoolP
   const [mobileOpen, setMobileOpen] = useState(false);
   const school = session.school;
 
-  const handleLogout = () => { logout(); router.push('/'); };
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error: unknown) {
+      window.alert(error instanceof Error ? error.message : 'Unable to sign out.');
+    }
+  };
 
-  const Sidebar = () => (
+  const renderSidebar = () => (
     <aside className="w-64 shrink-0 flex flex-col h-full" style={{ background: BG }}>
       {/* ── Brand ── */}
       <div className="shrink-0 px-5 pt-6 pb-4 border-b border-white/5">
@@ -182,7 +188,6 @@ export function SchoolPortalLayout({ children, activeTab, onTabChange }: SchoolP
   return (
     <div className="h-screen overflow-hidden flex" style={{ background: '#f0f4f8' }}>
 
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-30 lg:hidden"
@@ -190,18 +195,16 @@ export function SchoolPortalLayout({ children, activeTab, onTabChange }: SchoolP
         />
       )}
 
-      {/* ── Desktop Sidebar (always visible, proper flex child) ── */}
       <div className="hidden lg:flex h-full shadow-2xl shadow-slate-900/40">
-        <Sidebar />
+        {renderSidebar()}
       </div>
 
-      {/* ── Mobile Sidebar (slide-in drawer, z-stacked) ── */}
       <div className={`
         fixed inset-y-0 left-0 z-40 flex h-full shadow-2xl shadow-slate-900/50
         transition-transform duration-300 ease-in-out lg:hidden
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <Sidebar />
+        {renderSidebar()}
       </div>
 
       {/* ── MAIN AREA ── */}
@@ -223,11 +226,6 @@ export function SchoolPortalLayout({ children, activeTab, onTabChange }: SchoolP
             <span className="font-bold text-slate-800">{NAV.find(n => n.id === activeTab)?.label}</span>
           </div>
 
-          {/* Badge */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-            <Sparkles size={11} className="text-amber-600" />
-            <span className="text-[11px] font-bold text-amber-700">Agradhi Media 2026</span>
-          </div>
         </header>
 
         {/* Scrollable content */}

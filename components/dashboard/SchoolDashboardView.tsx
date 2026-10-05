@@ -4,12 +4,12 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useMediaStore } from '@/lib/store';
-import { Competition, Submission } from '@/lib/types';
+import { Competition } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/Badge';
 import { EntrySubmissionModal } from '@/components/forms/EntrySubmissionModal';
 import { SchoolTab } from '@/components/layout/SchoolPortalLayout';
 import {
-  Trophy, FilePlus, ExternalLink, Calendar,
+  Trophy, ExternalLink, Calendar,
   ShieldCheck, Users, CheckCircle2, Sparkles,
   Clock, Star, BarChart3, TrendingUp, AlertCircle,
   Mic, Camera, Radio, Newspaper, ArrowRight, Plus,
@@ -68,7 +68,7 @@ function StatCard({ label, val, icon: Icon, gradient, badge }: {
 }
 
 export function SchoolDashboardView({ activeTab, onTabChange, initialCompetitionId }: Props) {
-  const { session, competitions, submissions } = useMediaStore();
+  const { session, competitions, submissions, refreshSubmissions } = useMediaStore();
   const school = session.school;
 
   const [selectedComp, setSelectedComp] = useState<Competition | null>(() =>
@@ -104,7 +104,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
     <>
       {/* ── OVERVIEW TAB ── */}
       {activeTab === 'overview' && (
-        <div className="space-y-6 max-w-5xl">
+        <div className="w-full space-y-6">
 
           {/* School Hero Banner */}
           <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 sm:p-8 overflow-hidden border border-slate-700 shadow-xl">
@@ -266,7 +266,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
 
       {/* ── STUDENT ENTRIES TAB ── */}
       {activeTab === 'students' && (
-        <div className="max-w-5xl space-y-4">
+        <div className="w-full space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-slate-900">Student Entries</h2>
@@ -364,7 +364,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
 
       {/* ── COMPETITIONS TAB ── */}
       {activeTab === 'competitions' && (
-        <div className="max-w-5xl space-y-5">
+        <div className="w-full space-y-5">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Available Competitions</h2>
             <p className="text-xs text-slate-500 mt-0.5">{competitions.length} competitions · {openComps.length} open</p>
@@ -457,7 +457,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
 
       {/* ── ADD ENTRY TAB ── */}
       {activeTab === 'apply' && (
-        <div className="max-w-3xl space-y-5">
+        <div className="w-full space-y-5">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Submit a New Student Entry</h2>
             <p className="text-xs text-slate-500 mt-0.5">Select a competition to submit an entry for.</p>
@@ -535,7 +535,10 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
           onClose={() => setSelectedComp(null)}
           competition={selectedComp}
           school={school}
-          onSubmitted={() => { setSelectedComp(null); onTabChange('students'); }}
+          onSubmitted={async () => {
+            await refreshSubmissions();
+            onTabChange('students');
+          }}
         />
       )}
     </>

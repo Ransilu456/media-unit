@@ -131,7 +131,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <Trophy size={13} /> View Student Apply Form
           </Link>
           <button
-            onClick={() => { logout(); router.push('/'); }}
+            onClick={async () => {
+              try {
+                await logout();
+                router.push('/');
+              } catch (error: unknown) {
+                window.alert(error instanceof Error ? error.message : 'Unable to sign out.');
+              }
+            }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors"
           >
             <LogOut size={13} /> Sign Out

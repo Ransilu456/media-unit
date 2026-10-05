@@ -69,6 +69,11 @@ export interface RegisteredSchool {
   badgeCode: string;
 }
 
+export type PublicSchool = Pick<
+  RegisteredSchool,
+  'id' | 'name' | 'province' | 'district' | 'badgeCode'
+>;
+
 export interface Submission {
   id: string;
   competitionId: string;

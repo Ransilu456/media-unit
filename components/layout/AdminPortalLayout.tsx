@@ -8,7 +8,7 @@ import { useMediaStore } from '@/lib/store';
 import {
   LayoutDashboard, School, Trophy, FileText,
   LogOut, Menu, X, ChevronRight, Bell, ShieldCheck,
-  ArrowLeft, Sparkles,
+  ArrowLeft,
 } from 'lucide-react';
 
 export type AdminTab = 'overview' | 'submissions' | 'competitions' | 'schools';
@@ -38,10 +38,17 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
   const { logout, schools, submissions, competitions } = useMediaStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleLogout = () => { logout(); router.push('/'); };
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error: unknown) {
+      window.alert(error instanceof Error ? error.message : 'Unable to sign out.');
+    }
+  };
   const pending = submissions.filter(s => s.status === 'submitted' || s.status === 'under_review').length;
 
-  const Sidebar = () => (
+  const renderSidebar = () => (
     <aside
       className="w-64 shrink-0 flex flex-col h-full"
       style={{ background: 'linear-gradient(180deg, #0a0f1e 0%, #0d1530 50%, #0a0f1e 100%)' }}
@@ -169,7 +176,7 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
 
       {/* ── Desktop Sidebar (always visible) ── */}
       <div className="hidden lg:flex h-full shadow-2xl shadow-slate-900/40">
-        <Sidebar />
+        {renderSidebar()}
       </div>
 
       {/* ── Mobile Sidebar (slide-in drawer) ── */}
@@ -178,7 +185,7 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
         transition-transform duration-300 ease-in-out lg:hidden
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <Sidebar />
+        {renderSidebar()}
       </div>
 
       {/* ── MAIN AREA ── */}

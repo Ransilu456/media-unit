@@ -88,7 +88,9 @@ export function AdminDashboardView() {
             <button
               onClick={() => {
                 if (confirm('Reset store back to default demo schools and sample competitions?')) {
-                  resetToDefaults();
+                  void resetToDefaults().catch((error: unknown) => {
+                    window.alert(error instanceof Error ? error.message : 'Unable to reset the demo data.');
+                  });
                 }
               }}
               title="Reset Sample Data"

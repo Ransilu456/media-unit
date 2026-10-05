@@ -16,6 +16,15 @@ export function Navbar() {
   const isSchool = isLoaded && session.type === 'school';
   const isAdmin  = isLoaded && session.type === 'admin';
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setMobileOpen(false);
+    } catch (error: unknown) {
+      window.alert(error instanceof Error ? error.message : 'Unable to sign out.');
+    }
+  };
+
   const notices = [
     'Inter-School Media Competitions 2026 submissions are now open',
     'Registration deadline: November 15, 2026',
@@ -29,7 +38,6 @@ export function Navbar() {
 
   return (
     <>
-      {/* Thin top info bar */}
       <div className="bg-slate-900 text-slate-400 text-xs py-1.5 border-b border-slate-800 hidden sm:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <span>agradhimedia@saranath.edu.lk</span>
@@ -37,12 +45,10 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Main header — compact */}
       <header className="bg-white sticky top-0 z-50 border-t-4 border-amber-600 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
 
-            {/* Brand */}
             <Link href="/" className="flex items-center gap-3 group shrink-0">
               <div className="w-9 h-9 rounded-full bg-slate-900 border-2 border-amber-500 p-0.5 shrink-0 transition-transform group-hover:scale-105">
                 <Image src="/Agradhi.png" alt="Agradhi" width={32} height={32} className="object-contain w-full h-full" priority />
@@ -57,14 +63,12 @@ export function Navbar() {
               </div>
             </Link>
 
-            {/* Desktop nav — dynamic per role */}
+            {/* Desktop nav  */}
             <nav className="hidden lg:flex items-center gap-1">
 
-              {/* Common links always visible */}
               <NavLink href="/" label="Home" active={pathname === '/'} />
               <NavLink href="/competitions" label="Competitions" active={pathname === '/competitions'} />
 
-              {/* Guest: show Apply & auth buttons */}
               {isGuest && (
                 <>
                   <NavLink href="/apply" label="Apply for Competition" active={pathname === '/apply'} highlight />
@@ -79,7 +83,6 @@ export function Navbar() {
                 </>
               )}
 
-              {/* School teacher logged in */}
               {isSchool && session.school && (
                 <>
                   <NavLink href="/apply" label="Apply for Competition" active={pathname === '/apply'} highlight />
@@ -97,7 +100,6 @@ export function Navbar() {
                 </>
               )}
 
-              {/* Admin logged in */}
               {isAdmin && (
                 <div className="ml-3 flex items-center gap-2 pl-3 border-l border-slate-200">
                   <span className="text-xs bg-slate-900 text-amber-400 px-2.5 py-1 rounded font-medium flex items-center gap-1">
@@ -113,7 +115,6 @@ export function Navbar() {
               )}
             </nav>
 
-            {/* Mobile hamburger */}
             <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 text-slate-600 hover:text-slate-900">
               {mobileOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
@@ -121,7 +122,7 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Scrolling notice ticker — homepage only */}
+      {/* Scrolling notice */}
       {isHome && (
         <div className="bg-amber-50 border-b border-amber-100 py-2 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-3">
@@ -167,7 +168,7 @@ export function Navbar() {
                 </Link>
               </>
             ) : (
-              <button onClick={() => { logout(); setMobileOpen(false); }} className="flex-1 py-2 rounded border border-slate-200 text-xs font-semibold text-red-600">
+              <button onClick={() => void handleLogout()} className="flex-1 py-2 rounded border border-slate-200 text-xs font-semibold text-red-600">
                 Sign Out
               </button>
             )}

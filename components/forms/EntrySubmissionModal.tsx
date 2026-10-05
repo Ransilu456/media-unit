@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useMediaStore } from '@/lib/store';
 import { Competition, RegisteredSchool } from '@/lib/types';
+import { validateSubmissionInput } from '@/lib/validation';
 import {
   X,
   Link as LinkIcon,
@@ -16,7 +17,6 @@ import {
   FileText,
   Info,
   Mic,
-  AlertTriangle,
 } from 'lucide-react';
 
 interface Props {
@@ -24,7 +24,7 @@ interface Props {
   onClose: () => void;
   competition: Competition;
   school: RegisteredSchool;
-  onSubmitted?: () => void;
+  onSubmitted?: () => void | Promise<void>;
 }
 
 // ── Grade → typical age range lookup ─────────────────────────────────────────
@@ -129,6 +129,23 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
         return `"${field.label}" is required.`;
       }
     }
+    const dataErrors = validateSubmissionInput({
+      competitionId: competition.id,
+      competitionTitle: competition.title,
+      competitionMedium: competition.medium,
+      schoolId: school.id,
+      schoolName: school.name,
+      category: competition.category,
+      studentName: form.studentName,
+      studentGrade: form.studentGrade,
+      studentBirthday: form.studentBirthday,
+      studentContact: form.studentContact,
+      entryTitle: form.entryTitle,
+      submissionLink: form.submissionLink,
+      synopsis: form.synopsis,
+      customValues,
+    });
+    if (Object.keys(dataErrors).length > 0) return Object.values(dataErrors)[0];
     if (!certified) return 'You must check the certification declaration.';
     return null;
   };
@@ -140,6 +157,7 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
     if (validationError) { setError(validationError); return; }
 
     setSubmitting(true);
+    let entrySaved = false;
     try {
       await submitEntry({
         competitionId: competition.id,
@@ -157,14 +175,22 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
         synopsis: form.synopsis.trim(),
         customValues,
       });
+      entrySaved = true;
       setSuccess(true);
+      try {
+        await onSubmitted?.();
+      } catch (refreshError: unknown) {
+        console.error('[entry submission] Entry saved but dashboard refresh failed.', refreshError);
+        setError('Your entry was saved, but the dashboard could not refresh. Reopen the entries tab to view it.');
+      }
       setTimeout(() => {
         setSuccess(false);
-        if (onSubmitted) onSubmitted();
         onClose();
       }, 1800);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Submission failed. Please try again.');
+      if (!entrySaved) {
+        setError(err instanceof Error ? err.message : 'Submission failed. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -237,6 +263,9 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
             <label className={labelCls}>Entry / Project Title *</label>
             <input
               type="text"
+              required
+              minLength={2}
+              maxLength={160}
               value={form.entryTitle}
               onChange={(e) => set('entryTitle', e.target.value)}
               placeholder="e.g. Whispers of the Galle Fort / Sound of Rain"
@@ -257,6 +286,9 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
                 <User size={14} className="absolute left-3.5 top-3 text-slate-400" />
                 <input
                   type="text"
+                  required
+                  minLength={2}
+                  maxLength={100}
                   value={form.studentName}
                   onChange={(e) => set('studentName', e.target.value)}
                   placeholder="Full student name (as in school records)"
@@ -270,6 +302,7 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
               <div>
                 <label className={labelCls}>Grade / Class *</label>
                 <select
+                  required
                   value={form.studentGrade}
                   onChange={(e) => set('studentGrade', e.target.value)}
                   className={inputCls}
@@ -286,6 +319,7 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
                   <Calendar size={14} className="absolute left-3.5 top-3 text-slate-400" />
                   <input
                     type="date"
+                    required
                     value={form.studentBirthday}
                     onChange={(e) => set('studentBirthday', e.target.value)}
                     max={new Date().toISOString().split('T')[0]}
@@ -338,6 +372,8 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
                 <Phone size={14} className="absolute left-3.5 top-3 text-slate-400" />
                 <input
                   type="tel"
+                  required
+                  maxLength={20}
                   value={form.studentContact}
                   onChange={(e) => set('studentContact', e.target.value)}
                   placeholder="+94 77 123 4567"
@@ -372,6 +408,8 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
                 <Globe size={14} className="absolute left-3.5 top-3 text-slate-400" />
                 <input
                   type="url"
+                  required
+                  maxLength={2048}
                   value={form.submissionLink}
                   onChange={(e) => set('submissionLink', e.target.value)}
                   placeholder="https://drive.google.com/... or https://youtu.be/..."
@@ -396,6 +434,8 @@ export function EntrySubmissionModal({ isOpen, onClose, competition, school, onS
                 <FileText size={14} className="absolute left-3.5 top-3 text-slate-400" />
                 <textarea
                   rows={4}
+                  required
+                  maxLength={10000}
                   value={form.synopsis}
                   onChange={(e) => set('synopsis', e.target.value)}
                   placeholder="Provide context, storyline synopsis, or artistic statement (min. 20 words)..."

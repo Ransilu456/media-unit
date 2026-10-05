@@ -1,52 +1,60 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { readDb, mutateDb } from '@/lib/db';
 import { RegisteredSchool } from '@/lib/types';
+import {
+  createSessionToken,
+  getRequestSession,
+  hashPassword,
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+  stripSchoolPassword,
+} from '@/lib/auth';
+import {
+  InvalidRequestError,
+  readJsonRequest,
+  validateSchoolRegistration,
+} from '@/lib/validation';
 
 // GET /api/schools  — list all registered schools
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const session = getRequestSession(request.headers.get('cookie'));
+  if (session?.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, error: 'Admin access required.' },
+      { status: 401 }
+    );
+  }
   const db = readDb();
-  return Response.json({ success: true, data: db.schools });
+  const schools = db.schools.map(stripSchoolPassword);
+  return NextResponse.json({ success: true, data: schools });
 }
 
 // POST /api/schools  — register a new school
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-
-    // ── Validation ─────────────────────────────────────────────
-    const required: string[] = [
-      'name', 'province', 'district',
-      'teacherInCharge', 'teacherPhone',
-      'email', 'password',
-    ];
-    for (const field of required) {
-      if (!body[field] || !String(body[field]).trim()) {
-        return Response.json(
-          { success: false, error: `Field "${field}" is required.` },
-          { status: 400 }
-        );
-      }
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
+    const body = await readJsonRequest(request);
+    const validationErrors = validateSchoolRegistration(body);
+    if (Object.keys(validationErrors).length > 0) {
       return Response.json(
-        { success: false, error: 'Invalid email address.' },
+        { success: false, errors: validationErrors, error: Object.values(validationErrors)[0] },
         { status: 400 }
       );
     }
-
-    if (body.password.length < 4) {
-      return Response.json(
-        { success: false, error: 'Password must be at least 4 characters.' },
-        { status: 400 }
-      );
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return Response.json({ success: false, error: 'Invalid registration data.' }, { status: 400 });
     }
+    const registration = body as Record<string, unknown>;
+    const getText = (field: string, fallback = '') => {
+      const value = registration[field];
+      return typeof value === 'string' ? value.trim() : fallback;
+    };
+    const email = getText('email').toLowerCase();
+    const password = registration.password as string;
 
     // Duplicate email check
     const db = readDb();
     const emailExists = db.schools.some(
-      (s) => s.email.toLowerCase() === body.email.toLowerCase()
+      (s) => s.email.toLowerCase() === email
     );
     if (emailExists) {
       return Response.json(
@@ -58,25 +66,37 @@ export async function POST(request: NextRequest) {
     // ── Create record ───────────────────────────────────────────
     const newSchool: RegisteredSchool = {
       id: `scl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      name: String(body.name).trim(),
-      registrationNumber: body.registrationNumber?.trim() || `SCH-${Date.now().toString(36).toUpperCase()}`,
-      province: String(body.province).trim(),
-      district: String(body.district).trim(),
-      teacherInCharge: String(body.teacherInCharge).trim(),
-      teacherPhone: String(body.teacherPhone).trim(),
-      mediaPresident: String(body.mediaPresident ?? '').trim(),
-      presidentPhone: String(body.presidentPhone ?? '').trim(),
-      email: String(body.email).trim().toLowerCase(),
-      password: String(body.password),
+      name: getText('name'),
+      registrationNumber: getText('registrationNumber') || `SCH-${Date.now().toString(36).toUpperCase()}`,
+      province: getText('province'),
+      district: getText('district'),
+      teacherInCharge: getText('teacherInCharge'),
+      teacherPhone: getText('teacherPhone'),
+      mediaPresident: getText('mediaPresident'),
+      presidentPhone: getText('presidentPhone'),
+      email,
+      password: hashPassword(password),
       status: 'active',
       registeredAt: new Date().toISOString().split('T')[0],
       badgeCode: `AMU-SCL-${String(db.schools.length + 18).padStart(3, '0')}`,
     };
 
-    const updated = mutateDb((d) => d.schools.unshift(newSchool));
+    mutateDb((d) => d.schools.unshift(newSchool));
 
-    return Response.json({ success: true, data: newSchool }, { status: 201 });
+    const response = NextResponse.json(
+      { success: true, data: stripSchoolPassword(newSchool) },
+      { status: 201 }
+    );
+    response.cookies.set(
+      SESSION_COOKIE_NAME,
+      createSessionToken({ role: 'school', schoolId: newSchool.id }),
+      sessionCookieOptions()
+    );
+    return response;
   } catch (err: unknown) {
+    if (err instanceof InvalidRequestError) {
+      return Response.json({ success: false, error: err.message }, { status: 400 });
+    }
     console.error('[POST /api/schools]', err);
     return Response.json(
       { success: false, error: 'Internal server error.' },

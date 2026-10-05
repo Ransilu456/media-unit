@@ -4,62 +4,64 @@ import { useState, useEffect } from 'react';
 import {
   Competition,
   RegisteredSchool,
+  PublicSchool,
   Submission,
   AuthSession,
   SubmissionStatus,
 } from './types';
 import { INITIAL_COMPETITIONS } from './constants';
 
-const SESSION_KEY = 'agradhi_auth_session_v2';
-
-// ─── session helpers ────────────────────────────────────────────────────────
-
-function getSession(): AuthSession {
-  if (typeof window === 'undefined') return { type: 'guest' };
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : { type: 'guest' };
-  } catch {
-    return { type: 'guest' };
-  }
-}
-
-function saveSession(sess: AuthSession) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
-}
-
 // ─── main hook ──────────────────────────────────────────────────────────────
 
 export function useMediaStore() {
   const [competitions] = useState<Competition[]>(INITIAL_COMPETITIONS);
   const [schools, setSchools] = useState<RegisteredSchool[]>([]);
+  const [publicSchools, setPublicSchools] = useState<PublicSchool[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [session, setSessionState] = useState<AuthSession>({ type: 'guest' });
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Hydrate session from localStorage, then fetch API data
+  // Load the server-verified session before requesting role-protected data.
   useEffect(() => {
-    const sess = getSession();
-    setSessionState(sess);
+    const loadStore = async () => {
+      try {
+        const sessionResponse = await fetch('/api/auth/session', { cache: 'no-store' });
+        const sessionResult = await sessionResponse.json();
+        if (!sessionResponse.ok || !sessionResult.success) {
+          throw new Error(sessionResult.error || 'Unable to verify the current session.');
+        }
 
-    Promise.all([
-      fetch('/api/schools').then((r) => r.json()),
-      sess.type === 'school' && sess.school
-        ? fetch(`/api/submissions?schoolId=${sess.school.id}`).then((r) => r.json())
-        : Promise.resolve({ data: [] }),
-    ])
-      .then(([schoolsRes, subsRes]) => {
-        if (schoolsRes.success) setSchools(schoolsRes.data);
-        if (subsRes.success) setSubmissions(subsRes.data);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoaded(true));
+        const currentSession: AuthSession = sessionResult.data;
+        setSessionState(currentSession);
+        const [publicSchoolsResponse, schoolsResponse, submissionsResponse] = await Promise.all([
+          fetch('/api/schools/public'),
+          currentSession.type === 'admin' ? fetch('/api/schools') : null,
+          currentSession.type !== 'guest' ? fetch('/api/submissions') : null,
+        ]);
+
+        const publicSchoolsResult = await publicSchoolsResponse.json();
+        if (publicSchoolsResponse.ok && publicSchoolsResult.success) {
+          setPublicSchools(publicSchoolsResult.data);
+        }
+        if (schoolsResponse) {
+          const result = await schoolsResponse.json();
+          if (schoolsResponse.ok && result.success) setSchools(result.data);
+        }
+        if (submissionsResponse) {
+          const result = await submissionsResponse.json();
+          if (submissionsResponse.ok && result.success) setSubmissions(result.data);
+        }
+      } catch (error: unknown) {
+        console.error('[media store hydration]', error);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    void loadStore();
   }, []);
 
   const _persistSession = (s: AuthSession) => {
     setSessionState(s);
-    saveSession(s);
   };
 
   // ── Actions ──────────────────────────────────────────────────────────────
@@ -73,10 +75,20 @@ export function useMediaStore() {
       body: JSON.stringify(data),
     });
     const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Registration failed.');
+    if (!res.ok || !json.success) throw new Error(json.error || 'Registration failed.');
 
     const school: RegisteredSchool = json.data;
     setSchools((prev) => [school, ...prev]);
+    setPublicSchools((prev) => [
+      {
+        id: school.id,
+        name: school.name,
+        province: school.province,
+        district: school.district,
+        badgeCode: school.badgeCode,
+      },
+      ...prev,
+    ]);
     _persistSession({ type: 'school', school });
     return school;
   };
@@ -91,50 +103,91 @@ export function useMediaStore() {
       body: JSON.stringify({ email, password: pass }),
     });
     const json = await res.json();
-    if (!json.success) return null;
+    if (!res.ok || !json.success) {
+      if (res.status === 401) return null;
+      throw new Error(json.error || 'Unable to sign in.');
+    }
 
     const school: RegisteredSchool = json.data;
     _persistSession({ type: 'school', school });
 
-    // Load this school's submissions
-    const subsRes = await fetch(`/api/submissions?schoolId=${school.id}`).then((r) => r.json());
-    if (subsRes.success) setSubmissions(subsRes.data);
+    const subsResponse = await fetch('/api/submissions');
+    const subsResult = await subsResponse.json();
+    if (!subsResponse.ok || !subsResult.success) {
+      throw new Error(subsResult.error || 'Unable to load school submissions.');
+    }
+    setSubmissions(subsResult.data);
 
     return school;
   };
 
-  const loginAdmin = (usernameOrEmail: string, pass: string): boolean => {
-    if (
-      (usernameOrEmail === 'admin@saranath.lk' || usernameOrEmail === 'admin') &&
-      (pass === 'admin123' || pass === 'admin')
-    ) {
-      _persistSession({ type: 'admin', adminName: 'Agradhi Executive Board' });
-      return true;
+  const loginAdmin = async (email: string, pass: string): Promise<boolean> => {
+    const response = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      if (response.status >= 500) {
+        throw new Error(result.error || 'Admin login is temporarily unavailable.');
+      }
+      return false;
     }
-    return false;
+
+    const sessionResponse = await fetch('/api/auth/session', { cache: 'no-store' });
+    const sessionResult = await sessionResponse.json();
+    if (!sessionResponse.ok || !sessionResult.success || sessionResult.data.type !== 'admin') {
+      throw new Error(sessionResult.error || 'Unable to verify the admin session.');
+    }
+    _persistSession(sessionResult.data);
+
+    const [schoolsResponse, submissionsResponse] = await Promise.all([
+      fetch('/api/schools'),
+      fetch('/api/submissions'),
+    ]);
+    const [schoolsResult, submissionsResult] = await Promise.all([
+      schoolsResponse.json(),
+      submissionsResponse.json(),
+    ]);
+    if (!schoolsResponse.ok || !schoolsResult.success) {
+      throw new Error(schoolsResult.error || 'Unable to load registered schools.');
+    }
+    if (!submissionsResponse.ok || !submissionsResult.success) {
+      throw new Error(submissionsResult.error || 'Unable to load submissions.');
+    }
+    setSchools(schoolsResult.data);
+    setSubmissions(submissionsResult.data);
+    return true;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const response = await fetch('/api/auth/logout', { method: 'POST' });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Unable to sign out.');
+    }
     _persistSession({ type: 'guest' });
     setSubmissions([]);
+    setSchools([]);
+  };
+
+  const refreshSubmissions = async () => {
+    const response = await fetch('/api/submissions', { cache: 'no-store' });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Unable to refresh submissions.');
+    }
+    setSubmissions(result.data);
   };
 
   const submitEntry = async (
     entry: Omit<Submission, 'id' | 'submittedAt' | 'status' | 'studentAge'>
   ): Promise<Submission> => {
-    // Find competition to pass maxEntries for server validation
-    const comp = competitions.find((c) => c.id === entry.competitionId);
-
     const res = await fetch('/api/submissions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...entry,
-        maxEntriesPerSchool: comp?.maxEntriesPerSchool,
-        requiredCustomFields: comp?.customFields
-          .filter((f) => f.required)
-          .map((f) => f.id) ?? [],
-      }),
+      body: JSON.stringify(entry),
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.error || 'Submission failed.');
@@ -179,20 +232,21 @@ export function useMediaStore() {
   };
 
   const resetToDefaults = () => {
-    _persistSession({ type: 'guest' });
-    setSubmissions([]);
+    return logout();
   };
 
   return {
     isLoaded,
     competitions,
     schools,
+    publicSchools,
     submissions,
     session,
     registerSchool,
     loginSchool,
     loginAdmin,
     logout,
+    refreshSubmissions,
     submitEntry,
     addCompetition,
     updateCompetition,
@@ -200,6 +254,5 @@ export function useMediaStore() {
     updateSubmissionStatus,
     updateSchoolStatus,
     resetToDefaults,
-    setSession: _persistSession,
   };
 }

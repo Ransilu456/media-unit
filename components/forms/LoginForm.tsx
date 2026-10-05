@@ -38,19 +38,22 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
     }
   };
 
-  const handleAdminSubmit = (e: React.FormEvent) => {
+  const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    setTimeout(() => {
-      const ok = loginAdmin(email.trim(), password);
-      setLoading(false);
+    try {
+      const ok = await loginAdmin(email.trim(), password);
       if (ok) {
         router.push('/admin');
       } else {
         setError('Invalid admin credentials.');
       }
-    }, 400);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -144,7 +147,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
               <Mail size={14} className="absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text" required value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@saranath.lk"
+                placeholder="Configured admin email"
                 className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:border-slate-600 focus:bg-white"
               />
             </div>

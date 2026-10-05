@@ -6,7 +6,7 @@ import { useMediaStore } from '@/lib/store';
 import { ArrowRight, Trophy } from 'lucide-react';
 
 export function HeroSection() {
-  const { session, schools, competitions } = useMediaStore();
+  const { session, publicSchools, competitions } = useMediaStore();
 
   return (
     <div>
@@ -95,7 +95,7 @@ export function HeroSection() {
 
           <div className="text-center group cursor-default border-l border-slate-100">
             <div className="text-3xl md:text-4xl font-serif font-semibold text-slate-900 mb-1 group-hover:text-amber-600 transition-colors">
-              {schools.length || 18}+
+              {publicSchools.length || 18}+
             </div>
             <div className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-widest">
               Outer Schools

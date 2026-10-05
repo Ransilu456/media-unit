@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
 import { SRI_LANKA_PROVINCES } from '@/lib/constants';
+import { validateSchoolRegistration } from '@/lib/validation';
 import { Building2, User, KeyRound, CheckCircle2, AlertCircle, ChevronRight, ChevronLeft, Info } from 'lucide-react';
 
 const STEPS = [
@@ -41,19 +42,36 @@ export function SchoolRegisterForm() {
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  const registrationData = () => ({
+    name: form.schoolName.trim(),
+    registrationNumber: form.registrationNumber.trim(),
+    province: form.province,
+    district: form.district.trim(),
+    teacherInCharge: form.teacherName.trim(),
+    teacherPhone: form.teacherPhone.trim(),
+    mediaPresident: form.presidentName.trim(),
+    presidentPhone: form.presidentPhone.trim(),
+    email: form.email.trim(),
+    password: form.password,
+  });
+
   const validate = (): boolean => {
     setError(null);
+    const registrationErrors = validateSchoolRegistration(registrationData());
     if (step === 1) {
-      if (!form.schoolName.trim()) { setError('Please enter the school name.'); return false; }
-      if (!form.district.trim()) { setError('Please enter the district.'); return false; }
+      const error = registrationErrors.name || registrationErrors.district || registrationErrors.province;
+      if (error) { setError(error); return false; }
     }
     if (step === 2) {
-      if (!form.teacherName.trim()) { setError('Teacher name is required.'); return false; }
-      if (!form.teacherPhone.trim()) { setError('Teacher contact number is required.'); return false; }
+      const error = registrationErrors.teacherInCharge
+        || registrationErrors.teacherPhone
+        || registrationErrors.mediaPresident
+        || registrationErrors.presidentPhone;
+      if (error) { setError(error); return false; }
     }
     if (step === 3) {
-      if (!form.email.trim() || !form.email.includes('@')) { setError('Please enter a valid email address.'); return false; }
-      if (form.password.length < 4) { setError('Password must be at least 4 characters long.'); return false; }
+      const error = registrationErrors.email || registrationErrors.password;
+      if (error) { setError(error); return false; }
       if (form.password !== form.confirmPassword) { setError('Passwords do not match.'); return false; }
     }
     return true;
@@ -65,18 +83,7 @@ export function SchoolRegisterForm() {
   const submit = async () => {
     if (!validate()) return;
     try {
-      await registerSchool({
-        name: form.schoolName.trim(),
-        registrationNumber: form.registrationNumber.trim() || `SCH-${Date.now().toString(36).toUpperCase()}`,
-        province: form.province,
-        district: form.district.trim(),
-        teacherInCharge: form.teacherName.trim(),
-        teacherPhone: form.teacherPhone.trim(),
-        mediaPresident: form.presidentName.trim(),
-        presidentPhone: form.presidentPhone.trim(),
-        email: form.email.trim(),
-        password: form.password,
-      });
+      await registerSchool(registrationData());
       setSuccess(true);
       setTimeout(() => router.push('/dashboard'), 1500);
     } catch (err: unknown) {
@@ -152,18 +159,18 @@ export function SchoolRegisterForm() {
             <StepHeader title="School Information" desc="Enter the official name and location of your school." />
             <div>
               <label className={label}>School Name *</label>
-              <input className={input} value={form.schoolName} onChange={(e) => set('schoolName', e.target.value)} placeholder="e.g. Nalanda College, Colombo" />
+              <input className={input} required minLength={2} maxLength={120} value={form.schoolName} onChange={(e) => set('schoolName', e.target.value)} placeholder="e.g. Nalanda College, Colombo" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={label}>Province *</label>
-                <select className={input} value={form.province} onChange={(e) => set('province', e.target.value)}>
+                <select className={input} required value={form.province} onChange={(e) => set('province', e.target.value)}>
                   {SRI_LANKA_PROVINCES.map((p) => <option key={p}>{p}</option>)}
                 </select>
               </div>
               <div>
                 <label className={label}>District / Town *</label>
-                <input className={input} value={form.district} onChange={(e) => set('district', e.target.value)} placeholder="e.g. Colombo" />
+                <input className={input} required minLength={2} maxLength={100} value={form.district} onChange={(e) => set('district', e.target.value)} placeholder="e.g. Colombo" />
               </div>
             </div>
           </div>
@@ -175,11 +182,11 @@ export function SchoolRegisterForm() {
             <StepHeader title="Teacher-in-Charge" desc="The teacher who manages this school's media delegation. They will receive all official communication." />
             <div>
               <label className={label}>Full Name *</label>
-              <input className={input} value={form.teacherName} onChange={(e) => set('teacherName', e.target.value)} placeholder="e.g. Mr. K. A. Jayasekara" />
+              <input className={input} required minLength={2} maxLength={100} value={form.teacherName} onChange={(e) => set('teacherName', e.target.value)} placeholder="e.g. Mr. K. A. Jayasekara" />
             </div>
             <div>
               <label className={label}>Contact Mobile *</label>
-              <input className={input} type="tel" value={form.teacherPhone} onChange={(e) => set('teacherPhone', e.target.value)} placeholder="+94 7X XXX XXXX" />
+              <input className={input} type="tel" required maxLength={20} value={form.teacherPhone} onChange={(e) => set('teacherPhone', e.target.value)} placeholder="+94 7X XXX XXXX" />
             </div>
             <div>
               <label className={label}>School Address</label>
@@ -190,11 +197,11 @@ export function SchoolRegisterForm() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={label}>President Name</label>
-                  <input className={input} value={form.presidentName} onChange={(e) => set('presidentName', e.target.value)} placeholder="e.g. Kasun Perera" />
+                  <input className={input} maxLength={100} value={form.presidentName} onChange={(e) => set('presidentName', e.target.value)} placeholder="e.g. Kasun Perera" />
                 </div>
                 <div>
                   <label className={label}>President Mobile</label>
-                  <input className={input} type="tel" value={form.presidentPhone} onChange={(e) => set('presidentPhone', e.target.value)} placeholder="+94 7X XXX XXXX" />
+                  <input className={input} type="tel" maxLength={20} value={form.presidentPhone} onChange={(e) => set('presidentPhone', e.target.value)} placeholder="+94 7X XXX XXXX" />
                 </div>
               </div>
             </div>
@@ -207,15 +214,15 @@ export function SchoolRegisterForm() {
             <StepHeader title="Portal Login Account" desc="Create your school's login credentials for the teacher dashboard." />
             <div>
               <label className={label}>Official Email *</label>
-              <input className={input} type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="media@yourschool.lk" />
+              <input className={input} type="email" required maxLength={254} value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="media@yourschool.lk" />
             </div>
             <div>
               <label className={label}>Password *</label>
-              <input className={input} type="password" value={form.password} onChange={(e) => set('password', e.target.value)} placeholder="Min. 4 characters" />
+              <input className={input} type="password" minLength={12} value={form.password} onChange={(e) => set('password', e.target.value)} placeholder="Min. 12 characters" />
             </div>
             <div>
               <label className={label}>Confirm Password *</label>
-              <input className={input} type="password" value={form.confirmPassword} onChange={(e) => set('confirmPassword', e.target.value)} placeholder="Repeat password" />
+              <input className={input} type="password" minLength={12} value={form.confirmPassword} onChange={(e) => set('confirmPassword', e.target.value)} placeholder="Repeat password" />
             </div>
             <p className="text-xs text-slate-400 bg-slate-50 rounded-xl p-3 border border-slate-100">
               After registration, you can log in and <strong className="text-slate-600">add your students' competition entries</strong> from your dashboard.

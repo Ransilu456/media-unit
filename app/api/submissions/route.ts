@@ -1,144 +1,149 @@
+import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
+import { getRequestSession } from '@/lib/auth';
+import { INITIAL_COMPETITIONS } from '@/lib/constants';
 import { readDb, mutateDb } from '@/lib/db';
 import { Submission } from '@/lib/types';
+import {
+  InvalidRequestError,
+  calculateAge,
+  readJsonRequest,
+  validateSubmissionInput,
+} from '@/lib/validation';
 
-// GET /api/submissions?schoolId=xxx
 export async function GET(request: NextRequest) {
-  const { searchParams } = request.nextUrl;
-  const schoolId = searchParams.get('schoolId');
+  const session = getRequestSession(request.headers.get('cookie'));
+  if (!session) {
+    return Response.json(
+      { success: false, error: 'Authentication required.' },
+      { status: 401 }
+    );
+  }
 
   const db = readDb();
-  const data = schoolId
-    ? db.submissions.filter((s) => s.schoolId === schoolId)
-    : db.submissions;
+  if (session.role === 'admin') {
+    return Response.json({ success: true, data: db.submissions });
+  }
+  const school = db.schools.find((record) => record.id === session.schoolId);
+  if (!school || school.status !== 'active') {
+    return Response.json(
+      { success: false, error: 'Active school session required.' },
+      { status: 403 }
+    );
+  }
 
-  return Response.json({ success: true, data });
+  return Response.json({
+    success: true,
+    data: db.submissions.filter((submission) => submission.schoolId === session.schoolId),
+  });
 }
 
-// POST /api/submissions — create a new entry
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-
-    // ── Required field validation ───────────────────────────────
-    const requiredFields: string[] = [
-      'competitionId',
-      'competitionTitle',
-      'competitionMedium',
-      'schoolId',
-      'schoolName',
-      'category',
-      'studentName',
-      'studentGrade',
-      'studentBirthday',
-      'studentContact',
-      'entryTitle',
-      'submissionLink',
-      'synopsis',
-    ];
-
-    for (const field of requiredFields) {
-      const val = body[field];
-      if (val === undefined || val === null || !String(val).trim()) {
-        return Response.json(
-          { success: false, error: `Field "${field}" is required.` },
-          { status: 400 }
-        );
-      }
-    }
-
-    // ── Birthday / age validation ───────────────────────────────
-    const birthday = new Date(body.studentBirthday);
-    if (isNaN(birthday.getTime())) {
+    const session = getRequestSession(request.headers.get('cookie'));
+    if (!session) {
       return Response.json(
-        { success: false, error: 'Invalid student birthday date.' },
-        { status: 400 }
+        { success: false, error: 'Authentication required.' },
+        { status: 401 }
+      );
+    }
+    if (session.role !== 'school') {
+      return Response.json(
+        { success: false, error: 'Only school accounts can submit entries.' },
+        { status: 403 }
       );
     }
 
-    const today = new Date();
-    const age = Math.floor(
-      (today.getTime() - birthday.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-    );
-
-    if (age < 5 || age > 25) {
+    const body = await readJsonRequest(request);
+    const validationErrors = validateSubmissionInput(body);
+    if (Object.keys(validationErrors).length > 0) {
       return Response.json(
-        { success: false, error: `Calculated age (${age}) seems incorrect. Please verify the birthday.` },
+        {
+          success: false,
+          errors: validationErrors,
+          error: Object.values(validationErrors)[0],
+        },
         { status: 400 }
       );
     }
-
-    // ── URL validation ─────────────────────────────────────────
-    try {
-      new URL(body.submissionLink);
-    } catch {
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return Response.json({ success: false, error: 'Invalid submission data.' }, { status: 400 });
+    }
+    const input = body as Record<string, unknown>;
+    if (input.schoolId !== session.schoolId) {
       return Response.json(
-        { success: false, error: 'Submission link must be a valid URL (https://...).' },
-        { status: 400 }
+        { success: false, error: 'You can only submit entries for your own school.' },
+        { status: 403 }
       );
     }
 
-    // ── Synopsis length ────────────────────────────────────────
-    const wordCount = String(body.synopsis).trim().split(/\s+/).length;
-    if (wordCount < 20) {
-      return Response.json(
-        { success: false, error: 'Synopsis must be at least 20 words.' },
-        { status: 400 }
-      );
-    }
-
-    // ── Custom fields validation ───────────────────────────────
-    const customValues: Record<string, string> = body.customValues ?? {};
-    const customFieldErrors: string[] = body.requiredCustomFields ?? [];
-    for (const fieldId of customFieldErrors) {
-      if (!customValues[fieldId]?.trim()) {
-        return Response.json(
-          { success: false, error: `Required field "${fieldId}" is missing.` },
-          { status: 400 }
-        );
-      }
-    }
-
-    // ── Per-competition entry limit check ───────────────────────
     const db = readDb();
-    const existingCount = db.submissions.filter(
-      (s) => s.competitionId === body.competitionId && s.schoolId === body.schoolId
-    ).length;
-
-    if (body.maxEntriesPerSchool && existingCount >= body.maxEntriesPerSchool) {
+    const school = db.schools.find((record) => record.id === session.schoolId);
+    if (!school || school.status !== 'active') {
       return Response.json(
-        { success: false, error: `Entry limit (${body.maxEntriesPerSchool}) reached for this competition.` },
+        { success: false, error: 'Active school session required.' },
+        { status: 403 }
+      );
+    }
+    const competition = INITIAL_COMPETITIONS.find((item) => item.id === input.competitionId);
+    if (!competition || competition.status !== 'open') {
+      return Response.json(
+        { success: false, error: 'This competition is not accepting entries.' },
+        { status: 400 }
+      );
+    }
+
+    const existingCount = db.submissions.filter(
+      (entry) => entry.competitionId === competition.id && entry.schoolId === school.id
+    ).length;
+    if (existingCount >= competition.maxEntriesPerSchool) {
+      return Response.json(
+        {
+          success: false,
+          error: `Entry limit (${competition.maxEntriesPerSchool}) reached for this competition.`,
+        },
         { status: 409 }
       );
     }
 
-    // ── Create submission ──────────────────────────────────────
-    const newSub: Submission = {
-      id: `sub-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      competitionId: body.competitionId,
-      competitionTitle: body.competitionTitle,
-      competitionMedium: body.competitionMedium,
-      schoolId: body.schoolId,
-      schoolName: body.schoolName,
-      category: body.category,
-      studentName: String(body.studentName).trim(),
-      studentGrade: String(body.studentGrade).trim(),
-      studentBirthday: body.studentBirthday,
+    const studentBirthday = input.studentBirthday as string;
+    const submittedAt = new Date().toISOString().slice(0, 10);
+    const age = calculateAge(studentBirthday, new Date(`${submittedAt}T23:59:59.999Z`));
+    if (age === null) {
+      return Response.json(
+        { success: false, error: 'Enter a valid student birthday.' },
+        { status: 400 }
+      );
+    }
+
+    const newSubmission: Submission = {
+      id: `sub-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
+      competitionId: competition.id,
+      competitionTitle: competition.title,
+      competitionMedium: competition.medium,
+      schoolId: school.id,
+      schoolName: school.name,
+      category: competition.category,
+      studentName: (input.studentName as string).trim(),
+      studentGrade: (input.studentGrade as string).trim(),
+      studentBirthday,
       studentAge: age,
-      studentContact: String(body.studentContact).trim(),
-      entryTitle: String(body.entryTitle).trim(),
-      submissionLink: String(body.submissionLink).trim(),
-      synopsis: String(body.synopsis).trim(),
-      customValues,
+      studentContact: (input.studentContact as string).trim(),
+      entryTitle: (input.entryTitle as string).trim(),
+      submissionLink: (input.submissionLink as string).trim(),
+      synopsis: (input.synopsis as string).trim(),
+      customValues: (input.customValues ?? {}) as Record<string, string>,
       status: 'submitted',
-      submittedAt: new Date().toISOString().split('T')[0],
+      submittedAt,
     };
 
-    mutateDb((d) => d.submissions.unshift(newSub));
-
-    return Response.json({ success: true, data: newSub }, { status: 201 });
-  } catch (err: unknown) {
-    console.error('[POST /api/submissions]', err);
+    mutateDb((database) => database.submissions.unshift(newSubmission));
+    return Response.json({ success: true, data: newSubmission }, { status: 201 });
+  } catch (error: unknown) {
+    if (error instanceof InvalidRequestError) {
+      return Response.json({ success: false, error: error.message }, { status: 400 });
+    }
+    console.error('[POST /api/submissions]', error);
     return Response.json(
       { success: false, error: 'Internal server error.' },
       { status: 500 }

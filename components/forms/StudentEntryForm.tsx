@@ -32,7 +32,7 @@ const input = 'w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 t
 const label = 'block text-sm font-semibold text-slate-700 mb-2';
 
 export function StudentEntryForm() {
-  const { schools } = useMediaStore();
+  const { publicSchools } = useMediaStore();
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -50,7 +50,7 @@ export function StudentEntryForm() {
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const selectedCat = COMPETITION_CATEGORIES.find((c) => c.id === form.categoryId);
-  const selectedSchool = schools.find((s) => s.id === form.schoolId);
+  const selectedSchool = publicSchools.find((s) => s.id === form.schoolId);
 
   const validate = (): boolean => {
     setError(null);
@@ -172,11 +172,11 @@ export function StudentEntryForm() {
             <label className={label}>Your School *</label>
             <select className={input} value={form.schoolId} onChange={(e) => set('schoolId', e.target.value)}>
               <option value="">— Select your school —</option>
-              {schools.map((s) => (
+              {publicSchools.map((s) => (
                 <option key={s.id} value={s.id}>{s.name} ({s.district})</option>
               ))}
             </select>
-            {schools.length === 0 && (
+            {publicSchools.length === 0 && (
               <p className="text-xs text-amber-600 mt-1">Your school is not registered yet. Ask your teacher to register first.</p>
             )}
           </div>
