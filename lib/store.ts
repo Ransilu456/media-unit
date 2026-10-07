@@ -178,7 +178,10 @@ function useMediaStoreState() {
     }
 
     const newSub = await firebaseSubmitEntry(entry);
-    setSubmissions((prev) => [newSub, ...prev]);
+    setSubmissions((prev) => [
+      newSub,
+      ...prev.filter((submission) => submission.id !== newSub.id),
+    ]);
     return newSub;
   };
 

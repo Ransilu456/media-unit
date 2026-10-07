@@ -382,7 +382,10 @@ export function subscribeFirebaseSubmissions(
     : submissions;
   return onSnapshot(
     submissionsQuery,
-    (snapshot) => onData(snapshot.docs.map((item) => item.data() as Submission)),
+    (snapshot) => onData(snapshot.docs.map((item) => ({
+      ...item.data(),
+      id: item.id,
+    }) as Submission)),
     (error) => {
       reportFirestoreError(error);
       onError(error);
