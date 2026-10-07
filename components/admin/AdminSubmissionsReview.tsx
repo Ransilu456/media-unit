@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { SubmissionStatus } from '@/lib/types';
 import { useMediaStore } from '@/lib/store';
 import { EntryStatusGuide } from '@/components/dashboard/EntryStatusGuide';
@@ -55,7 +55,7 @@ function getDecisionHelp(status: SubmissionStatus): string {
 }
 
 export function AdminSubmissionsReview() {
-  const { submissions, updateSubmissionStatus } = useMediaStore();
+  const { submissions, competitions, updateSubmissionStatus } = useMediaStore();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [queueFilter, setQueueFilter] = useState<QueueFilter>('needs-review');
@@ -65,6 +65,15 @@ export function AdminSubmissionsReview() {
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [saveErrors, setSaveErrors] = useState<Record<string, string>>({});
+  const competitionFieldsById = useMemo(
+    () => new Map(
+      competitions.map((competition) => [
+        competition.id,
+        new Map((competition.customFields ?? []).map((field) => [field.id, field.label])),
+      ])
+    ),
+    [competitions]
+  );
 
   const categories = [...new Set(submissions.map((submission) => submission.category))];
   const awaitingReviewCount = submissions.filter(
@@ -259,6 +268,9 @@ export function AdminSubmissionsReview() {
               : submission.judgeFeedback ?? '';
             const isSaving = savingIds.includes(submission.id);
             const isSaved = savedIds.includes(submission.id);
+            const fieldLabels = competitionFieldsById.get(submission.competitionId);
+            const customAnswers = Object.entries(submission.customValues ?? {})
+              .filter(([, answer]) => answer.trim().length > 0);
 
             return (
               <article
@@ -322,6 +334,24 @@ export function AdminSubmissionsReview() {
                     </p>
                   </section>
                 </div>
+
+                {customAnswers.length > 0 && (
+                  <section aria-label="Additional competition answers" className="border-t border-slate-100 px-4 py-4 sm:px-5">
+                    <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Competition questions
+                    </h3>
+                    <dl className="grid gap-3 sm:grid-cols-2">
+                      {customAnswers.map(([fieldId, answer]) => (
+                        <div key={fieldId} className="rounded-lg bg-slate-50 p-3">
+                          <dt className="text-xs font-semibold text-slate-700">
+                            {fieldLabels?.get(fieldId) ?? fieldId}
+                          </dt>
+                          <dd className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-600">{answer}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                )}
 
                 <section aria-label={`Review ${submission.entryTitle}`} className="border-t border-amber-100 bg-amber-50/45 px-4 py-4 sm:px-5 sm:py-5">
                   <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

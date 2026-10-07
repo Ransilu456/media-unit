@@ -64,6 +64,9 @@ export function EntrySubmissionModal({
     submissionLink: '',
     synopsis: '',
   });
+  const [customValues, setCustomValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries((initialCompetition.customFields ?? []).map((field) => [field.id, '']))
+  );
 
   const [certified, setCertified] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +76,14 @@ export function EntrySubmissionModal({
   useEffect(() => {
     setSelectedCompId(initialCompetition.id);
   }, [initialCompetition.id]);
+
+  useEffect(() => {
+    setCustomValues((current) =>
+      Object.fromEntries(
+        (activeCompetition.customFields ?? []).map((field) => [field.id, current[field.id] ?? ''])
+      )
+    );
+  }, [selectedCompId, activeCompetition.customFields]);
 
   const calculatedAge = useMemo(() => {
     return calculateAge(form.studentBirthday);
@@ -112,6 +123,10 @@ export function EntrySubmissionModal({
     setForm((f) => ({ ...f, [k]: v }));
   };
 
+  const setCustomValue = (id: string, value: string) => {
+    setCustomValues((current) => ({ ...current, [id]: value }));
+  };
+
   const submissionInput: NewSubmissionInput = {
     competitionId: activeCompetition.id,
     competitionTitle: activeCompetition.title,
@@ -126,6 +141,7 @@ export function EntrySubmissionModal({
     entryTitle: form.entryTitle.trim(),
     submissionLink: form.submissionLink.trim(),
     synopsis: form.synopsis.trim(),
+    customValues,
   };
 
   const validate = (): string | null => {
@@ -479,6 +495,62 @@ export function EntrySubmissionModal({
 
 
           </div>
+
+          {(activeCompetition.customFields ?? []).length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
+              <div className="border-b border-slate-200/80 pb-2.5">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Additional competition questions
+                </span>
+              </div>
+              {(activeCompetition.customFields ?? []).map((field) => (
+                <div key={field.id}>
+                  <label htmlFor={`custom-${field.id}`} className={labelCls}>
+                    {field.label}{field.required ? ' *' : ''}
+                  </label>
+                  {field.type === 'textarea' ? (
+                    <textarea
+                      id={`custom-${field.id}`}
+                      required={field.required}
+                      maxLength={2000}
+                      rows={3}
+                      value={customValues[field.id] ?? ''}
+                      onChange={(event) => setCustomValue(field.id, event.target.value)}
+                      placeholder={field.placeholder || 'Enter your answer'}
+                      className={`${inputCls} resize-y`}
+                    />
+                  ) : field.type === 'select' ? (
+                    <select
+                      id={`custom-${field.id}`}
+                      required={field.required}
+                      value={customValues[field.id] ?? ''}
+                      onChange={(event) => setCustomValue(field.id, event.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="" disabled={field.required}>{field.placeholder || 'Choose an option'}</option>
+                      {(field.options ?? []).map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id={`custom-${field.id}`}
+                      type={field.type}
+                      required={field.required}
+                      maxLength={2000}
+                      value={customValues[field.id] ?? ''}
+                      onChange={(event) => setCustomValue(field.id, event.target.value)}
+                      placeholder={field.placeholder || 'Enter your answer'}
+                      className={inputCls}
+                    />
+                  )}
+                  {field.helperText && (
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">{field.helperText}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
             <label className="flex items-start gap-3 cursor-pointer text-xs text-slate-700 leading-relaxed">

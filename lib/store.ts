@@ -219,6 +219,9 @@ function useMediaStoreState() {
   const addCompetition = async (
     comp: Omit<Competition, 'id'>
   ): Promise<Competition> => {
+    if (competitions.some((existing) => existing.slug === comp.slug)) {
+      throw new Error('A competition with this URL slug already exists.');
+    }
     const newComp = await firebaseAddCompetition(comp);
     setCompetitions((prev) => [...prev, newComp]);
     return newComp;
@@ -228,6 +231,9 @@ function useMediaStoreState() {
     id: string,
     updates: Partial<Omit<Competition, 'id'>>
   ): Promise<void> => {
+    if (updates.slug && competitions.some((existing) => existing.id !== id && existing.slug === updates.slug)) {
+      throw new Error('A competition with this URL slug already exists.');
+    }
     await firebaseUpdateCompetition(id, updates);
     setCompetitions((prev) =>
       prev.map((comp) => (comp.id === id ? { ...comp, ...updates } : comp))

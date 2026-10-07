@@ -15,6 +15,8 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  getDocs,
+  limit,
   query,
   where,
 } from 'firebase/firestore';
@@ -271,6 +273,17 @@ export async function firebaseUpdateCompetition(
 }
 
 export async function firebaseDeleteCompetition(id: string): Promise<void> {
+  const existingSubmission = await withFirestoreErrorReporting(() =>
+    getDocs(query(
+      collection(db, COLLECTIONS.submissions),
+      where('competitionId', '==', id),
+      limit(1)
+    ))
+  );
+  if (!existingSubmission.empty) {
+    throw new Error('This competition has submissions and cannot be deleted. Close entries instead to preserve the review history.');
+  }
+
   await withFirestoreErrorReporting(() =>
     deleteDoc(doc(db, COLLECTIONS.competitions, id))
   );
@@ -304,6 +317,9 @@ export async function firebaseSubmitEntry(
     entryTitle: entry.entryTitle,
     submissionLink: entry.submissionLink,
     synopsis: entry.synopsis,
+    ...(entry.customValues && Object.keys(entry.customValues).length > 0
+      ? { customValues: entry.customValues }
+      : {}),
     status: 'submitted',
     submittedAt: new Date().toISOString(),
   };

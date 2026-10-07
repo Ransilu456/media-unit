@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useMediaStore } from '@/lib/store';
 import { Competition } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/Badge';
 import { CompetitionFormEditorModal } from './CompetitionFormEditorModal';
-import { Plus, Edit3, Trash2 } from 'lucide-react';
+import { Plus, Edit3, Eye, Trash2 } from 'lucide-react';
 
 export function AdminCompetitionsManager() {
   const {
@@ -18,14 +18,25 @@ export function AdminCompetitionsManager() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [compToEdit, setCompToEdit] = useState<Competition | null>(null);
+  const [startInPreview, setStartInPreview] = useState(false);
+
+  const submissionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    submissions.forEach((submission) => {
+      counts.set(submission.competitionId, (counts.get(submission.competitionId) ?? 0) + 1);
+    });
+    return counts;
+  }, [submissions]);
 
   const handleOpenAdd = () => {
     setCompToEdit(null);
+    setStartInPreview(false);
     setEditorOpen(true);
   };
 
-  const handleOpenEdit = (comp: Competition) => {
+  const handleOpenEdit = (comp: Competition, preview = false) => {
     setCompToEdit(comp);
+    setStartInPreview(preview);
     setEditorOpen(true);
   };
 
@@ -86,7 +97,7 @@ export function AdminCompetitionsManager() {
       {/* Competitions Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {competitions.map((comp) => {
-          const compSubs = submissions.filter((s) => s.competitionId === comp.id);
+          const submissionCount = submissionCounts.get(comp.id) ?? 0;
 
           return (
             <div
@@ -116,7 +127,7 @@ export function AdminCompetitionsManager() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Entries received:</span>
-                    <span className="text-slate-900 font-bold">{compSubs.length}</span>
+                    <span className="text-slate-900 font-bold">{submissionCount}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Eligibility:</span>
@@ -141,6 +152,14 @@ export function AdminCompetitionsManager() {
 
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={() => handleOpenEdit(comp, true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 font-medium transition-colors hover:bg-slate-50"
+                  >
+                    <Eye size={13} />
+                    <span>Preview</span>
+                  </button>
+
+                  <button
                     onClick={() => handleOpenEdit(comp)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-xs text-amber-800 font-medium transition-colors"
                   >
@@ -150,17 +169,24 @@ export function AdminCompetitionsManager() {
 
                   <button
                     onClick={() => {
-                      if (confirm(`Delete track "${comp.title}"?`)) {
+                      if (submissionCount === 0 && confirm(`Delete track "${comp.title}"? This cannot be undone.`)) {
                         void handleDelete(comp.id);
                       }
                     }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
-                    title="Delete Competition"
+                    disabled={submissionCount > 0}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    title={submissionCount > 0 ? 'Close entries instead; this competition has submissions.' : 'Delete competition'}
+                    aria-label={`Delete ${comp.title}`}
                   >
                     <Trash2 size={15} />
                   </button>
                 </div>
               </div>
+              {submissionCount > 0 && (
+                <p className="mt-2 text-right text-[11px] text-slate-500">
+                  Delete is unavailable because this competition has {submissionCount} {submissionCount === 1 ? 'entry' : 'entries'}.
+                </p>
+              )}
             </div>
           );
         })}
@@ -169,10 +195,12 @@ export function AdminCompetitionsManager() {
       {/* Form Editor Modal */}
       {editorOpen && (
         <CompetitionFormEditorModal
+          key={compToEdit?.id ?? 'new-competition'}
           isOpen={true}
           onClose={() => setEditorOpen(false)}
           competitionToEdit={compToEdit}
           onSave={handleSave}
+          startInPreview={startInPreview}
         />
       )}
     </div>

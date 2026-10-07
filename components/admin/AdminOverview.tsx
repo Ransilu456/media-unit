@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowRight, CheckCircle2, ClipboardCheck, FileText, School, Trophy } from 'lucide-react';
+import { useMemo } from 'react';
 import { useMediaStore } from '@/lib/store';
 import type { AdminTab } from '@/components/layout/AdminPortalLayout';
 import { StatusBadge } from '@/components/ui/Badge';
@@ -11,20 +12,31 @@ const categoryColors = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#0891b2', '
 
 export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) => void }) {
   const { schools, competitions, submissions } = useMediaStore();
-  const pending = submissions.filter((submission) =>
-    submission.status === 'submitted' || submission.status === 'under_review'
-  ).length;
+  const { pending, verifiedCount, shares } = useMemo(() => {
+    let pendingCount = 0;
+    let verified = 0;
+    const countsByCategory = new Map<string, number>();
+    submissions.forEach((submission) => {
+      if (submission.status === 'submitted' || submission.status === 'under_review') pendingCount += 1;
+      if (['verified', 'shortlisted', 'winner'].includes(submission.status)) verified += 1;
+      countsByCategory.set(
+        submission.category,
+        (countsByCategory.get(submission.category) ?? 0) + 1
+      );
+    });
+
+    return {
+      pending: pendingCount,
+      verifiedCount: verified,
+      shares: [...countsByCategory].map(([name, count], index) => ({
+        name,
+        percentage: Math.round((count / Math.max(submissions.length, 1)) * 100),
+        color: categoryColors[index % categoryColors.length],
+      })),
+    };
+  }, [submissions]);
   const pendingSchools = schools.filter((school) => school.status === 'pending').length;
   const openCompetitions = competitions.filter((competition) => competition.status === 'open').length;
-  const verifiedCount = submissions.filter((submission) =>
-    ['verified', 'shortlisted', 'winner'].includes(submission.status)
-  ).length;
-  const categories = [...new Set(submissions.map((submission) => submission.category))];
-  const shares = categories.map((name, index) => ({
-    name,
-    percentage: Math.round((submissions.filter((submission) => submission.category === name).length / Math.max(submissions.length, 1)) * 100),
-    color: categoryColors[index % categoryColors.length],
-  }));
 
   return (
     <div className="max-w-7xl space-y-6">

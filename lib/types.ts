@@ -90,6 +90,7 @@ export interface Submission {
   entryTitle: string;
   submissionLink: string;
   synopsis: string;
+  customValues?: Record<string, string>;
   status: SubmissionStatus;
   submittedAt: string;
   score?: number;
@@ -110,6 +111,7 @@ export interface NewSubmissionInput {
   entryTitle: string;
   submissionLink: string;
   synopsis: string;
+  customValues?: Record<string, string>;
 }
 
 export interface AuthSession {

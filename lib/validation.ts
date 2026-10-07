@@ -61,7 +61,7 @@ const ALLOWED_SCHOOL_FIELDS = new Set([
 const ALLOWED_SUBMISSION_FIELDS = new Set([
   'competitionId', 'competitionTitle', 'competitionMedium', 'schoolId',
   'schoolName', 'category', 'studentName', 'studentGrade', 'studentBirthday',
-  'studentContact', 'entryTitle', 'submissionLink', 'synopsis',
+  'studentContact', 'entryTitle', 'submissionLink', 'synopsis', 'customValues',
 ]);
 const ALLOWED_DATABASE_FIELDS = new Set(['competitions', 'schools', 'submissions', 'admin']);
 const ALLOWED_STORED_SCHOOL_FIELDS = new Set([
@@ -73,7 +73,7 @@ const ALLOWED_STORED_SUBMISSION_FIELDS = new Set([
   'id', 'competitionId', 'competitionTitle', 'competitionMedium', 'schoolId',
   'schoolName', 'category', 'studentName', 'studentGrade', 'studentBirthday',
   'studentAge', 'studentContact', 'entryTitle', 'submissionLink', 'synopsis',
-  'status', 'submittedAt', 'score', 'judgeFeedback',
+  'customValues', 'status', 'submittedAt', 'score', 'judgeFeedback',
 ]);
 
 function validateJsonValue(value: unknown, path: string, depth = 0, budget = { nodes: 0 }): asserts value is JsonValue {
@@ -161,9 +161,10 @@ export function validateCompetitionInput(value: unknown): ValidationErrors {
     errors.guidelines = 'Guidelines must be a list of up to 30 rules, each at most 500 characters.';
   }
 
-  if (!Array.isArray(value.customFields) || value.customFields.length > 20) {
+  if (value.customFields !== undefined
+    && (!Array.isArray(value.customFields) || value.customFields.length > 20)) {
     errors.customFields = 'Add no more than 20 custom fields.';
-  } else {
+  } else if (Array.isArray(value.customFields)) {
     const fieldIds = new Set<string>();
     value.customFields.forEach((field, index) => {
       if (!isRecord(field)) {
@@ -372,6 +373,43 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
     if (value.competitionMedium !== undefined && value.competitionMedium !== competition.medium) {
       errors.competitionMedium = 'Competition medium does not match the selected competition.';
     }
+
+    const customValues = value.customValues ?? {};
+    if (!isRecord(customValues)) {
+      errors.customValues = 'Custom answers must be an object.';
+    } else {
+      const customFields = competition.customFields ?? [];
+      const allowedFieldIds = new Set(customFields.map((field) => field.id));
+      if (Object.keys(customValues).some((id) => !allowedFieldIds.has(id))) {
+        errors.customValues = 'Custom answers contain fields that are not part of this competition.';
+      }
+
+      for (const field of customFields) {
+        const answer = customValues[field.id];
+        if (answer === undefined || (typeof answer === 'string' && answer.trim() === '')) {
+          if (field.required) errors.customValues = `Please complete "${field.label}".`;
+          continue;
+        }
+        if (typeof answer !== 'string' || answer.length > 2000) {
+          errors.customValues = `Answer for "${field.label}" must be at most 2,000 characters.`;
+          continue;
+        }
+        if (field.type === 'select' && !field.options?.includes(answer)) {
+          errors.customValues = `Select a valid option for "${field.label}".`;
+        } else if (field.type === 'url') {
+          try {
+            const answerUrl = new URL(answer);
+            if (!['https:', 'http:'].includes(answerUrl.protocol) || !answerUrl.hostname) {
+              errors.customValues = `Enter a valid link for "${field.label}".`;
+            }
+          } catch {
+            errors.customValues = `Enter a valid link for "${field.label}".`;
+          }
+        } else if (field.type === 'number' && !Number.isFinite(Number(answer))) {
+          errors.customValues = `Enter a valid number for "${field.label}".`;
+        }
+      }
+    }
   }
 
   return errors;
@@ -401,7 +439,10 @@ export function isSubmissionInput(value: unknown): value is NewSubmissionInput {
   const customValues = value.customValues;
   return customValues === undefined
     || (isRecord(customValues)
-      && Object.values(customValues).every((item) => typeof item === 'string'));
+      && Object.keys(customValues).length <= 20
+      && Object.entries(customValues).every(([key, item]) =>
+        key.length > 0 && typeof item === 'string' && item.length <= 2000
+      ));
 }
 
 function assertText(value: unknown, path: string, min = 1, max = 10000): asserts value is string {
