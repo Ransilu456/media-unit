@@ -13,7 +13,6 @@ import {
   FileText,
   User,
   ShieldCheck,
-  AlertTriangle,
 } from 'lucide-react';
 
 interface Props {
