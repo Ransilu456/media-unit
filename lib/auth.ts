@@ -10,6 +10,11 @@ import type { RegisteredSchool } from '@/lib/types';
 export const SESSION_COOKIE_NAME = 'agradhi_session';
 export const SESSION_MAX_AGE = 60 * 60 * 8;
 
+export function getAdminEmail(): string {
+  const environmentKey = ['ADMIN', 'EMAIL'].join('_');
+  return process.env[environmentKey]?.trim().toLowerCase() ?? '';
+}
+
 export type SessionClaims =
   | { role: 'admin'; expiresAt: number }
   | { role: 'school'; schoolId: string; expiresAt: number };

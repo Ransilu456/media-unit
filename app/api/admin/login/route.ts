@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   constantTimeStringEqual,
   createSessionToken,
+  getAdminEmail,
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
 } from '@/lib/auth';
@@ -9,7 +10,7 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
-    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminEmail = getAdminEmail();
     const adminPassword = process.env.ADMIN_PASSWORD;
 
     if (!adminEmail || !adminPassword || adminPassword.length < 12) {
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     if (
       typeof email !== 'string' ||
       typeof password !== 'string' ||
-      email.trim().toLowerCase() !== adminEmail.trim().toLowerCase() ||
+      email.trim().toLowerCase() !== adminEmail ||
       !constantTimeStringEqual(password, adminPassword)
     ) {
       return NextResponse.json(
