@@ -132,7 +132,6 @@ export async function POST(request: NextRequest) {
       entryTitle: input.entryTitle.trim(),
       submissionLink: input.submissionLink.trim(),
       synopsis: input.synopsis.trim(),
-      customValues: input.customValues ?? {},
       status: 'submitted',
       submittedAt,
     };

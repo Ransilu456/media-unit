@@ -12,7 +12,7 @@ import type {
 
 export type ValidationErrors = Record<string, string>;
 
-export class InvalidRequestError extends Error {}
+export class InvalidRequestError extends Error { }
 
 export async function readJsonRequest(
   request: Request,
@@ -61,7 +61,7 @@ const ALLOWED_SCHOOL_FIELDS = new Set([
 const ALLOWED_SUBMISSION_FIELDS = new Set([
   'competitionId', 'competitionTitle', 'competitionMedium', 'schoolId',
   'schoolName', 'category', 'studentName', 'studentGrade', 'studentBirthday',
-  'studentContact', 'entryTitle', 'submissionLink', 'synopsis', 'customValues',
+  'studentContact', 'entryTitle', 'submissionLink', 'synopsis',
 ]);
 const ALLOWED_DATABASE_FIELDS = new Set(['competitions', 'schools', 'submissions', 'admin']);
 const ALLOWED_STORED_SCHOOL_FIELDS = new Set([
@@ -73,7 +73,7 @@ const ALLOWED_STORED_SUBMISSION_FIELDS = new Set([
   'id', 'competitionId', 'competitionTitle', 'competitionMedium', 'schoolId',
   'schoolName', 'category', 'studentName', 'studentGrade', 'studentBirthday',
   'studentAge', 'studentContact', 'entryTitle', 'submissionLink', 'synopsis',
-  'customValues', 'status', 'submittedAt', 'score', 'judgeFeedback',
+  'status', 'submittedAt', 'score', 'judgeFeedback',
 ]);
 
 function validateJsonValue(value: unknown, path: string, depth = 0, budget = { nodes: 0 }): asserts value is JsonValue {
@@ -230,44 +230,6 @@ function validPhone(value: string): boolean {
   return /^\d{9,12}$/.test(digits);
 }
 
-function validateCustomValues(value: unknown, competition: Competition): string | null {
-  if (!isRecord(value)) return 'Custom field values must be an object.';
-  const fieldIds = new Set(competition.customFields.map((field) => field.id));
-  if (Object.keys(value).some((key) => !fieldIds.has(key))) {
-    return 'Submission contains unknown custom fields.';
-  }
-
-  for (const field of competition.customFields) {
-    const fieldValue = value[field.id];
-    if (fieldValue === undefined) {
-      if (field.required) return `"${field.label}" is required.`;
-      continue;
-    }
-    if (!isText(fieldValue, 0, 2000, true)) {
-      return `"${field.label}" must be text of at most 2,000 characters.`;
-    }
-    if (field.required && !fieldValue.trim()) return `"${field.label}" is required.`;
-    if (!fieldValue.trim()) continue;
-    if (field.type === 'select' && field.options && !field.options.includes(fieldValue)) {
-      return `Select a valid value for "${field.label}".`;
-    }
-    if (field.type === 'number' && !Number.isFinite(Number(fieldValue))) {
-      return `"${field.label}" must be a valid number.`;
-    }
-    if (field.type === 'url') {
-      try {
-        const url = new URL(fieldValue);
-        if (!['https:', 'http:'].includes(url.protocol) || !url.hostname) {
-          return `"${field.label}" must be a valid HTTP or HTTPS URL.`;
-        }
-      } catch {
-        return `"${field.label}" must be a valid HTTP or HTTPS URL.`;
-      }
-    }
-  }
-  return null;
-}
-
 export function validateSchoolRegistration(value: unknown): ValidationErrors {
   const errors: ValidationErrors = {};
   if (!isRecord(value)) return { form: 'Registration data must be an object.' };
@@ -280,9 +242,12 @@ export function validateSchoolRegistration(value: unknown): ValidationErrors {
     ['district', 'District', 2, 100],
     ['teacherInCharge', 'Teacher-in-charge name', 2, 100],
     ['teacherPhone', 'Teacher phone', 9, 20],
+    ['presidentPhone', 'President phone', 9, 20],
+    ['mediaPresident', 'Media Unit President name', 2, 100],
     ['email', 'Email address', 3, 254],
     ['password', 'Password', 12, 128],
   ];
+
   for (const [field, label, minimum, maximum] of required) {
     if (!isText(value[field], minimum, maximum)) {
       errors[field] = `${label} must be between ${minimum} and ${maximum} characters.`;
@@ -303,17 +268,6 @@ export function validateSchoolRegistration(value: unknown): ValidationErrors {
     errors.province = 'Select a valid province.';
   }
 
-  const optionalText: Array<[string, string, number]> = [
-    ['registrationNumber', 'Registration number', 50],
-    ['mediaPresident', 'Media president name', 100],
-    ['presidentPhone', 'President phone', 20],
-  ];
-  for (const [field, label, maximum] of optionalText) {
-    const fieldValue = value[field] ?? '';
-    if (!isText(fieldValue, 0, maximum, true)) {
-      errors[field] = `${label} must not exceed ${maximum} characters.`;
-    }
-  }
   if (typeof value.presidentPhone === 'string'
     && value.presidentPhone.trim()
     && !validPhone(value.presidentPhone)) {
@@ -322,12 +276,11 @@ export function validateSchoolRegistration(value: unknown): ValidationErrors {
   return errors;
 }
 
-export function validateSubmissionInput(
-  value: unknown,
-  competitions: Competition[] = INITIAL_COMPETITIONS
-): ValidationErrors {
+export function validateSubmissionInput(value: unknown, competitions: Competition[] = INITIAL_COMPETITIONS): ValidationErrors {
   const errors: ValidationErrors = {};
+
   if (!isRecord(value)) return { form: 'Submission data must be an object.' };
+
   if (!hasOnlyFields(value, ALLOWED_SUBMISSION_FIELDS)) {
     errors.form = 'Submission contains unsupported fields.';
   }
@@ -335,17 +288,18 @@ export function validateSubmissionInput(
   const competition = typeof value.competitionId === 'string'
     ? competitions.find((item) => item.id === value.competitionId)
     : undefined;
+
   if (!competition) errors.competitionId = 'Select a valid competition.';
+
   if (value.competitionTitle !== undefined
-    && (typeof value.competitionTitle !== 'string'
-      || (competition && value.competitionTitle !== competition.title))) {
+    && (typeof value.competitionTitle !== 'string' || (competition && value.competitionTitle !== competition.title))) {
     errors.competitionTitle = 'Competition title does not match the selected competition.';
   }
-  if (value.competitionMedium !== undefined
-    && (typeof value.competitionMedium !== 'string'
-      || (competition && value.competitionMedium !== competition.medium))) {
+
+  if (value.competitionMedium !== undefined && (typeof value.competitionMedium !== 'string' || (competition && value.competitionMedium !== competition.medium))) {
     errors.competitionMedium = 'Competition medium does not match the selected competition.';
   }
+
   if (value.schoolName !== undefined && !isText(value.schoolName, 2, 120)) {
     errors.schoolName = 'School name must be between 2 and 120 characters.';
   }
@@ -420,11 +374,6 @@ export function validateSubmissionInput(
     }
   }
 
-  const customValues = value.customValues ?? {};
-  if (competition) {
-    const customValuesError = validateCustomValues(customValues, competition);
-    if (customValuesError) errors.customValues = customValuesError;
-  }
   return errors;
 }
 

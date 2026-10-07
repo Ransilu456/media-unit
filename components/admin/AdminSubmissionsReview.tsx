@@ -140,8 +140,7 @@ export function AdminSubmissionsReview() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
-        <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full bg-amber-50" />
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs">
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
             <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-800">
@@ -322,22 +321,6 @@ export function AdminSubmissionsReview() {
                       {submission.synopsis}
                     </p>
                   </section>
-
-                  {submission.customValues && Object.keys(submission.customValues).length > 0 && (
-                    <section className="md:col-span-2 rounded-xl border border-slate-100 bg-white p-4">
-                      <div className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                        <Sparkles size={13} className="text-amber-700" /> Competition details
-                      </div>
-                      <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                        {Object.entries(submission.customValues).map(([key, value]) => (
-                          <div key={key} className="min-w-0">
-                            <dt className="text-[11px] text-slate-500">{key.replaceAll('_', ' ')}</dt>
-                            <dd className="mt-0.5 break-words text-sm font-medium text-slate-800">{value}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </section>
-                  )}
                 </div>
 
                 <section aria-label={`Review ${submission.entryTitle}`} className="border-t border-amber-100 bg-amber-50/45 px-4 py-4 sm:px-5 sm:py-5">

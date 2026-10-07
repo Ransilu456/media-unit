@@ -5,7 +5,20 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
-import { GraduationCap, ShieldCheck, Mail, Lock, AlertCircle, Info } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  GraduationCap,
+  ShieldCheck,
+  Mail,
+  Lock,
+  AlertCircle,
+  Info,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Clock,
+  ShieldX,
+} from 'lucide-react';
 
 interface LoginFormProps {
   initialTab?: 'school' | 'admin';
@@ -14,169 +27,242 @@ interface LoginFormProps {
 export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
   const router = useRouter();
   const { loginSchool, loginAdmin } = useMediaStore();
+  const { rateLimited, cooldownRemaining, recordFailedAttempt, recordSuccess, refreshSession } =
+    useAuth();
+
   const [activeTab, setActiveTab] = useState<'school' | 'admin'>(initialTab);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSchoolSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      const school = await loginSchool(email.trim(), password);
-      if (school) {
-        router.push('/dashboard');
-      } else {
-        setError('Email or password is incorrect. Please check and try again.');
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  // Format mm:ss countdown
+  const formatCooldown = (secs: number): string => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
   };
 
-  const handleAdminSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (rateLimited) return;
     setError(null);
     setLoading(true);
+
     try {
-      const ok = await loginAdmin(email.trim(), password);
-      if (ok) {
-        router.push('/admin');
+      if (activeTab === 'school') {
+        const school = await loginSchool(email.trim(), password);
+        if (school) {
+          await recordSuccess('school');
+          await refreshSession();
+          router.replace('/dashboard');
+        } else {
+          const isNowLimited = recordFailedAttempt();
+          if (!isNowLimited) {
+            setError('Invalid school email or password. Please verify and retry.');
+          }
+        }
       } else {
-        setError('Invalid admin credentials.');
+        const ok = await loginAdmin(email.trim(), password);
+        if (ok) {
+          await recordSuccess('admin');
+          await refreshSession();
+          router.replace('/admin');
+        } else {
+          const isNowLimited = recordFailedAttempt();
+          if (!isNowLimited) {
+            setError('Invalid admin credentials.');
+          }
+        }
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      const isNowLimited = recordFailedAttempt();
+      if (!isNowLimited) {
+        setError(err instanceof Error ? err.message : 'Login failed. Please check credentials.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      {/* Logo */}
-      <div className="text-center mb-7">
-        <div className="w-14 h-14 mx-auto mb-3 bg-slate-900 rounded-full border-2 border-amber-500 p-1 flex items-center justify-center shadow">
+    <div className="w-full max-w-md mx-auto">
+      {/* Brand Header */}
+      <div className="text-center mb-8">
+        <div className="w-14 h-14 mx-auto mb-3 bg-slate-950 rounded-xl border border-slate-700 p-2 flex items-center justify-center shadow-xs">
           <Image src="/Agradhi.png" alt="Agradhi" width={44} height={44} className="object-contain" />
         </div>
-        <h1 className="text-xl font-serif font-bold text-slate-900">Staff Portal Login</h1>
-        <p className="text-xs text-slate-500 mt-1">For School Teachers & Agradhi Executive Staff only</p>
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Staff &amp; Delegation Login</h1>
+        <p className="text-xs text-slate-500 mt-1">For School Teachers-in-Charge &amp; Agradhi Media Board</p>
       </div>
 
       {/* Student notice */}
-      <div className="flex items-start gap-2.5 p-3 mb-5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs">
-        <Info size={14} className="shrink-0 mt-0.5" />
+      <div className="flex items-start gap-2.5 p-3.5 mb-6 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed">
+        <Info size={16} className="shrink-0 mt-0.5 text-amber-700" />
         <span>
-          <strong>Are you a student?</strong> Ask your teacher-in-charge to submit your entry using the school account.{' '}
-          <Link href="/apply" className="underline font-semibold hover:text-blue-900">
-            View open competitions →
+          <strong>Student Competitors:</strong> You do not need to sign in directly. Entries are submitted by your registered teacher.{' '}
+          <Link href="/competitions" className="underline font-bold hover:text-amber-950">
+            Browse competition guidelines →
           </Link>
         </span>
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 mb-5">
+      <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-slate-100 border border-slate-200 mb-6">
         <button
+          type="button"
           onClick={() => { setActiveTab('school'); setError(null); }}
-          className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'school' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            activeTab === 'school'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <GraduationCap size={13} /> School Teacher
+          <GraduationCap size={15} />
+          <span>School Teacher</span>
         </button>
         <button
+          type="button"
           onClick={() => { setActiveTab('admin'); setError(null); }}
-          className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'admin' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            activeTab === 'admin'
+              ? 'bg-slate-950 text-white shadow-sm'
+              : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <ShieldCheck size={13} /> Admin Board
+          <ShieldCheck size={15} />
+          <span>Admin Board</span>
         </button>
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 p-3 mb-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
-          <AlertCircle size={13} className="shrink-0" />
-          {error}
-        </div>
-      )}
+      {/* Card */}
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 sm:p-8">
 
-      {/* School form */}
-      {activeTab === 'school' ? (
-        <form onSubmit={handleSchoolSubmit} className="space-y-4">
+        {/* ── Rate-limit banner ── */}
+        {rateLimited && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-center">
+            <div className="flex items-center justify-center gap-2 text-red-700 font-bold text-sm mb-1">
+              <ShieldX size={18} />
+              <span>Too Many Failed Attempts</span>
+            </div>
+            <p className="text-xs text-red-600 leading-relaxed mb-3">
+              For your account&apos;s security, sign-in has been temporarily disabled. Please wait before trying again.
+            </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-100 border border-red-200">
+              <Clock size={14} className="text-red-600" />
+              <span className="text-red-800 font-mono font-bold text-sm tabular-nums">
+                {formatCooldown(cooldownRemaining)}
+              </span>
+              <span className="text-red-600 text-xs">remaining</span>
+            </div>
+            <p className="text-[11px] text-red-500 mt-3">
+              If you&apos;ve forgotten your credentials, please contact your Agradhi coordinator.
+            </p>
+          </div>
+        )}
+
+        {/* ── Error banner ── */}
+        {!rateLimited && error && (
+          <div className="flex items-start gap-2.5 p-3.5 mb-5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">
+            <AlertCircle size={15} className="shrink-0 mt-0.5 text-red-600" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form noValidate onSubmit={handleSubmit} className="space-y-4">
+          {/* Email */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">School Email</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+              {activeTab === 'school' ? 'School Email Address' : 'Admin Email'}
+            </label>
             <div className="relative">
-              <Mail size={14} className="absolute left-3 top-2.5 text-slate-400" />
+              <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
-                type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="media@school.lk"
-                className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
+                id="login-email"
+                type="email"
+                required
+                disabled={rateLimited}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={activeTab === 'school' ? 'teacher@school.sch.lk' : 'admin@agradhi.lk'}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
+
+          {/* Password */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Password</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPassword((p) => !p)}
+                className="text-xs text-slate-400 hover:text-slate-700 flex items-center gap-1"
+              >
+                {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                <span>{showPassword ? 'Hide' : 'Show'}</span>
+              </button>
+            </div>
             <div className="relative">
-              <Lock size={14} className="absolute left-3 top-2.5 text-slate-400" />
+              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
-                type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white"
+                id="login-password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                disabled={rateLimited}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
+
           <button
-            type="submit" disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm transition-all disabled:opacity-60"
+            type="submit"
+            id="login-submit"
+            disabled={loading || rateLimited}
+            className={`w-full py-3 rounded-xl text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+              activeTab === 'school'
+                ? 'bg-amber-600 hover:bg-amber-700'
+                : 'bg-slate-950 hover:bg-slate-800'
+            }`}
           >
-            {loading ? 'Signing in...' : 'Sign In to School Portal'}
-          </button>
-
-
-        </form>
-      ) : (
-        <form onSubmit={handleAdminSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
-            <div className="relative">
-              <Mail size={14} className="absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="Configured admin email"
-                className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:border-slate-600 focus:bg-white"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Password</label>
-            <div className="relative">
-              <Lock size={14} className="absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:border-slate-600 focus:bg-white"
-              />
-            </div>
-          </div>
-          <button type="submit" disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm transition-all disabled:opacity-60"
-          >
-            {loading ? 'Signing in...' : 'Access Admin Console'}
+            {loading ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Signing in...
+              </>
+            ) : rateLimited ? (
+              <>
+                <Clock size={14} />
+                Sign-in Temporarily Disabled
+              </>
+            ) : (
+              <>
+                <span>Sign in to {activeTab === 'school' ? 'School Dashboard' : 'Admin Panel'}</span>
+                <ArrowRight size={14} />
+              </>
+            )}
           </button>
         </form>
-      )}
 
-      <p className="text-center text-xs text-slate-400 mt-6">
-        New school?{' '}
-        <Link href="/register" className="text-amber-700 font-semibold hover:underline">
-          Register your school →
-        </Link>
-      </p>
+
+        {/* Register link */}
+        {activeTab === 'school' && (
+          <div className="mt-4 text-center">
+            <Link
+              href="/register"
+              className="text-xs font-semibold text-slate-600 hover:text-amber-700 transition-colors"
+            >
+              Don&apos;t have a school account yet? <strong>Register now →</strong>
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,54 @@
 {
   "schools": [
     {
+      "id": "scl-muwfd8oa-yc9e",
+      "name": "asdsd",
+      "registrationNumber": "SCH-MUWFD8OB",
+      "province": "Western Province",
+      "district": "Colombo",
+      "teacherInCharge": "asds",
+      "teacherPhone": "0767639484",
+      "mediaPresident": "jbkjk",
+      "presidentPhone": "0767639484",
+      "email": "seffsd@ass.com",
+      "password": "scrypt$rkZMV2TrBFQeIL09xiU7rQ$cd7O_IyRxSlQq5Lr4fyQ-qrSvN45ZkdjZ9XlP6LjpX3pJllTNoTO4P0Yv65qsL_9JWbZxP6hjjVA7kfMl1Sejw",
+      "status": "active",
+      "registeredAt": "2026-10-06",
+      "badgeCode": "AMU-SCL-023"
+    },
+    {
+      "id": "scl-muw249wl-j51y",
+      "name": "askdnlkas",
+      "registrationNumber": "ASDASDAS",
+      "province": "Western Province",
+      "district": "Colombo",
+      "teacherInCharge": "ASDASDA",
+      "teacherPhone": "077 123 4566",
+      "mediaPresident": "SADASD",
+      "presidentPhone": "077 123 4566",
+      "email": "my@media.com",
+      "password": "scrypt$9LRlCPTDgd6_Ng4TyeefrQ$QRUjZwT_O4m3bQiN22v-ZRv80r0F54tlRKQgQp6XDnDRchbHaYL3_YJY20-LfYs51F9oQX0fC-kA_1d6RKZphQ",
+      "status": "active",
+      "registeredAt": "2026-10-06",
+      "badgeCode": "AMU-SCL-022"
+    },
+    {
+      "id": "scl-muvj3qpq-i2ep",
+      "name": "My School",
+      "registrationNumber": "SCH-MUVJ3QPQ",
+      "province": "Western Province",
+      "district": "Some",
+      "teacherInCharge": "kjasbdkasbd",
+      "teacherPhone": "0711234567",
+      "mediaPresident": "kandalkw",
+      "presidentPhone": "0711234567",
+      "email": "media@schooll.com",
+      "password": "scrypt$1dRTLRu2_x34196Zh7GR6g$-58b1J94Wze552vhkeX6kRblz1xBNQkCctiDuaXmNr6-c65l75kqhrKXzTwgZ8TqzmuqtZYkmmE5ShL2jHimhQ",
+      "status": "active",
+      "registeredAt": "2026-10-05",
+      "badgeCode": "AMU-SCL-021"
+    },
+    {
       "id": "scl-muv30xi9-t5qg",
       "name": "andksd",
       "registrationNumber": "SCH-MUV30XI9",
@@ -50,6 +98,30 @@
     }
   ],
   "submissions": [
+    {
+      "id": "sub-muvj57qv-926a082a",
+      "competitionId": "agr-radio-script-s",
+      "competitionTitle": "Radio Script Writing — Sinhala Medium",
+      "competitionMedium": "Sinhala",
+      "schoolId": "scl-muvj3qpq-i2ep",
+      "schoolName": "My School",
+      "category": "Radio Play & Audio Production",
+      "studentName": "ojowjdaw",
+      "studentGrade": "Grade 6",
+      "studentBirthday": "2014-06-05",
+      "studentAge": 12,
+      "studentContact": "0711234567",
+      "entryTitle": "kugiugif",
+      "submissionLink": "https://asds",
+      "synopsis": "as asd asd sada sd asd asd as das das d as das ds das ad da d sd sd sd",
+      "customValues": {
+        "drive_link": "https://sad"
+      },
+      "status": "disqualified",
+      "submittedAt": "2026-10-05",
+      "score": 0,
+      "judgeFeedback": "I don't like this"
+    },
     {
       "id": "sub-muumknpp-128e7b88",
       "competitionId": "agr-photography",
@@ -107,7 +179,7 @@
       "medium": "Sinhala",
       "slug": "news-presenting-sinhala",
       "description": "Students present a prepared Sinhala news bulletin demonstrating proper pronunciation, voice modulation, eye contact, and broadcast composure. Judged on accuracy, delivery, and presentation.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -154,7 +226,7 @@
       "medium": "English",
       "slug": "news-presenting-english",
       "description": "Students present a prepared English news bulletin demonstrating proper pronunciation, voice modulation, eye contact, and broadcast composure.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -199,7 +271,7 @@
       "medium": "Sinhala",
       "slug": "news-editing-sinhala",
       "description": "Participants edit a provided raw Sinhala news script for broadcast — correcting grammar, structure, and clarity while maintaining journalistic standards.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -240,7 +312,7 @@
       "medium": "English",
       "slug": "news-editing-english",
       "description": "Participants edit a provided raw English news script for broadcast — correcting grammar, structure, and clarity while maintaining journalistic standards.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -280,7 +352,7 @@
       "medium": "Sinhala",
       "slug": "radio-script-sinhala",
       "description": "Write an original Sinhala radio script for a 5-minute programme — could be a feature, drama, or documentary segment.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -322,7 +394,7 @@
       "medium": "English",
       "slug": "radio-script-english",
       "description": "Write an original English radio script for a 5-minute programme — feature, drama, or documentary.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -363,7 +435,7 @@
       "medium": "Sinhala",
       "slug": "radio-presenting-sinhala",
       "description": "Students host a short Sinhala radio programme segment — demonstrating voice quality, pacing, audience engagement, and smooth presentation.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -405,7 +477,7 @@
       "medium": "English",
       "slug": "radio-presenting-english",
       "description": "Students host a short English radio programme segment demonstrating voice quality, pacing, and smooth presentation.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -446,7 +518,7 @@
       "medium": "Sinhala",
       "slug": "programme-presenting-sinhala",
       "description": "Students present a short TV/radio programme segment in Sinhala, demonstrating stage presence, fluency, and programme hosting skills.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -488,7 +560,7 @@
       "medium": "English",
       "slug": "programme-presenting-english",
       "description": "Students present a short TV/radio programme segment in English demonstrating stage presence, fluency, and hosting skills.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -529,7 +601,7 @@
       "medium": "Sinhala",
       "slug": "dubbing-sinhala",
       "description": "Students dub a provided video clip into Sinhala — matching lip sync, voice emotion, and timing with the original content.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,
@@ -571,7 +643,7 @@
       "medium": "English",
       "slug": "dubbing-english",
       "description": "Students dub a provided video clip into English — matching lip sync, voice emotion, and timing with the original content.",
-      "eligibility": "Grades 6 – 13 (O/L & A/L)",
+      "eligibility": "Grades 6 – 13 ",
       "ageCategory": {
         "label": "All Levels",
         "minAge": 11,

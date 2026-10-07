@@ -32,7 +32,7 @@ export interface AgeCategory {
   label: string;
   minAge: number;
   maxAge: number;
-  grades: string[]; // e.g. ['Grade 6','Grade 7', ...]
+  grades: string[]; 
 }
 
 export interface Competition {
@@ -49,7 +49,7 @@ export interface Competition {
   status: CompetitionStatus;
   prizePool: string;
   guidelines: string[];
-  customFields: FormField[];
+  customFields?: FormField[];
 }
 
 export interface RegisteredSchool {
@@ -90,7 +90,6 @@ export interface Submission {
   entryTitle: string;
   submissionLink: string;
   synopsis: string;
-  customValues?: Record<string, string>;
   status: SubmissionStatus;
   submittedAt: string;
   score?: number;
@@ -111,7 +110,6 @@ export interface NewSubmissionInput {
   entryTitle: string;
   submissionLink: string;
   synopsis: string;
-  customValues?: Record<string, string>;
 }
 
 export interface AuthSession {

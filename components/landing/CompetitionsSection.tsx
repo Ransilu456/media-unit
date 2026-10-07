@@ -1,166 +1,326 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useMediaStore } from '@/lib/store';
 import { StatusBadge } from '@/components/ui/Badge';
+import { EntrySubmissionModal } from '@/components/forms/EntrySubmissionModal';
+import { Competition } from '@/lib/types';
 import {
-  Trophy, Calendar, Users, Award, ArrowRight,
-  Film, Camera, Mic, Palette, Radio, CheckCircle2,
+  Trophy,
+  ArrowRight,
+  Film,
+  Camera,
+  Mic,
+  Palette,
+  Radio,
+  CheckCircle2,
+  Search,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  'Short Film & Cinematography':   <Film    size={18} className="text-amber-600" />,
-  'Photography':                   <Camera  size={18} className="text-amber-600" />,
-  'News Reading & Announcing':     <Mic     size={18} className="text-amber-600" />,
-  'Graphic Design & Digital Art':  <Palette size={18} className="text-amber-600" />,
-  'Radio Play & Audio Production': <Radio   size={18} className="text-amber-600" />,
-  'Live Media Reporting':          <Film    size={18} className="text-amber-600" />,
+  'Short Film & Cinematography': <Film size={18} className="text-amber-700" />,
+  'Photography': <Camera size={18} className="text-amber-700" />,
+  'News Reading & Announcing': <Mic size={18} className="text-amber-700" />,
+  'Graphic Design & Digital Art': <Palette size={18} className="text-amber-700" />,
+  'Radio Play & Audio Production': <Radio size={18} className="text-amber-700" />,
+  'Live Media Reporting': <Film size={18} className="text-amber-700" />,
 };
 
-export function CompetitionsSection() {
-  const { competitions, session } = useMediaStore();
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+interface CompetitionsSectionProps {
+  title?: string;
+  subtitle?: string;
+}
 
-  const categories = ['All', ...Array.from(new Set(competitions.map((c) => c.category)))];
-  const filtered = selectedCategory === 'All'
-    ? competitions
-    : competitions.filter((c) => c.category === selectedCategory);
+export function CompetitionsSection({
+  title = 'Competition Tracks',
+  subtitle = 'Review rules, grade levels, and deadlines to submit student entries through your school delegation.',
+}: CompetitionsSectionProps) {
+  const { competitions, session, refreshSubmissions } = useMediaStore();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedMedium, setSelectedMedium] = useState<string>('All');
+  const [expandedCompId, setExpandedCompId] = useState<string | null>(null);
+  const [activeModalComp, setActiveModalComp] = useState<Competition | null>(null);
+
+  const categories = useMemo(() => {
+    return ['All', ...Array.from(new Set(competitions.map((c) => c.category)))];
+  }, [competitions]);
+
+  const filteredCompetitions = useMemo(() => {
+    return competitions.filter((comp) => {
+      const matchesSearch =
+        comp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        comp.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        comp.category.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === 'All' || comp.category === selectedCategory;
+
+      const matchesMedium =
+        selectedMedium === 'All' ||
+        comp.medium === selectedMedium ||
+        (selectedMedium === 'Open' && (comp.medium === 'None' || !comp.medium));
+
+      return matchesSearch && matchesCategory && matchesMedium;
+    });
+  }, [competitions, searchQuery, selectedCategory, selectedMedium]);
+
+  const toggleExpand = (id: string) => {
+    setExpandedCompId((prev) => (prev === id ? null : id));
+  };
+
+  const isSchool = session.type === 'school' && session.school;
 
   return (
-    <section id="competitions" className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 border-t border-slate-200">
-      <div className="max-w-7xl mx-auto">
-
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-          <div>
-            <span className="text-amber-600 font-bold tracking-[0.2em] text-xs uppercase block mb-3 font-mono">
-              Official Competition Tracks
-            </span>
-            <h2 className="text-3xl sm:text-5xl font-serif font-bold text-slate-900 tracking-tight">
-              Annual Inter-School Competitions
-            </h2>
-            <p className="text-slate-500 text-sm max-w-xl mt-3 font-light">
-              Explore open categories, review submission criteria, and submit official entries on behalf of your school delegation.
+    <section id="competitions" className="py-16 md:py-24 bg-white">
+      <div className="max-w-5xl mx-auto px-6">
+        
+        {/* Section Header */}
+        <div className="mb-12 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+          <div className="max-w-xl">
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">
+              Agradhi 2026 Assembly
+            </p>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              {title}
+            </h1>
+            <p className="mt-2 text-slate-500 text-sm sm:text-base leading-relaxed">
+              {subtitle}
             </p>
           </div>
-          <Link
-            href={session.type === 'school' ? '/dashboard' : '/register'}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold transition-all shadow-md shadow-amber-900/10 whitespace-nowrap"
-          >
-            <Trophy size={15} />
-            {session.type === 'school' ? 'Submit from Dashboard' : 'Register to Compete'}
-          </Link>
-        </div>
 
-        {/* Filter pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
-                selectedCategory === cat
-                  ? 'bg-slate-900 text-white border-slate-900 font-semibold shadow-sm'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-amber-400 hover:text-amber-700'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.length === 0 && (
-            <div className="col-span-full py-20 text-center">
-              <Trophy size={40} className="mx-auto text-slate-300 mb-3" />
-              <h3 className="text-lg font-serif font-bold text-slate-500 mb-1">No competitions yet</h3>
-              <p className="text-xs text-slate-400">
-                {selectedCategory !== 'All'
-                  ? 'Try selecting "All" to see all tracks.'
-                  : 'Agradhi admin will publish competitions soon.'}
-              </p>
-            </div>
-          )}
-          {filtered.map((comp) => {
-            const icon = CATEGORY_ICONS[comp.category] ?? <Trophy size={18} className="text-amber-600" />;
-            const isSchool = session.type === 'school';
-            return (
-              <div
-                key={comp.id}
-                className="group flex flex-col justify-between p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg hover:border-amber-300 transition-all duration-300"
+          <div>
+            {isSchool ? (
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-sm"
               >
-                <div>
-                  {/* Category & status */}
-                  <div className="flex items-center justify-between gap-2 mb-4">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-mono text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                      {icon}
-                      <span className="truncate max-w-[140px]">{comp.category}</span>
-                    </div>
-                    <StatusBadge status={comp.status} />
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-lg sm:text-xl font-serif font-bold text-slate-900 mb-2 group-hover:text-amber-700 transition-colors leading-snug">
-                    {comp.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 line-clamp-3 mb-5 leading-relaxed font-light">
-                    {comp.description}
-                  </p>
-
-                  {/* Metadata */}
-                  <div className="space-y-2 py-4 border-y border-slate-100 mb-5 text-xs text-slate-700">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 flex items-center gap-1.5"><Users size={12} /> Eligibility:</span>
-                      <span className="font-medium text-slate-800">{comp.eligibility}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 flex items-center gap-1.5"><Calendar size={12} /> Deadline:</span>
-                      <span className="font-mono text-amber-700 font-semibold">{comp.deadline}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 flex items-center gap-1.5"><Award size={12} /> Max entries:</span>
-                      <span className="font-medium text-slate-800">{comp.maxEntriesPerSchool} per school</span>
-                    </div>
-                  </div>
-
-                  {/* Guidelines preview */}
-                  {comp.guidelines.length > 0 && (
-                    <div className="space-y-1.5 mb-5">
-                      <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">Requirements:</p>
-                      {comp.guidelines.slice(0, 2).map((g, i) => (
-                        <div key={i} className="flex items-start gap-2 text-xs text-slate-600">
-                          <CheckCircle2 size={12} className="text-amber-600 shrink-0 mt-0.5" />
-                          <span className="line-clamp-1">{g}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* CTA */}
-                <div>
-                  {isSchool ? (
-                    <Link
-                      href={`/dashboard?entryComp=${comp.id}`}
-                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs transition-all"
-                    >
-                      Fill Submission Form <ArrowRight size={13} />
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/apply"
-                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-all"
-                    >
-                      Apply Now <ArrowRight size={13} className="text-slate-400" />
-                    </Link>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                <span>School Dashboard</span>
+                <ArrowRight size={14} />
+              </Link>
+            ) : (
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-sm"
+              >
+                <span>Register Your School</span>
+                <ArrowRight size={14} />
+              </Link>
+            )}
+          </div>
         </div>
+
+        {/* Search & Filter Bar */}
+        <div className="mb-10 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search tracks by keyword, category, or medium..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 shadow-xs"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Medium Selector */}
+            <div className="flex rounded-xl border border-slate-200 bg-slate-50/50 p-1 text-xs font-medium text-slate-600">
+              {['All', 'Sinhala', 'English'].map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setSelectedMedium(m)}
+                  className={`px-3 py-1.5 rounded-lg transition-colors ${
+                    selectedMedium === m
+                      ? 'bg-white text-slate-900 font-bold shadow-xs'
+                      : 'hover:text-slate-900'
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category Chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs transition-colors ${
+                  selectedCategory === cat
+                    ? 'bg-slate-900 text-white font-semibold'
+                    : 'bg-slate-50 border border-slate-200/80 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Competitions Cards Grid with Clean White Shadows */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filteredCompetitions.length === 0 ? (
+            <div className="col-span-full py-16 text-center bg-slate-50/50 rounded-3xl border border-slate-100 p-8">
+              <Trophy size={32} className="mx-auto text-slate-300 mb-3" />
+              <h3 className="text-base font-bold text-slate-800 mb-1">No competition tracks match your search</h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto mb-4 leading-relaxed">
+                Try resetting your category or medium filter to explore all available categories.
+              </p>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('All');
+                  setSelectedMedium('All');
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800"
+              >
+                Reset Filters
+              </button>
+            </div>
+          ) : (
+            filteredCompetitions.map((comp) => {
+              const icon = CATEGORY_ICONS[comp.category] ?? <Trophy size={18} className="text-amber-700" />;
+              const isExpanded = expandedCompId === comp.id;
+
+              return (
+                <div
+                  key={comp.id}
+                  className="rounded-3xl border border-slate-100 bg-white p-7 shadow-[0_4px_25px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_35px_rgba(0,0,0,0.06)] hover:border-slate-200 transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Top Row */}
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                          {icon}
+                        </div>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          {comp.category}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {comp.medium && comp.medium !== 'None' && (
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                              comp.medium === 'Sinhala'
+                                ? 'bg-blue-50 text-blue-700 border-blue-100'
+                                : 'bg-purple-50 text-purple-700 border-purple-100'
+                            }`}
+                          >
+                            {comp.medium}
+                          </span>
+                        )}
+                        <StatusBadge status={comp.status} />
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-lg font-bold text-slate-900 leading-snug mb-2.5">
+                      {comp.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-xs text-slate-500 leading-relaxed mb-5 line-clamp-3">
+                      {comp.description}
+                    </p>
+
+                    {/* Metadata Box */}
+                    <div className="grid grid-cols-2 gap-2 p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 text-xs mb-5">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-semibold block uppercase">Deadline</span>
+                        <span className="font-semibold text-slate-800">{comp.deadline}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-semibold block uppercase">Quota</span>
+                        <span className="font-semibold text-slate-800">Max {comp.maxEntriesPerSchool} entries</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-[10px] text-slate-400 font-semibold block uppercase">Eligibility</span>
+                        <span className="font-semibold text-slate-800">{comp.eligibility}</span>
+                      </div>
+                    </div>
+
+                    {/* Collapsible Rules */}
+                    {comp.guidelines && comp.guidelines.length > 0 && (
+                      <div className="mb-5">
+                        <button
+                          onClick={() => toggleExpand(comp.id)}
+                          className="flex items-center justify-between w-full text-xs font-semibold text-slate-600 hover:text-slate-900 py-1 transition-colors"
+                        >
+                          <span>{isExpanded ? 'Hide track requirements' : 'View requirements & rules'}</span>
+                          {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+
+                        {isExpanded && (
+                          <div className="mt-2.5 p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs space-y-2">
+                            {comp.guidelines.map((g, idx) => (
+                              <div key={idx} className="flex items-start gap-2 text-slate-600">
+                                <CheckCircle2 size={13} className="text-amber-700 mt-0.5 shrink-0" />
+                                <span className="leading-relaxed">{g}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-4 border-t border-slate-50">
+                    {isSchool ? (
+                      <button
+                        onClick={() => setActiveModalComp(comp)}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-xs"
+                      >
+                        <span>Submit Student Entry</span>
+                        <ArrowRight size={14} />
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/register?track=${comp.id}`}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-xs"
+                      >
+                        <span>Register School to Enter</span>
+                        <ArrowRight size={14} />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Submission Modal for 1-Click Submission */}
+        {activeModalComp && isSchool && session.school && (
+          <EntrySubmissionModal
+            isOpen={true}
+            onClose={() => setActiveModalComp(null)}
+            competition={activeModalComp}
+            school={session.school}
+            onSubmitted={async () => {
+              await refreshSubmissions();
+              setActiveModalComp(null);
+            }}
+          />
+        )}
+
       </div>
     </section>
   );

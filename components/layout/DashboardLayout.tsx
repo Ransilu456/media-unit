@@ -125,10 +125,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Sidebar footer */}
         <div className="p-3 border-t border-slate-800 space-y-1">
           <Link
-            href="/apply"
+            href="/competitions"
             className="flex items-center gap-2 px-3 py-2 text-xs text-amber-400 hover:bg-slate-800 rounded-lg transition-colors"
           >
-            <Trophy size={13} /> View Student Apply Form
+            <Trophy size={13} /> View competitions
           </Link>
           <button
             onClick={async () => {

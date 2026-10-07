@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
+import { useState, useEffect, useCallback } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebase';
+import type {
   Competition,
   RegisteredSchool,
   PublicSchool,
@@ -12,8 +14,24 @@ import {
 } from './types';
 import { INITIAL_COMPETITIONS } from './constants';
 import { validateSubmissionInput } from './validation';
+import {
+  getFirebaseSession,
+  firebaseLoginSchool,
+  firebaseLoginAdmin,
+  firebaseRegisterSchool,
+  firebaseLogout,
+  firebaseGetCompetitions,
+  firebaseAddCompetition,
+  firebaseUpdateCompetition,
+  firebaseDeleteCompetition,
+  firebaseGetSchools,
+  firebaseUpdateSchoolStatus,
+  firebaseGetSubmissions,
+  firebaseSubmitEntry,
+  firebaseUpdateSubmission,
+} from './firebaseOperations';
 
-// ─── main hook ──────────────────────────────────────────────────────────────
+// ─── Main media store hook powered by Firebase ───────────────────────────────
 
 export function useMediaStore() {
   const [competitions, setCompetitions] = useState<Competition[]>(INITIAL_COMPETITIONS);
@@ -23,70 +41,72 @@ export function useMediaStore() {
   const [session, setSessionState] = useState<AuthSession>({ type: 'guest' });
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load the server-verified session before requesting role-protected data.
-  useEffect(() => {
-    const loadStore = async () => {
-      try {
-        const sessionResponse = await fetch('/api/auth/session', { cache: 'no-store' });
-        const sessionResult = await sessionResponse.json();
-        if (!sessionResponse.ok || !sessionResult.success) {
-          throw new Error(sessionResult.error || 'Unable to verify the current session.');
-        }
-
-        const currentSession: AuthSession = sessionResult.data;
-        setSessionState(currentSession);
-        const [competitionsResponse, publicSchoolsResponse, schoolsResponse, submissionsResponse] = await Promise.all([
-          fetch('/api/competitions', { cache: 'no-store' }),
-          fetch('/api/schools/public'),
-          currentSession.type === 'admin' ? fetch('/api/schools') : null,
-          currentSession.type !== 'guest' ? fetch('/api/submissions') : null,
-        ]);
-
-        const competitionsResult = await competitionsResponse.json();
-        if (!competitionsResponse.ok || !competitionsResult.success) {
-          throw new Error(competitionsResult.error || 'Unable to load competitions.');
-        }
-        setCompetitions(competitionsResult.data);
-
-        const publicSchoolsResult = await publicSchoolsResponse.json();
-        if (publicSchoolsResponse.ok && publicSchoolsResult.success) {
-          setPublicSchools(publicSchoolsResult.data);
-        }
-        if (schoolsResponse) {
-          const result = await schoolsResponse.json();
-          if (schoolsResponse.ok && result.success) setSchools(result.data);
-        }
-        if (submissionsResponse) {
-          const result = await submissionsResponse.json();
-          if (submissionsResponse.ok && result.success) setSubmissions(result.data);
-        }
-      } catch (error: unknown) {
-        console.error('[media store hydration]', error);
-      } finally {
-        setIsLoaded(true);
-      }
-    };
-    void loadStore();
-  }, []);
-
   const _persistSession = (s: AuthSession) => {
     setSessionState(s);
   };
 
-  // ── Actions ──────────────────────────────────────────────────────────────
+  // Firebase Auth is the session source; Firestore supplies the user profile.
+  useEffect(() => {
+    let active = true;
+    let authEvent = 0;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const currentEvent = ++authEvent;
+      void (async () => {
+        let currentSession: AuthSession;
+        try {
+          currentSession = await getFirebaseSession(user);
+        } catch (error) {
+          console.warn('[firebase session initialization]', error);
+          if (active && currentEvent === authEvent) setSessionState({ type: 'guest' });
+          if (active && currentEvent === authEvent) setIsLoaded(true);
+          return;
+        }
+
+        if (!active || currentEvent !== authEvent) return;
+        setSessionState(currentSession);
+        const [compsResult, schoolsResult, submissionsResult] = await Promise.allSettled([
+          firebaseGetCompetitions(),
+          currentSession.type === 'admin' ? firebaseGetSchools() : Promise.resolve([]),
+          firebaseGetSubmissions(
+            currentSession.type === 'school' ? currentSession.school?.id : undefined
+          ),
+        ]);
+        if (!active || currentEvent !== authEvent) return;
+        if (compsResult.status === 'fulfilled') setCompetitions(compsResult.value);
+        else console.warn('[firestore competitions]', compsResult.reason);
+        if (schoolsResult.status === 'fulfilled') {
+          const loadedSchools = schoolsResult.value;
+          setSchools(loadedSchools);
+          setPublicSchools(loadedSchools.map((school) => ({
+            id: school.id,
+            name: school.name,
+            province: school.province,
+            district: school.district,
+            badgeCode: school.badgeCode,
+          })));
+        } else console.warn('[firestore schools]', schoolsResult.reason);
+        if (submissionsResult.status === 'fulfilled') setSubmissions(submissionsResult.value);
+        else console.warn('[firestore submissions]', submissionsResult.reason);
+
+        if (active && currentEvent === authEvent) {
+          setIsLoaded(true);
+        }
+      })();
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  // ── Actions ────────────────────────────────────────────────────────────────
 
   const registerSchool = async (
     data: Omit<RegisteredSchool, 'id' | 'registeredAt' | 'badgeCode' | 'status'>
   ): Promise<RegisteredSchool> => {
-    const res = await fetch('/api/schools', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error || 'Registration failed.');
-
-    const school: RegisteredSchool = json.data;
+    const school = await firebaseRegisterSchool(data);
+    _persistSession({ type: 'school', school });
     setSchools((prev) => [school, ...prev]);
     setPublicSchools((prev) => [
       {
@@ -98,7 +118,6 @@ export function useMediaStore() {
       },
       ...prev,
     ]);
-    _persistSession({ type: 'school', school });
     return school;
   };
 
@@ -106,89 +125,47 @@ export function useMediaStore() {
     email: string,
     pass: string
   ): Promise<RegisteredSchool | null> => {
-    const res = await fetch('/api/schools/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass }),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      if (res.status === 401) return null;
-      throw new Error(json.error || 'Unable to sign in.');
-    }
+    const school = await firebaseLoginSchool(email, pass);
+    if (!school) return null;
 
-    const school: RegisteredSchool = json.data;
     _persistSession({ type: 'school', school });
-
-    const subsResponse = await fetch('/api/submissions');
-    const subsResult = await subsResponse.json();
-    if (!subsResponse.ok || !subsResult.success) {
-      throw new Error(subsResult.error || 'Unable to load school submissions.');
-    }
-    setSubmissions(subsResult.data);
-
+    const userSubs = await firebaseGetSubmissions(school.id);
+    setSubmissions(userSubs);
     return school;
   };
 
   const loginAdmin = async (email: string, pass: string): Promise<boolean> => {
-    const response = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass }),
+    const ok = await firebaseLoginAdmin(email, pass);
+    if (!ok) return false;
+
+    _persistSession({ type: 'admin' });
+
+    // Non-blocking fetch of all schools and submissions
+    void Promise.all([
+      firebaseGetSchools(),
+      firebaseGetSubmissions(),
+    ]).then(([allSchools, allSubs]) => {
+      setSchools(allSchools);
+      setSubmissions(allSubs);
+    }).catch((err) => {
+      console.warn('[admin post-login data load]', err);
     });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      if (response.status >= 500) {
-        throw new Error(result.error || 'Admin login is temporarily unavailable.');
-      }
-      return false;
-    }
 
-    const sessionResponse = await fetch('/api/auth/session', { cache: 'no-store' });
-    const sessionResult = await sessionResponse.json();
-    if (!sessionResponse.ok || !sessionResult.success || sessionResult.data.type !== 'admin') {
-      throw new Error(sessionResult.error || 'Unable to verify the admin session.');
-    }
-    _persistSession(sessionResult.data);
-
-    const [schoolsResponse, submissionsResponse] = await Promise.all([
-      fetch('/api/schools'),
-      fetch('/api/submissions'),
-    ]);
-    const [schoolsResult, submissionsResult] = await Promise.all([
-      schoolsResponse.json(),
-      submissionsResponse.json(),
-    ]);
-    if (!schoolsResponse.ok || !schoolsResult.success) {
-      throw new Error(schoolsResult.error || 'Unable to load registered schools.');
-    }
-    if (!submissionsResponse.ok || !submissionsResult.success) {
-      throw new Error(submissionsResult.error || 'Unable to load submissions.');
-    }
-    setSchools(schoolsResult.data);
-    setSubmissions(submissionsResult.data);
     return true;
   };
 
   const logout = async () => {
-    const response = await fetch('/api/auth/logout', { method: 'POST' });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Unable to sign out.');
-    }
+    await firebaseLogout();
     _persistSession({ type: 'guest' });
     setSubmissions([]);
-    setSchools([]);
   };
 
-  const refreshSubmissions = async () => {
-    const response = await fetch('/api/submissions', { cache: 'no-store' });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Unable to refresh submissions.');
-    }
-    setSubmissions(result.data);
-  };
+  const refreshSubmissions = useCallback(async () => {
+    const currentSession = await getFirebaseSession();
+    const schoolId = currentSession.type === 'school' ? currentSession.school?.id : undefined;
+    const subs = await firebaseGetSubmissions(schoolId);
+    setSubmissions(subs);
+  }, []);
 
   const submitEntry = async (
     entry: NewSubmissionInput
@@ -198,39 +175,28 @@ export function useMediaStore() {
       throw new Error(Object.values(validationErrors)[0]);
     }
 
-    const res = await fetch('/api/submissions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry),
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Submission failed.');
-
-    const newSub: Submission = json.data;
+    const newSub = await firebaseSubmitEntry(entry);
     setSubmissions((prev) => [newSub, ...prev]);
     return newSub;
   };
 
-  // Stub for admin status update — would call a PATCH API in production
   const updateSubmissionStatus = async (
     id: string,
     status: SubmissionStatus,
     score?: number,
     feedback?: string
   ): Promise<void> => {
-    const response = await fetch('/api/submissions', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status, score, feedback }),
+    await firebaseUpdateSubmission(id, {
+      status,
+      score,
+      judgeFeedback: feedback,
     });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Unable to save the submission update.');
-    }
 
     setSubmissions((prev) =>
       prev.map((s) =>
-        s.id === id ? result.data : s
+        s.id === id
+          ? { ...s, status, score: score !== undefined ? score : s.score, judgeFeedback: feedback !== undefined ? feedback : s.judgeFeedback }
+          : s
       )
     );
   };
@@ -239,31 +205,17 @@ export function useMediaStore() {
     id: string,
     status: 'active' | 'pending' | 'suspended'
   ): Promise<void> => {
-    const response = await fetch('/api/schools', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status }),
-    });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Unable to save the school status.');
-    }
-
-    setSchools((prev) => prev.map((school) => (school.id === id ? result.data : school)));
+    await firebaseUpdateSchoolStatus(id, status);
+    setSchools((prev) =>
+      prev.map((school) => (school.id === id ? { ...school, status } : school))
+    );
   };
 
-  const addCompetition = async (comp: Omit<Competition, 'id'>): Promise<Competition> => {
-    const response = await fetch('/api/competitions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(comp),
-    });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Unable to create the competition.');
-    }
-    const newComp: Competition = result.data;
-    setCompetitions((previous) => [...previous, newComp]);
+  const addCompetition = async (
+    comp: Omit<Competition, 'id'>
+  ): Promise<Competition> => {
+    const newComp = await firebaseAddCompetition(comp);
+    setCompetitions((prev) => [...prev, newComp]);
     return newComp;
   };
 
@@ -271,33 +223,15 @@ export function useMediaStore() {
     id: string,
     updates: Partial<Omit<Competition, 'id'>>
   ): Promise<void> => {
-    const current = competitions.find((competition) => competition.id === id);
-    if (!current) throw new Error('Competition not found.');
-    const response = await fetch('/api/competitions', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...current, ...updates, id }),
-    });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Unable to save the competition.');
-    }
-    setCompetitions((previous) =>
-      previous.map((competition) => competition.id === id ? result.data : competition)
+    await firebaseUpdateCompetition(id, updates);
+    setCompetitions((prev) =>
+      prev.map((comp) => (comp.id === id ? { ...comp, ...updates } : comp))
     );
   };
 
   const deleteCompetition = async (id: string): Promise<void> => {
-    const response = await fetch('/api/competitions', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Unable to delete the competition.');
-    }
-    setCompetitions((previous) => previous.filter((competition) => competition.id !== id));
+    await firebaseDeleteCompetition(id);
+    setCompetitions((prev) => prev.filter((comp) => comp.id !== id));
   };
 
   const resetToDefaults = () => {

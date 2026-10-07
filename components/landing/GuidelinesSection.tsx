@@ -13,76 +13,60 @@ import {
 export function GuidelinesSection() {
   const rules = [
     {
-      title: 'Drive Link Permissions',
-      desc: 'All Google Drive submission folders must be set to "Anyone with the link can view". Broken or private links cannot be evaluated by the jury.',
+      title: 'Share your work',
+      desc: 'Set your Google Drive link so anyone with the link can view it. Judges cannot open private or broken links.',
       icon: FolderLock,
     },
     {
-      title: 'School Endorsement Letter',
-      desc: 'Each participating delegation must obtain the signature of the Principal or Media Teacher-in-Charge on the official school declaration form.',
+      title: 'Get school approval',
+      desc: 'Ask your principal or teacher-in-charge to sign the school approval form.',
       icon: FileCheck2,
     },
     {
-      title: 'Authenticity & Anti-Plagiarism',
-      desc: 'All artwork, scripts, photography, and video footage must be original work produced by currently enrolled students. Unauthorized AI-generated submissions will be disqualified.',
+      title: 'Send original work',
+      desc: 'Entries must be made by current students. Copied or AI-generated work is not allowed.',
       icon: ShieldAlert,
     },
     {
-      title: 'Deadline Compliance',
-      desc: 'Submissions portal closes strictly at 23:59 on the indicated dates. No late submissions will be accepted through email or direct message.',
+      title: 'Submit on time',
+      desc: 'Send your entry before the deadline. Late entries will not be accepted.',
       icon: CalendarDays,
     },
   ];
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900 border-t border-slate-800">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
-          {/* Left Column — Header */}
-          <div className="space-y-4">
-            <span className="text-amber-500 font-bold tracking-[0.2em] text-xs uppercase block font-mono">
-              Official Regulations
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-white tracking-tight">
-              Competition Guidelines & Standards
-            </h2>
-            <p className="text-sm text-slate-400 leading-relaxed font-light">
-              Please review all technical requirements and compliance standards before lodging official entries on behalf of your school media circle.
-            </p>
-            <div className="pt-4">
-              <Link
-                href="/register"
-                className="inline-flex items-center gap-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 px-5 py-2.5 rounded transition-colors shadow-sm"
-              >
-                <span>Register Your Delegation</span>
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-
-          {/* Right Column — Rule Cards */}
-          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {rules.map((rule, idx) => {
-              const Icon = rule.icon;
-              return (
-                <div
-                  key={idx}
-                  className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-3 hover:bg-white/10 hover:border-amber-500/30 transition-colors"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-amber-600/10 border border-amber-500/20 flex items-center justify-center">
-                    <Icon size={18} className="text-amber-400" />
-                  </div>
-                  <h4 className="text-base font-serif font-bold text-white">
-                    {rule.title}
-                  </h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    {rule.desc}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+    <section className="border-t border-slate-200 bg-slate-50 py-16">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="mb-8 max-w-2xl">
+          <p className="mb-3 text-sm font-semibold text-amber-700">Before you enter</p>
+          <h2 className="text-3xl font-semibold text-slate-900 md:text-4xl">
+            Competition guidelines
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Read these rules before sending an entry for your school.
+          </p>
         </div>
+
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          {rules.map((rule) => {
+            const Icon = rule.icon;
+            return (
+              <div key={rule.title} className="border-t border-slate-300 pt-4">
+                <div className="mb-2 flex items-center gap-2 text-slate-700">
+                  <Icon size={17} className="text-amber-700" />
+                  <h3 className="text-base font-semibold">{rule.title}</h3>
+                </div>
+                <p className="text-sm leading-6 text-slate-600">{rule.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+        <Link
+          href="/register"
+          className="mt-8 inline-flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-3 text-sm font-semibold text-white hover:bg-amber-700"
+        >
+          Register your school <ArrowRight size={15} />
+        </Link>
       </div>
     </section>
   );

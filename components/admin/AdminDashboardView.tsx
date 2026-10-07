@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useMediaStore } from '@/lib/store';
+import { firebaseGetCompetitions, firebaseGetSchools, firebaseGetSubmissions } from '@/lib/firebaseOperations';
 import { AdminCompetitionsManager } from './AdminCompetitionsManager';
 import { AdminSubmissionsReview } from './AdminSubmissionsReview';
 import { AdminSchoolsManager } from './AdminSchoolsManager';
@@ -13,11 +14,42 @@ import {
   FileText,
   Trophy,
   RotateCcw,
+  Cloud,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 
 export function AdminDashboardView() {
   const { session, schools, competitions, submissions, resetToDefaults } = useMediaStore();
   const [activeTab, setActiveTab] = useState<'submissions' | 'competitions' | 'schools'>('submissions');
+  const [syncingFirebase, setSyncingFirebase] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleSyncFirebase = async () => {
+    setSyncingFirebase(true);
+    setSyncStatus(null);
+    try {
+      // Directly refresh from Firebase Firestore — no API route needed
+      const [comps, schs, subs] = await Promise.all([
+        firebaseGetCompetitions(),
+        firebaseGetSchools(),
+        firebaseGetSubmissions(),
+      ]);
+      const total = comps.length + schs.length + subs.length;
+      setSyncStatus({
+        type: 'success',
+        message: `Firebase sync complete! Loaded ${comps.length} competitions, ${schs.length} schools, ${subs.length} submissions.`,
+      });
+    } catch (err) {
+      setSyncStatus({
+        type: 'error',
+        message: 'Could not reach Firestore. Please verify Cloud Firestore is created in Firebase Console.',
+      });
+    } finally {
+      setSyncingFirebase(false);
+    }
+  };
 
   if (session.type !== 'admin') {
     return (
@@ -84,7 +116,17 @@ export function AdminDashboardView() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => void handleSyncFirebase()}
+              disabled={syncingFirebase}
+              title="Sync current records to Cloud Firestore"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-semibold transition-all shadow-xs"
+            >
+              <Cloud size={13} className={syncingFirebase ? 'animate-pulse' : ''} />
+              <span>{syncingFirebase ? 'Syncing...' : 'Sync to Firebase'}</span>
+            </button>
+
             <button
               onClick={() => {
                 if (confirm('Reset store back to default demo schools and sample competitions?')) {
@@ -101,6 +143,23 @@ export function AdminDashboardView() {
             </button>
           </div>
         </div>
+
+        {syncStatus && (
+          <div
+            className={`mt-4 p-3 rounded-xl flex items-center gap-2 text-xs font-medium ${
+              syncStatus.type === 'success'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                : 'bg-amber-50 text-amber-900 border border-amber-200'
+            }`}
+          >
+            {syncStatus.type === 'success' ? (
+              <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
+            ) : (
+              <AlertCircle size={15} className="shrink-0 text-amber-600" />
+            )}
+            <span>{syncStatus.message}</span>
+          </div>
+        )}
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-6 border-t border-slate-100">

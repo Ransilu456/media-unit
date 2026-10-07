@@ -3,124 +3,169 @@
 import React from 'react';
 import Link from 'next/link';
 import { useMediaStore } from '@/lib/store';
-import { ArrowRight, Trophy } from 'lucide-react';
+import {
+  ArrowRight,
+  Trophy,
+  Film,
+  Camera,
+  Mic,
+  Radio,
+  FileCheck2,
+  CheckCircle2,
+} from 'lucide-react';
 
 export function HeroSection() {
-  const { session, publicSchools, competitions } = useMediaStore();
+  const { session, competitions } = useMediaStore();
+  const openCount = competitions.filter((c) => c.status === 'open').length;
+
+  const disciplines = [
+    {
+      title: 'Short Film & Cinema',
+      category: 'Cinematography',
+      desc: 'Narrative short films and investigative documentaries judged on direction, lighting, and pacing.',
+      icon: Film,
+      badge: '4K / HD Video',
+      color: 'text-amber-700 bg-amber-50 border-amber-200/60',
+    },
+    {
+      title: 'News Reading & Announcing',
+      category: 'Broadcasting',
+      desc: 'Formal news delivery in Sinhala and English evaluated on diction, poise, and broadcast standards.',
+      icon: Mic,
+      badge: 'Sinhala & English',
+      color: 'text-blue-700 bg-blue-50 border-blue-200/60',
+    },
+    {
+      title: 'Press & Documentary Photography',
+      category: 'Visual Arts',
+      desc: 'Single-frame storytelling capturing cultural heritage, nature, sports, and street photojournalism.',
+      icon: Camera,
+      badge: 'Digital Stills',
+      color: 'text-emerald-700 bg-emerald-50 border-emerald-200/60',
+    },
+    {
+      title: 'Radio Play & Sound Production',
+      category: 'Audio Arts',
+      desc: 'SLBC gold-standard acoustic audio plays, voice modulation, and binaural sound design.',
+      icon: Radio,
+      badge: 'Acoustic Audio',
+      color: 'text-purple-700 bg-purple-50 border-purple-200/60',
+    },
+  ];
 
   return (
-    <div>
-      {/* Hero Section — exactly matching sara-by-keshan.netlify.app */}
-      <section className="relative h-[600px] bg-slate-900 flex items-center overflow-hidden">
-        {/* Background image + overlay layers — same as reference */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=2070&auto=format&fit=crop"
-            alt="Saranath College Campus"
-            className="w-full h-full object-cover opacity-30"
-            style={{ animation: 'pulse 10s ease-in-out infinite' }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/90 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-900 to-transparent" />
-        </div>
+    <section className="relative bg-white pt-16 pb-24 md:pt-24 md:pb-32 overflow-hidden border-b border-slate-100">
+      <div className="max-w-6xl mx-auto px-6">
+        
+        {/* Header Block */}
+        <div className="max-w-3xl mx-auto text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-semibold text-slate-700 mb-6 shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+            <span>Saranath College · All-Island Media Assembly 2026</span>
+          </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-          <div className="max-w-3xl border-l-4 border-amber-500 pl-8 md:pl-10 py-2">
+          <h1 className="text-4xl sm:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.12] mb-6">
+            National Stage for <br className="hidden sm:inline" />
+            <span className="text-amber-700">Student Broadcasters</span>
+          </h1>
 
-            {/* Animated dot badge */}
-            <div className="flex items-center gap-2 mb-4">
-              <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-amber-400 font-medium tracking-wider uppercase text-xs md:text-sm">
-                Welcome to Agradhi Media Unit
-              </span>
-            </div>
+          <p className="text-base sm:text-lg text-slate-500 leading-relaxed mb-10 max-w-2xl mx-auto">
+            Sri Lanka&apos;s premier collegiate media festival uniting student filmmakers, announcers, photographers, and audio artists across all 25 districts.
+          </p>
 
-            {/* Main Headline */}
-            <h2 className="text-5xl md:text-7xl font-serif font-semibold text-white leading-[1.1] mb-6 tracking-tight">
-              A Legacy of <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
-                Cinematic Excellence
-              </span>
-            </h2>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/competitions"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-all shadow-sm hover:shadow"
+            >
+              <Trophy size={16} className="text-amber-400" />
+              <span>Browse {openCount} Open Tracks</span>
+              <ArrowRight size={15} />
+            </Link>
 
-            {/* Subtitle */}
-            <p className="text-lg text-slate-300 mb-10 leading-relaxed max-w-xl font-light">
-              Nurturing the next generation of young broadcasters, cinematographers, and visual artists across Sri Lanka. Enter the 8th Annual All-Island Media Assembly.
-            </p>
-
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              {session.type === 'school' && session.school ? (
-                <Link
-                  href="/dashboard"
-                  className="px-8 py-3.5 bg-amber-600 text-white text-sm font-medium rounded hover:bg-amber-500 transition-all shadow-lg shadow-amber-900/20 flex items-center justify-center gap-2"
-                >
-                  <span>Go to {session.school.name} Dashboard</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/register"
-                    className="px-8 py-3.5 bg-amber-600 text-white text-sm font-medium rounded hover:bg-amber-500 transition-all shadow-lg shadow-amber-900/20 flex items-center justify-center gap-2"
-                  >
-                    <span>Register Outer School</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href="/competitions"
-                    className="px-8 py-3.5 bg-white/5 backdrop-blur-sm border border-white/20 text-white text-sm font-medium rounded hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Trophy className="w-[18px] text-amber-400" />
-                    Browse Competitions
-                  </Link>
-                </>
-              )}
-            </div>
+            {session.type === 'school' && session.school ? (
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-sm font-semibold transition-colors shadow-2xs"
+              >
+                <span>Open School Dashboard</span>
+              </Link>
+            ) : (
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-sm font-semibold transition-colors shadow-2xs"
+              >
+                <FileCheck2 size={16} className="text-amber-700" />
+                <span>Register Outer School</span>
+              </Link>
+            )}
           </div>
         </div>
-      </section>
 
-      {/* Floating Stats Banner — matches sara-by-keshan exactly */}
-      <section className="py-12 bg-white border-b border-slate-100 relative z-20 -mt-8 mx-4 md:mx-auto max-w-7xl rounded-xl shadow-xl shadow-slate-200/50">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 px-6">
-          <div className="text-center group cursor-default">
-            <div className="text-3xl md:text-4xl font-serif font-semibold text-slate-900 mb-1 group-hover:text-amber-600 transition-colors">
-              98%
-            </div>
-            <div className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-widest">
-              Audit Accuracy
-            </div>
-          </div>
+        {/* Disciplines Bento Grid with Clean Soft Shadows */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-14">
+          {disciplines.map((d, i) => {
+            const Icon = d.icon;
+            return (
+              <Link
+                key={i}
+                href="/competitions"
+                className="group rounded-2xl bg-white p-6 border border-slate-100 shadow-[0_4px_25px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_35px_rgba(0,0,0,0.06)] hover:border-slate-200 transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700 group-hover:bg-amber-50 group-hover:text-amber-700 transition-colors">
+                      <Icon size={18} />
+                    </div>
+                    <span className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
+                      {d.badge}
+                    </span>
+                  </div>
 
-          <div className="text-center group cursor-default border-l border-slate-100">
-            <div className="text-3xl md:text-4xl font-serif font-semibold text-slate-900 mb-1 group-hover:text-amber-600 transition-colors">
-              {publicSchools.length || 18}+
-            </div>
-            <div className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-widest">
-              Outer Schools
-            </div>
-          </div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    {d.category}
+                  </p>
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-amber-700 transition-colors mb-2 leading-snug">
+                    {d.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    {d.desc}
+                  </p>
+                </div>
 
-          <div className="text-center group cursor-default border-l border-slate-100">
-            <div className="text-3xl md:text-4xl font-serif font-semibold text-slate-900 mb-1 group-hover:text-amber-600 transition-colors">
-              {competitions.length || 5}
-            </div>
-            <div className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-widest">
-              Contest Tracks
-            </div>
-          </div>
-
-          <div className="text-center group cursor-default border-l border-slate-100">
-            <div className="text-3xl md:text-4xl font-serif font-semibold text-slate-900 mb-1 group-hover:text-amber-600 transition-colors">
-              40+
-            </div>
-            <div className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-widest">
-              Laurels & Shields
-            </div>
-          </div>
+                <div className="pt-4 border-t border-slate-50 mt-5 flex items-center justify-between text-xs text-slate-400 group-hover:text-slate-700">
+                  <span>View Track Rules</span>
+                  <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            );
+          })}
         </div>
-      </section>
-    </div>
+
+        {/* Minimal Institutional Trust Bar */}
+        <div className="rounded-2xl bg-slate-50/70 border border-slate-100 p-5 flex flex-wrap items-center justify-around gap-4 text-xs font-medium text-slate-500">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600" />
+            <span>100% Free Entry for All Schools</span>
+          </span>
+          <span className="hidden sm:inline text-slate-200">|</span>
+          <span className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600" />
+            <span>Sinhala & English Medium Categories</span>
+          </span>
+          <span className="hidden sm:inline text-slate-200">|</span>
+          <span className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600" />
+            <span>Grades 6–13 (Junior & Senior Levels)</span>
+          </span>
+          <span className="hidden sm:inline text-slate-200">|</span>
+          <span className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600" />
+            <span>National Media Standards</span>
+          </span>
+        </div>
+
+      </div>
+    </section>
   );
 }

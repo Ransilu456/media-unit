@@ -1,43 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
-@font-face {
-  font-family: "Poppins";
-  src: url("/fonts/poppins-400.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Poppins";
-  src: url("/fonts/poppins-500.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Poppins";
-  src: url("/fonts/poppins-600.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Poppins";
-  src: url("/fonts/poppins-700.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-
 @theme {
-  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: "Playfair Display", Georgia, serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "Georgia", "Times New Roman", serif;
 
-  /* Saranath College & Agradhi Media Brand Colors */
   --color-sara-navy: #0f172a;
   --color-sara-dark: #020617;
   --color-sara-amber: #d97706;
@@ -58,12 +25,21 @@
     scroll-behavior: smooth;
   }
 
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background-color: #f8fafc;
     color: #334155;
     font-family: var(--font-body);
     margin: 0;
     overflow-x: hidden;
+    text-rendering: optimizeLegibility;
   }
 
   h1, h2, h3, .font-serif {
@@ -73,16 +49,15 @@
 
 @layer utilities {
   .college-shadow {
-    box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 8px 24px -12px rgba(15, 23, 42, 0.16);
   }
 
   .college-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+    box-shadow: 0 6px 18px -12px rgba(15, 23, 42, 0.12);
   }
 
-  /* Marquee ticker — exactly as in sara-by-keshan */
   .marquee-container {
     overflow: hidden;
     white-space: nowrap;
@@ -108,7 +83,6 @@
     }
   }
 
-  /* Scrollbar hide utility */
   .scrollbar-none {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -118,10 +92,6 @@
   }
 
   .dashboard-font {
-    font-family: "Poppins", sans-serif;
-  }
-
-  .dashboard-font [class*="shadow"] {
-    box-shadow: none !important;
+    font-family: "Inter", sans-serif;
   }
 }

@@ -22,17 +22,9 @@ export const SRI_LANKA_PROVINCES = [
   'Eastern Province',
 ];
 
-// Age eligibility: Grades 6–13 → roughly ages 11–19
-// Junior: Grades 6–9 (age 11–15), Senior: Grades 10–13 (age 15–19)
 const JUNIOR_GRADES = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 const SENIOR_GRADES = ['Grade 10', 'Grade 11', 'Grade 12', 'Grade 13'];
 const ALL_GRADES = [...JUNIOR_GRADES, ...SENIOR_GRADES];
-
-// ─────────────────────────────────────────────────────────────────
-// Real Agradhi Media Unit competition tracks (from official list).
-// Schools and Submissions start empty — filled through registration
-// and student entries respectively.
-// ─────────────────────────────────────────────────────────────────
 
 export const INITIAL_COMPETITIONS: Competition[] = [
   {
@@ -43,7 +35,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'news-presenting-sinhala',
     description:
       'Students present a prepared Sinhala news bulletin demonstrating proper pronunciation, voice modulation, eye contact, and broadcast composure. Judged on accuracy, delivery, and presentation.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-15',
     maxEntriesPerSchool: 2,
@@ -54,10 +46,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
       'Formal news anchor attire is mandatory.',
       'Duration: 2 – 4 minutes.',
       'Clear audio — minimal background noise.',
-    ],
-    customFields: [
-      { id: 'level', label: 'Level (O/L or A/L)', type: 'select', required: true, options: ['O/L', 'A/L'] },
-    ],
+    ]
   },
   {
     id: 'agr-news-presenting-e',
@@ -67,7 +56,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'news-presenting-english',
     description:
       'Students present a prepared English news bulletin demonstrating proper pronunciation, voice modulation, eye contact, and broadcast composure.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-15',
     maxEntriesPerSchool: 2,
@@ -77,10 +66,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
       'Submit an unedited video recording of the student reading the provided sample bulletin.',
       'Formal news anchor attire is mandatory.',
       'Duration: 2 – 4 minutes.',
-    ],
-    customFields: [
-      { id: 'level', label: 'Level (O/L or A/L)', type: 'select', required: true, options: ['O/L', 'A/L'] },
-    ],
+    ]
   },
   {
     id: 'agr-news-editing-s',
@@ -90,7 +76,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'news-editing-sinhala',
     description:
       'Participants edit a provided raw Sinhala news script for broadcast — correcting grammar, structure, and clarity while maintaining journalistic standards.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-15',
     maxEntriesPerSchool: 2,
@@ -112,7 +98,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'news-editing-english',
     description:
       'Participants edit a provided raw English news script for broadcast — correcting grammar, structure, and clarity while maintaining journalistic standards.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-15',
     maxEntriesPerSchool: 2,
@@ -133,7 +119,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'radio-script-sinhala',
     description:
       'Write an original Sinhala radio script for a 5-minute programme — could be a feature, drama, or documentary segment.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-20',
     maxEntriesPerSchool: 2,
@@ -156,7 +142,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'radio-script-english',
     description:
       'Write an original English radio script for a 5-minute programme — feature, drama, or documentary.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-20',
     maxEntriesPerSchool: 2,
@@ -178,7 +164,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'radio-presenting-sinhala',
     description:
       'Students host a short Sinhala radio programme segment — demonstrating voice quality, pacing, audience engagement, and smooth presentation.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-20',
     maxEntriesPerSchool: 2,
@@ -201,7 +187,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'radio-presenting-english',
     description:
       'Students host a short English radio programme segment demonstrating voice quality, pacing, and smooth presentation.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-20',
     maxEntriesPerSchool: 2,
@@ -223,7 +209,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'programme-presenting-sinhala',
     description:
       'Students present a short TV/radio programme segment in Sinhala, demonstrating stage presence, fluency, and programme hosting skills.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-22',
     maxEntriesPerSchool: 2,
@@ -246,7 +232,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'programme-presenting-english',
     description:
       'Students present a short TV/radio programme segment in English demonstrating stage presence, fluency, and hosting skills.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-22',
     maxEntriesPerSchool: 2,
@@ -268,7 +254,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'dubbing-sinhala',
     description:
       'Students dub a provided video clip into Sinhala — matching lip sync, voice emotion, and timing with the original content.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-25',
     maxEntriesPerSchool: 2,
@@ -291,7 +277,7 @@ export const INITIAL_COMPETITIONS: Competition[] = [
     slug: 'dubbing-english',
     description:
       'Students dub a provided video clip into English — matching lip sync, voice emotion, and timing with the original content.',
-    eligibility: 'Grades 6 – 13 (O/L & A/L)',
+    eligibility: 'Grades 6 – 13 ',
     ageCategory: { label: 'All Levels', minAge: 11, maxAge: 20, grades: ALL_GRADES },
     deadline: '2026-11-25',
     maxEntriesPerSchool: 2,

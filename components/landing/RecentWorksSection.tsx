@@ -7,28 +7,32 @@ import { Film, Radio, Video, Award, ArrowRight } from 'lucide-react';
 export function RecentWorksSection() {
   const items = [
     {
-      title: 'Our History & Archives',
-      desc: 'Documenting Saranath College heritage and collegiate traditions since 1924.',
+      title: 'Centennial Archives & Heritage',
+      desc: 'Documenting Saranath College heritage, collegiate traditions, and historical achievements since 1883.',
       icon: Film,
       href: '/competitions',
+      tag: 'Heritage',
     },
     {
-      title: 'Live OB Broadcast',
-      desc: 'Student-engineered multi-camera live broadcast unit covering sports & national forums.',
+      title: 'Live OB Broadcasting Unit',
+      desc: 'Student-engineered multi-camera high definition broadcasting team covering sports derbies and national assemblies.',
       icon: Video,
       href: '/competitions',
+      tag: 'Broadcast',
     },
     {
-      title: 'Short Film Laurels',
-      desc: 'Award-winning investigative documentaries and cinematic narrative features.',
+      title: 'Cinematic Narrative Features',
+      desc: 'Award-winning investigative documentaries, dramatic short films, and colour-graded visual narratives.',
       icon: Award,
       href: '/competitions',
+      tag: 'Cinema',
     },
     {
-      title: 'Acoustic Radio Theater',
-      desc: 'SLBC gold medal radio dramas, binaural sound design, and vocal broadcasting.',
+      title: 'Acoustic Radio Theater & Voice',
+      desc: 'SLBC gold medal radio dramas, binaural sound design, vocal presenting, and news commentary.',
       icon: Radio,
       href: '/competitions',
+      tag: 'Audio',
     },
   ];
 
@@ -48,7 +52,7 @@ export function RecentWorksSection() {
           <div className="w-20 h-1 bg-amber-500 mx-auto mt-6 rounded-full" />
         </div>
 
-        {/* 4 Cards matching Explore Saranath in sara-by-keshan */}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {items.map((item, idx) => {
             const Icon = item.icon;
@@ -60,15 +64,15 @@ export function RecentWorksSection() {
               >
                 <div className="w-20 h-20 bg-white shadow-sm border border-slate-100 text-slate-700 rounded-3xl flex items-center justify-center mb-8 group-hover:bg-amber-600 group-hover:text-white group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-slate-200/50">
                   <Icon className="w-9 h-9" />
-                </div>
+                  </div>
 
                 <h3 className="font-serif font-bold text-2xl mb-4 text-slate-900 group-hover:text-amber-700 transition-colors">
-                  {item.title}
-                </h3>
+                    {item.title}
+                  </h3>
 
-                <p className="text-slate-500 leading-relaxed text-sm mb-8 flex-grow">
-                  {item.desc}
-                </p>
+                <p className="text-slate-500 leading-relaxed text-sm mb-8 grow">
+                    {item.desc}
+                  </p>
 
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-400 group-hover:text-amber-600 uppercase tracking-widest transition-all">
                   Learn More
@@ -77,10 +81,11 @@ export function RecentWorksSection() {
 
                 {/* Bottom Amber Line Indicator */}
                 <div className="absolute bottom-0 left-0 w-full h-1 bg-amber-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-              </Link>
+                  </Link>
             );
           })}
         </div>
+
       </div>
     </section>
   );

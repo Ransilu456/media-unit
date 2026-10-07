@@ -70,7 +70,7 @@ export function AdminCompetitionsManager() {
 
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold transition-all shadow-sm"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-xs"
         >
           <Plus size={15} />
           <span>Add competition</span>
@@ -91,7 +91,7 @@ export function AdminCompetitionsManager() {
           return (
             <div
               key={comp.id}
-              className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm hover:border-amber-300 transition-all flex flex-col justify-between"
+              className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-md transition-all flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
@@ -119,30 +119,10 @@ export function AdminCompetitionsManager() {
                     <span className="text-slate-900 font-bold">{compSubs.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Form Questions:</span>
-                    <span className="text-slate-800">
-                      Standard + {comp.customFields.length} custom fields
-                    </span>
+                    <span className="text-slate-400">Eligibility:</span>
+                    <span className="text-slate-800">{comp.eligibility}</span>
                   </div>
                 </div>
-
-                {comp.customFields.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1.5 font-semibold">
-                      Configured Custom Fields:
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {comp.customFields.map((f) => (
-                        <span
-                          key={f.id}
-                          className="px-2 py-0.5 rounded bg-slate-100 text-[10px] text-slate-700 font-mono"
-                        >
-                          {f.label} ({f.type})
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Actions */}

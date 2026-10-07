@@ -3,211 +3,234 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
-import { Bell, LogOut, Menu, X, ShieldCheck } from 'lucide-react';
+import {
+  LogOut,
+  Menu,
+  X,
+  ShieldCheck,
+  ChevronRight,
+} from 'lucide-react';
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { session, logout, isLoaded } = useMediaStore();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isHome = pathname === '/';
+
   const isGuest = !isLoaded || session.type === 'guest';
   const isSchool = isLoaded && session.type === 'school';
-  const isAdmin  = isLoaded && session.type === 'admin';
+  const isAdmin = isLoaded && session.type === 'admin';
 
   const handleLogout = async () => {
     try {
       await logout();
       setMobileOpen(false);
+      router.push('/');
     } catch (error: unknown) {
       window.alert(error instanceof Error ? error.message : 'Unable to sign out.');
     }
   };
 
-  const notices = [
-    'Inter-School Media Competitions 2026 submissions are now open',
-    'Registration deadline: November 15, 2026',
-    'Categories: News Presenting, Radio, Photography, Announcing & more',
-    'Grand Assembly & Awards Ceremony at Saranath College Auditorium',
-    'Inter-School Media Competitions 2026 submissions are now open',
-    'Registration deadline: November 15, 2026',
-    'Categories: News Presenting, Radio, Photography, Announcing & more',
-    'Grand Assembly & Awards Ceremony at Saranath College Auditorium',
-  ];
-
   return (
     <>
-      <div className="bg-slate-900 text-slate-400 text-xs py-1.5 border-b border-slate-800 hidden sm:block">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <span>agradhimedia@saranath.edu.lk</span>
-          <span>Saranath College · Kuliyapitiya</span>
-        </div>
-      </div>
-
-      <header className="bg-white sticky top-0 z-50 border-t-4 border-amber-600 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-
-            <Link href="/" className="flex items-center gap-3 group shrink-0">
-              <div className="w-9 h-9 rounded-full bg-slate-900 border-2 border-amber-500 p-0.5 shrink-0 transition-transform group-hover:scale-105">
-                <Image src="/Agradhi.png" alt="Agradhi" width={32} height={32} className="object-contain w-full h-full" priority />
+      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-slate-100 transition-all">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8">
+          <div className="flex h-20 items-center justify-between">
+            
+            {/* Logo and Brand */}
+            <Link href="/" className="flex items-center gap-3.5 group">
+              <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-50 border border-slate-200/80 p-1.5 flex items-center justify-center transition-transform group-hover:scale-105">
+                <Image
+                  src="/Agradhi.png"
+                  alt="Agradhi Media Unit"
+                  width={30}
+                  height={30}
+                  className="object-contain"
+                  priority
+                />
               </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-base md:text-lg font-serif font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+              <div className="flex flex-col">
+                <span className="text-base font-semibold text-slate-900 tracking-tight">
                   Agradhi Media Unit
                 </span>
-                <span className="text-[9px] font-medium text-amber-600 uppercase tracking-widest hidden sm:block">
+                <span className="text-xs text-slate-400">
                   Saranath College
                 </span>
               </div>
             </Link>
 
-            {/* Desktop nav  */}
-            <nav className="hidden lg:flex items-center gap-1">
+            {/* Desktop Navigation Links */}
+            <nav aria-label="Main navigation" className="hidden items-center gap-8 md:flex">
+              <Link
+                href="/"
+                className={`text-sm font-medium transition-colors ${
+                  pathname === '/'
+                    ? 'text-slate-900 font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Home
+              </Link>
 
-              <NavLink href="/" label="Home" active={pathname === '/'} />
-              <NavLink href="/competitions" label="Competitions" active={pathname === '/competitions'} />
+              <Link
+                href="/competitions"
+                className={`text-sm font-medium transition-colors ${
+                  pathname === '/competitions'
+                    ? 'text-slate-900 font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Competitions
+              </Link>
 
+              {/* Guest Actions */}
               {isGuest && (
-                <>
-                  <NavLink href="/apply" label="Apply for Competition" active={pathname === '/apply'} highlight />
-                  <div className="ml-3 flex items-center gap-2 pl-3 border-l border-slate-200">
-                    <Link href="/login" className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-amber-700 transition-colors">
-                      Teacher Login
-                    </Link>
-                    <Link href="/register" className="px-4 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded hover:bg-slate-800 transition-colors border-b-2 border-amber-600">
-                      Register School
-                    </Link>
-                  </div>
-                </>
-              )}
-
-              {isSchool && session.school && (
-                <>
-                  <NavLink href="/apply" label="Apply for Competition" active={pathname === '/apply'} highlight />
-                  <div className="ml-3 flex items-center gap-2 pl-3 border-l border-slate-200">
-                    <span className="text-xs text-slate-500 font-medium truncate max-w-[120px]" title={session.school.name}>
-                      {session.school.name}
-                    </span>
-                    <Link href="/dashboard" className="px-4 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded hover:bg-amber-500 transition-colors">
-                      My Dashboard
-                    </Link>
-                    <button onClick={logout} title="Sign Out" className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
-                      <LogOut size={14} />
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {isAdmin && (
-                <div className="ml-3 flex items-center gap-2 pl-3 border-l border-slate-200">
-                  <span className="text-xs bg-slate-900 text-amber-400 px-2.5 py-1 rounded font-medium flex items-center gap-1">
-                    <ShieldCheck size={12} /> Admin
-                  </span>
-                  <Link href="/admin" className="px-4 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded hover:bg-slate-800 transition-colors border-b-2 border-amber-600">
-                    Console
+                <div className="flex items-center gap-4 pl-4 border-l border-slate-100">
+                  <Link
+                    href="/login"
+                    className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                  >
+                    Teacher Login
                   </Link>
-                  <button onClick={logout} title="Sign Out" className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
-                    <LogOut size={14} />
+
+                  <Link
+                    href="/register"
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium transition-colors shadow-sm"
+                  >
+                    Register School
+                  </Link>
+                </div>
+              )}
+
+              {/* School Session */}
+              {isSchool && session.school && (
+                <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-xs font-semibold text-slate-800 transition-colors"
+                  >
+                    <span className="truncate max-w-[120px]">{session.school.name}</span>
+                    <ChevronRight size={13} className="text-slate-400" />
+                  </Link>
+
+                  <button
+                    onClick={() => void handleLogout()}
+                    title="Sign out"
+                    className="p-2 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
+                  >
+                    <LogOut size={15} />
+                  </button>
+                </div>
+              )}
+
+              {/* Admin Session */}
+              {isAdmin && (
+                <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold"
+                  >
+                    <ShieldCheck size={14} />
+                    <span>Admin Board</span>
+                  </Link>
+
+                  <button
+                    onClick={() => void handleLogout()}
+                    title="Sign out"
+                    className="p-2 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
+                  >
+                    <LogOut size={15} />
                   </button>
                 </div>
               )}
             </nav>
 
-            <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 text-slate-600 hover:text-slate-900">
-              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
+            {/* Mobile menu trigger */}
+            <div className="flex items-center gap-2 md:hidden">
+              <button
+                type="button"
+                onClick={() => setMobileOpen((open) => !open)}
+                aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+                className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Scrolling notice */}
-      {isHome && (
-        <div className="bg-amber-50 border-b border-amber-100 py-2 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-3">
-            <span className="flex items-center gap-1 text-[10px] font-semibold bg-amber-600 text-white px-2 py-0.5 rounded shrink-0 uppercase tracking-wide">
-              <Bell className="w-2.5 h-2.5" /> Latest
-            </span>
-            <div className="marquee-container w-full">
-              <div className="marquee-content text-xs font-medium text-slate-700 flex gap-8">
-                {notices.map((n, i) => (
-                  <span key={i} className="shrink-0">
-                    {n}
-                    {i < notices.length - 1 && <span className="text-amber-400 mx-3">•</span>}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Mobile drawer */}
+      {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-5 space-y-2 shadow-xl z-40 relative">
-          <MobileLink href="/" label="Home" active={pathname === '/'} onClick={() => setMobileOpen(false)} />
-          <MobileLink href="/competitions" label="Competitions" active={pathname === '/competitions'} onClick={() => setMobileOpen(false)} />
-          <MobileLink href="/apply" label="Apply for Competition" active={pathname === '/apply'} onClick={() => setMobileOpen(false)} highlight />
+        <div className="fixed inset-0 z-40 md:hidden bg-slate-900/20 backdrop-blur-xs flex flex-col justify-start">
+          <div className="bg-white border-b border-slate-200 p-6 space-y-4 shadow-lg">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <span className="text-xs font-semibold text-slate-400">Navigation</span>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-1 rounded-md text-slate-500 hover:bg-slate-50"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-          {isSchool && session.school && (
-            <MobileLink href="/dashboard" label={`${session.school.name} — Dashboard`} active={pathname === '/dashboard'} onClick={() => setMobileOpen(false)} />
-          )}
-          {isAdmin && (
-            <MobileLink href="/admin" label="Admin Console" active={pathname === '/admin'} onClick={() => setMobileOpen(false)} />
-          )}
+            <Link
+              href="/"
+              onClick={() => setMobileOpen(false)}
+              className={`block py-2 text-sm font-medium ${pathname === '/' ? 'text-slate-900 font-bold' : 'text-slate-600'}`}
+            >
+              Home
+            </Link>
 
-          <div className="pt-3 border-t border-slate-100 flex gap-2">
-            {isGuest ? (
-              <>
-                <Link href="/login" onClick={() => setMobileOpen(false)} className="flex-1 text-center py-2 rounded border border-slate-200 text-xs font-semibold text-slate-700">
+            <Link
+              href="/competitions"
+              onClick={() => setMobileOpen(false)}
+              className={`block py-2 text-sm font-medium ${pathname === '/competitions' ? 'text-slate-900 font-bold' : 'text-slate-600'}`}
+            >
+              Competitions
+            </Link>
+
+            {isSchool && session.school && (
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileOpen(false)}
+                  className="block w-full py-2.5 text-center rounded-xl bg-slate-900 text-white text-xs font-semibold"
+                >
+                  Go to {session.school.name} Dashboard
+                </Link>
+                <button
+                  onClick={() => void handleLogout()}
+                  className="w-full py-2 text-center text-xs text-red-600"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+
+            {isGuest && (
+              <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-3">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold text-center hover:bg-slate-50"
+                >
                   Teacher Login
                 </Link>
-                <Link href="/register" onClick={() => setMobileOpen(false)} className="flex-1 text-center py-2 rounded bg-amber-600 text-white text-xs font-semibold">
+                <Link
+                  href="/register"
+                  onClick={() => setMobileOpen(false)}
+                  className="py-2.5 rounded-xl bg-slate-900 text-white text-xs font-semibold text-center hover:bg-slate-800"
+                >
                   Register School
                 </Link>
-              </>
-            ) : (
-              <button onClick={() => void handleLogout()} className="flex-1 py-2 rounded border border-slate-200 text-xs font-semibold text-red-600">
-                Sign Out
-              </button>
+              </div>
             )}
           </div>
         </div>
       )}
     </>
-  );
-}
-
-function NavLink({ href, label, active, highlight }: { href: string; label: string; active: boolean; highlight?: boolean }) {
-  return (
-    <Link
-      href={href}
-      className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-        active
-          ? 'bg-amber-50 text-amber-700 font-semibold'
-          : highlight
-          ? 'text-amber-700 hover:bg-amber-50 font-semibold'
-          : 'text-slate-600 hover:text-amber-700 hover:bg-slate-50'
-      }`}
-    >
-      {label}
-    </Link>
-  );
-}
-
-function MobileLink({ href, label, active, onClick, highlight }: { href: string; label: string; active: boolean; onClick: () => void; highlight?: boolean }) {
-  return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className={`block px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-        active ? 'bg-amber-50 text-amber-800 font-semibold' :
-        highlight ? 'text-amber-700 bg-amber-50/50' :
-        'text-slate-700 hover:bg-slate-50'
-      }`}
-    >
-      {label}
-    </Link>
   );
 }
