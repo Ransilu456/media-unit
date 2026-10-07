@@ -1,9 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { readDb } from '@/lib/db';
 import {
   SESSION_COOKIE_NAME,
-  stripSchoolPassword,
   verifySessionToken,
 } from '@/lib/auth';
 
@@ -14,24 +12,16 @@ export async function GET() {
   if (session?.role === 'admin') {
     return NextResponse.json({
       success: true,
-      data: { type: 'admin', adminName: 'Agradhi Executive Board' },
+      data: {
+        type: 'admin',
+        adminEmail: process.env.ADMIN_EMAIL?.trim().toLowerCase() ?? '',
+        adminName: 'Agradhi Executive Board',
+      },
     });
   }
 
-  if (session?.role === 'school') {
-    const school = readDb().schools.find((record) => record.id === session.schoolId);
-    if (school?.status === 'active') {
-      return NextResponse.json({
-        success: true,
-        data: { type: 'school', school: stripSchoolPassword(school) },
-      });
-    }
-  }
-
-  const response = NextResponse.json({
+  return NextResponse.json({
     success: true,
     data: { type: 'guest' },
   });
-  response.cookies.delete(SESSION_COOKIE_NAME);
-  return response;
 }

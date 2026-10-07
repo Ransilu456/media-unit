@@ -38,7 +38,7 @@ export function CompetitionsSection({
   title = 'Competition Tracks',
   subtitle = 'Review rules, grade levels, and deadlines to submit student entries through your school delegation.',
 }: CompetitionsSectionProps) {
-  const { competitions, session, refreshSubmissions } = useMediaStore();
+  const { competitions, session } = useMediaStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedMedium, setSelectedMedium] = useState<string>('All');
@@ -314,8 +314,7 @@ export function CompetitionsSection({
             onClose={() => setActiveModalComp(null)}
             competition={activeModalComp}
             school={session.school}
-            onSubmitted={async () => {
-              await refreshSubmissions();
+            onSubmitted={() => {
               setActiveModalComp(null);
             }}
           />

@@ -4,7 +4,7 @@ import React from 'react';
 import { SubmissionStatus, CompetitionStatus } from '@/lib/types';
 
 interface BadgeProps {
-  status?: SubmissionStatus | CompetitionStatus | 'active' | 'pending' | 'suspended';
+  status?: SubmissionStatus | CompetitionStatus | 'active' | 'pending' | 'suspended' | 'banned';
   label?: string;
   size?: 'sm' | 'md';
 }
@@ -103,6 +103,13 @@ export function StatusBadge({ status, label, size = 'sm' }: BadgeProps) {
       border: 'border-red-200',
       dot: 'bg-red-500',
       display: 'Suspended',
+    },
+    banned: {
+      bg: 'bg-red-100',
+      text: 'text-red-900',
+      border: 'border-red-300',
+      dot: 'bg-red-700',
+      display: 'Banned',
     },
   };
 

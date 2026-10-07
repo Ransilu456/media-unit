@@ -61,7 +61,7 @@ function MediumChip({ medium }: { medium: string }) {
 }
 
 export function SchoolDashboardView({ activeTab, onTabChange, initialCompetitionId }: Props) {
-  const { session, competitions, submissions, refreshSubmissions } = useMediaStore();
+  const { session, competitions, submissions } = useMediaStore();
   const school = session.school;
 
   const [selectedComp, setSelectedComp] = useState<Competition | null>(() => {
@@ -661,8 +661,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
           onClose={() => setSelectedComp(null)}
           competition={selectedComp}
           school={school}
-          onSubmitted={async () => {
-            await refreshSubmissions();
+          onSubmitted={() => {
             onTabChange('students');
           }}
         />

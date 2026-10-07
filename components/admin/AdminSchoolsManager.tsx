@@ -8,11 +8,11 @@ import { Search, Filter } from 'lucide-react';
 export function AdminSchoolsManager() {
   const { schools, updateSchoolStatus, submissions } = useMediaStore();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'suspended'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'suspended' | 'banned'>('all');
 
   const handleSchoolStatusUpdate = async (
     id: string,
-    status: 'active' | 'pending' | 'suspended'
+    status: 'active' | 'pending' | 'suspended' | 'banned'
   ) => {
     try {
       await updateSchoolStatus(id, status);
@@ -33,21 +33,23 @@ export function AdminSchoolsManager() {
   const pendingCount = schools.filter((school) => school.status === 'pending').length;
   const activeCount = schools.filter((school) => school.status === 'active').length;
   const suspendedCount = schools.filter((school) => school.status === 'suspended').length;
+  const bannedCount = schools.filter((school) => school.status === 'banned').length;
 
   return (
     <div className="space-y-6">
       <section>
         <h1 className="text-xl font-semibold text-slate-950">School accounts</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Activate a school to allow sign-in and submissions. Pending and suspended accounts cannot submit entries.
+          Pending accounts wait for approval. Suspended and banned accounts cannot use the school portal; restore them by setting status to active.
         </p>
       </section>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="School account status counts">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="School account status counts">
         {[
           { label: 'Pending approval', value: pendingCount, detail: 'Review registration details', tone: 'text-amber-800 bg-amber-50' },
           { label: 'Active accounts', value: activeCount, detail: 'Can sign in and submit', tone: 'text-emerald-800 bg-emerald-50' },
           { label: 'Suspended accounts', value: suspendedCount, detail: 'Sign-in and submissions blocked', tone: 'text-rose-800 bg-rose-50' },
+          { label: 'Banned accounts', value: bannedCount, detail: 'Blocked until restored by admin', tone: 'text-red-900 bg-red-100' },
         ].map(({ label, value, detail, tone }) => (
           <div key={label} className="rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between gap-2">
@@ -75,7 +77,7 @@ export function AdminSchoolsManager() {
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Filter size={14} className="text-slate-400 shrink-0" />
           <div className="flex gap-1 overflow-x-auto">
-            {(['all', 'active', 'pending', 'suspended'] as const).map((st) => (
+            {(['all', 'active', 'pending', 'suspended', 'banned'] as const).map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
@@ -132,7 +134,12 @@ export function AdminSchoolsManager() {
                   </div>
                   <div>
                     <span className="text-slate-400">Email: </span>
-                    <span className="text-amber-700">{school.email}</span>
+                    <a
+                      href={`mailto:${school.email}?subject=${encodeURIComponent('Agradhi school account update')}`}
+                      className="text-amber-700 underline decoration-amber-300 underline-offset-2 hover:text-amber-900"
+                    >
+                      {school.email}
+                    </a>
                   </div>
                   <div>
                     <span className="text-slate-400">Entries: </span>
@@ -152,7 +159,7 @@ export function AdminSchoolsManager() {
                       : 'bg-slate-50 text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  Approve / Active
+                  {school.status === 'banned' || school.status === 'suspended' ? 'Restore / Active' : 'Approve / Active'}
                 </button>
                 <button
                   onClick={() => void handleSchoolStatusUpdate(school.id, 'pending')}
@@ -173,6 +180,16 @@ export function AdminSchoolsManager() {
                   }`}
                 >
                   Suspend
+                </button>
+                <button
+                  onClick={() => void handleSchoolStatusUpdate(school.id, 'banned')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    school.status === 'banned'
+                      ? 'bg-red-100 text-red-900 border border-red-300'
+                      : 'bg-slate-50 text-slate-600 hover:text-red-800'
+                  }`}
+                >
+                  Ban
                 </button>
               </div>
             </div>

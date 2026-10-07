@@ -11,7 +11,7 @@ const inputClassName =
   'w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-amber-500 focus:outline-none';
 
 export function StudentEntryForm() {
-  const { competitions, isLoaded, session, submissions, refreshSubmissions } = useMediaStore();
+  const { competitions, isLoaded, session, submissions } = useMediaStore();
   const [selectedCompetitionId, setSelectedCompetitionId] = useState('');
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
 
@@ -151,7 +151,6 @@ export function StudentEntryForm() {
           competition={selectedCompetition}
           school={school}
           onClose={() => setSelectedCompetition(null)}
-          onSubmitted={refreshSubmissions}
         />
       )}
     </>

@@ -64,7 +64,7 @@ export interface RegisteredSchool {
   presidentPhone: string;
   email: string;
   password?: string;
-  status: 'active' | 'pending' | 'suspended';
+  status: 'active' | 'pending' | 'suspended' | 'banned';
   registeredAt: string;
   badgeCode: string;
 }

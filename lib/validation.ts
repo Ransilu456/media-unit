@@ -1,4 +1,4 @@
-import { INITIAL_COMPETITIONS, SRI_LANKA_PROVINCES } from './constants';
+import { SRI_LANKA_PROVINCES } from './constants';
 import type { DbData, JsonValue } from './db';
 import type {
   CategoryType,
@@ -36,7 +36,7 @@ export async function readJsonRequest(
   }
 }
 
-const SCHOOL_STATUSES = ['active', 'pending', 'suspended'] as const;
+const SCHOOL_STATUSES = ['active', 'pending', 'suspended', 'banned'] as const;
 const SUBMISSION_STATUSES: readonly SubmissionStatus[] = [
   'submitted',
   'under_review',
@@ -276,7 +276,7 @@ export function validateSchoolRegistration(value: unknown): ValidationErrors {
   return errors;
 }
 
-export function validateSubmissionInput(value: unknown, competitions: Competition[] = INITIAL_COMPETITIONS): ValidationErrors {
+export function validateSubmissionInput(value: unknown, competitions: Competition[] = []): ValidationErrors {
   const errors: ValidationErrors = {};
 
   if (!isRecord(value)) return { form: 'Submission data must be an object.' };

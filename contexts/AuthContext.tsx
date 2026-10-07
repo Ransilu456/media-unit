@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * AuthContext — wraps the application to expose session state globally.
+ * AuthContext — exposes Firebase identity and login rate-limit state globally.
  *
  * Features:
- *  • Session resolved from Firebase Auth and Firestore
+ *  • Firebase Auth state observation
  *  • Rate-limit guard: tracks failed login attempts in memory.
  *    After MAX_ATTEMPTS consecutive failures within WINDOW_MS the context
  *    surfaces a `rateLimited` flag + remaining cooldown seconds so the UI
@@ -23,8 +23,6 @@ import React, {
 import { logEvent } from 'firebase/analytics';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth, getFirebaseAnalytics } from '@/lib/firebase';
-import { getFirebaseSession } from '@/lib/firebaseOperations';
-import type { AuthSession } from '@/lib/types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 /** Max failed attempts before showing the rate-limit cooldown screen */
@@ -36,8 +34,6 @@ const COOLDOWN_SECS = 2 * 60;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface AuthContextValue {
-  /** Current session from the server cookie */
-  session: AuthSession;
   /** Firebase authenticated user */
   firebaseUser: FirebaseUser | null;
   /** True while the initial session hydration is in progress */
@@ -53,21 +49,18 @@ export interface AuthContextValue {
   recordFailedAttempt: () => boolean;
   /** Call after a successful login so the counter resets */
   recordSuccess: (role: 'school' | 'admin') => void;
-  /** Refresh the session from the server (e.g. after logout) */
-  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<AuthSession>({ type: 'guest' });
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [rateLimited, setRateLimited] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
-  // Firebase Auth is the persisted identity; Firestore provides the school profile.
+  // Firebase Auth is the persisted identity; the media store resolves Firestore roles.
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -82,13 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         setFirebaseUser(user);
-        void getFirebaseSession(user)
-          .then(setSession)
-          .catch((error: unknown) => {
-            console.warn('[firebase session]', error);
-            setSession({ type: 'guest' });
-          })
-          .finally(() => setLoading(false));
+        setLoading(false);
       });
       return () => unsubscribe();
     } catch (err) {
@@ -100,21 +87,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const attempts = useRef<number[]>([]);
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const cooldownEnd = useRef<number>(0);
-
-  // ── Firebase session refresh ──────────────────────────────────────────────
-  const refreshSession = useCallback(async () => {
-    try {
-      setSession(await getFirebaseSession());
-    } catch {
-      setSession({ type: 'guest' });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshSession();
-  }, [refreshSession]);
 
   // ── Cooldown ticker ────────────────────────────────────────────────────────
   const startCooldown = useCallback(() => {
@@ -177,14 +149,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value: AuthContextValue = {
-    session,
     firebaseUser,
     loading,
     rateLimited,
     cooldownRemaining,
     recordFailedAttempt,
     recordSuccess,
-    refreshSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

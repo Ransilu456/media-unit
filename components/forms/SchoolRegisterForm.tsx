@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
 import { SRI_LANKA_PROVINCES } from '@/lib/constants';
 import { validateSchoolRegistration } from '@/lib/validation';
@@ -45,7 +44,6 @@ const inputCls =
 const labelCls = 'block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5';
 
 export function SchoolRegisterForm() {
-  const router = useRouter();
   const { registerSchool } = useMediaStore();
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -141,7 +139,6 @@ export function SchoolRegisterForm() {
     try {
       await registerSchool(registrationData());
       setSuccess(true);
-      setTimeout(() => router.replace('/dashboard'), 1400);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed. Please check your data.');
     } finally {
@@ -220,7 +217,11 @@ export function SchoolRegisterForm() {
         {success && (
           <div className="flex items-center gap-2.5 p-4 mb-5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold animate-in fade-in-50">
             <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
-            <span>School registered successfully! Taking you to your dashboard...</span>
+            <span>
+              Registration received. Your account is pending approval by the Agradhi administrator.
+              You can <Link href="/login" className="underline">try signing in</Link> after it is approved;
+              this page will not send an automatic email.
+            </span>
           </div>
         )}
 
@@ -354,7 +355,7 @@ export function SchoolRegisterForm() {
                 placeholder="e.g. media@yourschool.sch.lk"
                 className={inputCls}
               />
-              <p className="mt-1 text-[11px] text-slate-400">All submissions updates and certificates will be sent here.</p>
+              <p className="mt-1 text-[11px] text-slate-400">Use an email address your school checks; the administrator may contact you about approval.</p>
             </div>
 
             <div>

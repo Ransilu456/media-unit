@@ -27,7 +27,7 @@ interface LoginFormProps {
 export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
   const router = useRouter();
   const { loginSchool, loginAdmin } = useMediaStore();
-  const { rateLimited, cooldownRemaining, recordFailedAttempt, recordSuccess, refreshSession } =
+  const { rateLimited, cooldownRemaining, recordFailedAttempt, recordSuccess } =
     useAuth();
 
   const [activeTab, setActiveTab] = useState<'school' | 'admin'>(initialTab);
@@ -55,7 +55,6 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
         const school = await loginSchool(email.trim(), password);
         if (school) {
           await recordSuccess('school');
-          await refreshSession();
           router.replace('/dashboard');
         } else {
           const isNowLimited = recordFailedAttempt();
@@ -67,7 +66,6 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
         const ok = await loginAdmin(email.trim(), password);
         if (ok) {
           await recordSuccess('admin');
-          await refreshSession();
           router.replace('/admin');
         } else {
           const isNowLimited = recordFailedAttempt();
@@ -77,9 +75,11 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
         }
       }
     } catch (err: unknown) {
-      const isNowLimited = recordFailedAttempt();
+      const message = err instanceof Error ? err.message : 'Login failed. Please check credentials.';
+      const isAccountStatusMessage = /awaiting approval|account is suspended|account is banned/i.test(message);
+      const isNowLimited = isAccountStatusMessage ? false : recordFailedAttempt();
       if (!isNowLimited) {
-        setError(err instanceof Error ? err.message : 'Login failed. Please check credentials.');
+        setError(message);
       }
     } finally {
       setLoading(false);

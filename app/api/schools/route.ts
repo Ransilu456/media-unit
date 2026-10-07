@@ -15,7 +15,7 @@ import {
   validateSchoolRegistration,
 } from '@/lib/validation';
 
-const SCHOOL_STATUSES = ['active', 'pending', 'suspended'] as const;
+const SCHOOL_STATUSES = ['active', 'pending', 'suspended', 'banned'] as const;
 
 // GET /api/schools  — list all registered schools
 export async function GET(request: NextRequest) {

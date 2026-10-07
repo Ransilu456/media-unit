@@ -3,8 +3,6 @@ import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import type { Competition, RegisteredSchool, Submission } from './types';
 import { validateDatabase } from './validation';
-import { INITIAL_COMPETITIONS } from './constants';
-import { syncAllToFirestore, fetchAllFromFirestore } from './firebaseDb';
 
 export type JsonValue =
   | null
@@ -26,7 +24,6 @@ const MAX_DATABASE_BYTES = 10 * 1024 * 1024;
 
 // In-memory cache ensures fast reads and serverless survivability
 let cachedDb: DbData | null = null;
-let firestoreSyncAttempted = false;
 
 export function readDb(): DbData {
   if (cachedDb) {
@@ -44,7 +41,7 @@ export function readDb(): DbData {
           !Array.isArray(parsed) &&
           !Object.hasOwn(parsed, 'competitions')
         ) {
-          (parsed as Record<string, unknown>).competitions = structuredClone(INITIAL_COMPETITIONS);
+          (parsed as Record<string, unknown>).competitions = [];
           validateDatabase(parsed);
           writeDb(parsed as DbData);
           cachedDb = parsed as DbData;
@@ -59,9 +56,9 @@ export function readDb(): DbData {
     console.warn('[database] Note: Could not read local db.json, using memory store:', error);
   }
 
-  // Fallback defaults for serverless / new environments
+  // Start empty; production application data lives in Cloud Firestore.
   const fallbackDb: DbData = {
-    competitions: structuredClone(INITIAL_COMPETITIONS),
+    competitions: [],
     schools: [],
     submissions: [],
   };
@@ -72,12 +69,6 @@ export function readDb(): DbData {
     writeDb(fallbackDb);
   } catch {
     // Read-only filesystem is tolerated
-  }
-
-  // Attempt non-blocking hydration from Firestore on cold boot
-  if (!firestoreSyncAttempted) {
-    firestoreSyncAttempted = true;
-    void hydrateFromFirestore();
   }
 
   return cachedDb;
@@ -109,10 +100,6 @@ export function writeDb(data: DbData): void {
     console.warn('[database] Local disk write skipped or read-only (tolerated in serverless):', (diskError as Error).message);
   }
 
-  // 2. Asynchronously persist to Cloud Firestore (production database backend)
-  void syncAllToFirestore(data).catch((err) => {
-    console.warn('[database] Firestore background sync notice:', err);
-  });
 }
 
 export function mutateDb(fn: (db: DbData) => void): DbData {
@@ -121,22 +108,3 @@ export function mutateDb(fn: (db: DbData) => void): DbData {
   writeDb(db);
   return db;
 }
-
-/**
- * Hydrate in-memory database from Cloud Firestore if available.
- */
-export async function hydrateFromFirestore(): Promise<boolean> {
-  try {
-    const remoteData = await fetchAllFromFirestore();
-    if (remoteData && remoteData.competitions.length > 0) {
-      cachedDb = remoteData;
-      console.log('[database] Successfully hydrated state from Cloud Firestore.');
-      return true;
-    }
-  } catch (error) {
-    console.warn('[database] Cloud Firestore hydration not yet active:', error);
-  }
-  return false;
-}
-
-export { INITIAL_COMPETITIONS as competitions };

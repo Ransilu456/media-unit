@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email == 'adminsara@scladmin.com';
+    }
+
+    function isActiveSchool(schoolId) {
+      return signedIn()
+        && request.auth.uid == schoolId
+        && exists(/databases/$(database)/documents/schools/$(schoolId))
+        && get(/databases/$(database)/documents/schools/$(schoolId)).data.status == 'active';
+    }
+
+    match /competitions/{competitionId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /schools/{schoolId} {
+      allow get: if isAdmin() || (signedIn() && request.auth.uid == schoolId);
+      allow list: if isAdmin();
+      allow create: if signedIn()
+        && request.auth.uid == schoolId
+        && request.resource.data.id == schoolId
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasAll([
+          'id', 'name', 'registrationNumber', 'province', 'district',
+          'teacherInCharge', 'teacherPhone', 'mediaPresident', 'presidentPhone',
+          'email', 'status', 'registeredAt', 'badgeCode'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id', 'name', 'registrationNumber', 'province', 'district',
+          'teacherInCharge', 'teacherPhone', 'mediaPresident', 'presidentPhone',
+          'email', 'status', 'registeredAt', 'badgeCode'
+        ])
+        && !request.resource.data.keys().hasAny(['password']);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isAdmin() || isActiveSchool(resource.data.schoolId);
+      allow create: if isActiveSchool(request.resource.data.schoolId)
+        && request.resource.data.status == 'submitted';
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+  }
+}

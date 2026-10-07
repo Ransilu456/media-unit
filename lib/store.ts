@@ -1,6 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import {
+  createContext,
+  createElement,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 import type {
@@ -12,7 +19,6 @@ import type {
   SubmissionStatus,
   NewSubmissionInput,
 } from './types';
-import { INITIAL_COMPETITIONS } from './constants';
 import { validateSubmissionInput } from './validation';
 import {
   getFirebaseSession,
@@ -20,21 +26,22 @@ import {
   firebaseLoginAdmin,
   firebaseRegisterSchool,
   firebaseLogout,
-  firebaseGetCompetitions,
   firebaseAddCompetition,
   firebaseUpdateCompetition,
   firebaseDeleteCompetition,
-  firebaseGetSchools,
   firebaseUpdateSchoolStatus,
-  firebaseGetSubmissions,
   firebaseSubmitEntry,
   firebaseUpdateSubmission,
+  subscribeFirebaseCompetitions,
+  subscribeFirebaseSchools,
+  subscribeFirebaseSchoolStatus,
+  subscribeFirebaseSubmissions,
 } from './firebaseOperations';
 
 // ─── Main media store hook powered by Firebase ───────────────────────────────
 
-export function useMediaStore() {
-  const [competitions, setCompetitions] = useState<Competition[]>(INITIAL_COMPETITIONS);
+function useMediaStoreState() {
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [schools, setSchools] = useState<RegisteredSchool[]>([]);
   const [publicSchools, setPublicSchools] = useState<PublicSchool[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -49,8 +56,15 @@ export function useMediaStore() {
   useEffect(() => {
     let active = true;
     let authEvent = 0;
+    let subscriptions: Array<() => void> = [];
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       const currentEvent = ++authEvent;
+      subscriptions.forEach((stop) => stop());
+      subscriptions = [];
+      setIsLoaded(false);
+      setSchools([]);
+      setPublicSchools([]);
+      setSubmissions([]);
       void (async () => {
         let currentSession: AuthSession;
         try {
@@ -64,38 +78,59 @@ export function useMediaStore() {
 
         if (!active || currentEvent !== authEvent) return;
         setSessionState(currentSession);
-        const [compsResult, schoolsResult, submissionsResult] = await Promise.allSettled([
-          firebaseGetCompetitions(),
-          currentSession.type === 'admin' ? firebaseGetSchools() : Promise.resolve([]),
-          firebaseGetSubmissions(
-            currentSession.type === 'school' ? currentSession.school?.id : undefined
-          ),
-        ]);
-        if (!active || currentEvent !== authEvent) return;
-        if (compsResult.status === 'fulfilled') setCompetitions(compsResult.value);
-        else console.warn('[firestore competitions]', compsResult.reason);
-        if (schoolsResult.status === 'fulfilled') {
-          const loadedSchools = schoolsResult.value;
-          setSchools(loadedSchools);
-          setPublicSchools(loadedSchools.map((school) => ({
-            id: school.id,
-            name: school.name,
-            province: school.province,
-            district: school.district,
-            badgeCode: school.badgeCode,
-          })));
-        } else console.warn('[firestore schools]', schoolsResult.reason);
-        if (submissionsResult.status === 'fulfilled') setSubmissions(submissionsResult.value);
-        else console.warn('[firestore submissions]', submissionsResult.reason);
+        subscriptions.push(
+          subscribeFirebaseCompetitions((loadedCompetitions) => {
+            if (!active || currentEvent !== authEvent) return;
+            setCompetitions(loadedCompetitions);
+          }, (error) => console.warn('[firestore competitions listener]', error))
+        );
 
-        if (active && currentEvent === authEvent) {
-          setIsLoaded(true);
+        if (currentSession.type === 'admin') {
+          subscriptions.push(
+            subscribeFirebaseSchools((loadedSchools) => {
+              if (!active || currentEvent !== authEvent) return;
+              setSchools(loadedSchools);
+              setPublicSchools(loadedSchools.map((school) => ({
+                id: school.id,
+                name: school.name,
+                province: school.province,
+                district: school.district,
+                badgeCode: school.badgeCode,
+              })));
+            }, (error) => console.warn('[firestore schools listener]', error))
+          );
+          subscriptions.push(
+            subscribeFirebaseSubmissions(undefined, (loadedSubmissions) => {
+              if (active && currentEvent === authEvent) setSubmissions(loadedSubmissions);
+            }, (error) => console.warn('[firestore submissions listener]', error))
+          );
+        } else if (currentSession.type === 'school' && currentSession.school) {
+          subscriptions.push(
+            subscribeFirebaseSchoolStatus(
+              currentSession.school.id,
+              (status, fromCache) => {
+                if (!fromCache && status !== 'active') {
+                  void firebaseLogout().catch((error: unknown) => {
+                    console.warn('[school access revocation]', error);
+                  });
+                }
+              },
+              (error) => console.warn('[firestore school status listener]', error)
+            )
+          );
+          subscriptions.push(
+            subscribeFirebaseSubmissions(currentSession.school.id, (loadedSubmissions) => {
+              if (active && currentEvent === authEvent) setSubmissions(loadedSubmissions);
+            }, (error) => console.warn('[firestore submissions listener]', error))
+          );
         }
+        setIsLoaded(true);
       })();
     });
 
     return () => {
       active = false;
+      subscriptions.forEach((stop) => stop());
       unsubscribe();
     };
   }, []);
@@ -105,20 +140,7 @@ export function useMediaStore() {
   const registerSchool = async (
     data: Omit<RegisteredSchool, 'id' | 'registeredAt' | 'badgeCode' | 'status'>
   ): Promise<RegisteredSchool> => {
-    const school = await firebaseRegisterSchool(data);
-    _persistSession({ type: 'school', school });
-    setSchools((prev) => [school, ...prev]);
-    setPublicSchools((prev) => [
-      {
-        id: school.id,
-        name: school.name,
-        province: school.province,
-        district: school.district,
-        badgeCode: school.badgeCode,
-      },
-      ...prev,
-    ]);
-    return school;
+    return firebaseRegisterSchool(data);
   };
 
   const loginSchool = async (
@@ -129,8 +151,6 @@ export function useMediaStore() {
     if (!school) return null;
 
     _persistSession({ type: 'school', school });
-    const userSubs = await firebaseGetSubmissions(school.id);
-    setSubmissions(userSubs);
     return school;
   };
 
@@ -140,17 +160,6 @@ export function useMediaStore() {
 
     _persistSession({ type: 'admin' });
 
-    // Non-blocking fetch of all schools and submissions
-    void Promise.all([
-      firebaseGetSchools(),
-      firebaseGetSubmissions(),
-    ]).then(([allSchools, allSubs]) => {
-      setSchools(allSchools);
-      setSubmissions(allSubs);
-    }).catch((err) => {
-      console.warn('[admin post-login data load]', err);
-    });
-
     return true;
   };
 
@@ -159,13 +168,6 @@ export function useMediaStore() {
     _persistSession({ type: 'guest' });
     setSubmissions([]);
   };
-
-  const refreshSubmissions = useCallback(async () => {
-    const currentSession = await getFirebaseSession();
-    const schoolId = currentSession.type === 'school' ? currentSession.school?.id : undefined;
-    const subs = await firebaseGetSubmissions(schoolId);
-    setSubmissions(subs);
-  }, []);
 
   const submitEntry = async (
     entry: NewSubmissionInput
@@ -203,7 +205,7 @@ export function useMediaStore() {
 
   const updateSchoolStatus = async (
     id: string,
-    status: 'active' | 'pending' | 'suspended'
+    status: 'active' | 'pending' | 'suspended' | 'banned'
   ): Promise<void> => {
     await firebaseUpdateSchoolStatus(id, status);
     setSchools((prev) =>
@@ -234,10 +236,6 @@ export function useMediaStore() {
     setCompetitions((prev) => prev.filter((comp) => comp.id !== id));
   };
 
-  const resetToDefaults = () => {
-    return logout();
-  };
-
   return {
     isLoaded,
     competitions,
@@ -249,13 +247,27 @@ export function useMediaStore() {
     loginSchool,
     loginAdmin,
     logout,
-    refreshSubmissions,
     submitEntry,
     addCompetition,
     updateCompetition,
     deleteCompetition,
     updateSubmissionStatus,
     updateSchoolStatus,
-    resetToDefaults,
   };
+}
+
+type MediaStoreValue = ReturnType<typeof useMediaStoreState>;
+const MediaStoreContext = createContext<MediaStoreValue | null>(null);
+
+export function MediaStoreProvider({ children }: { children: ReactNode }) {
+  const store = useMediaStoreState();
+  return createElement(MediaStoreContext.Provider, { value: store }, children);
+}
+
+export function useMediaStore(): MediaStoreValue {
+  const store = useContext(MediaStoreContext);
+  if (!store) {
+    throw new Error('useMediaStore must be used inside <MediaStoreProvider>');
+  }
+  return store;
 }
