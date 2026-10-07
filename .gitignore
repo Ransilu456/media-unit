@@ -42,11 +42,13 @@ next-env.d.ts
 data*
 scripts*
 
-# sensitive docs 
+# Documentation kept locally, not committed to GitHub
 CLAUDE.md
+/docs/
 
 # editor directories
 .idea/
 .vscode/
 *.swp
 *.swo
+
