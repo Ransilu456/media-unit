@@ -15,8 +15,7 @@ import {
 } from 'lucide-react';
 
 export function HeroSection() {
-  const { session, competitions } = useMediaStore();
-  const openCount = competitions.filter((c) => c.status === 'open').length;
+  const { session } = useMediaStore();
 
   const disciplines = [
     {
@@ -79,7 +78,7 @@ export function HeroSection() {
               className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-all shadow-sm hover:shadow"
             >
               <Trophy size={16} className="text-amber-400" />
-              <span>Browse {openCount} Open Tracks</span>
+              <span>Browse Competition Tracks</span>
               <ArrowRight size={15} />
             </Link>
 

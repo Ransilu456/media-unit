@@ -1,11 +1,16 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useMediaStore } from '@/lib/store';
 import { Competition } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/Badge';
-import { CompetitionFormEditorModal } from './CompetitionFormEditorModal';
 import { Plus, Edit3, Eye, Trash2 } from 'lucide-react';
+
+const CompetitionFormEditorModal = dynamic(
+  () => import('./CompetitionFormEditorModal').then((module) => module.CompetitionFormEditorModal),
+  { loading: () => <div role="status" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 text-sm text-white">Loading competition editor...</div> }
+);
 
 export function AdminCompetitionsManager() {
   const {

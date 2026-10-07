@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
+import { DashboardNotifications } from './DashboardNotifications';
 import {
   LayoutDashboard,
   School,
@@ -197,6 +198,7 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
           </div>
 
           <div className="flex items-center gap-3">
+            <DashboardNotifications />
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold">
               <ShieldCheck size={14} className="text-amber-700" />
               <span>Saranath College</span>

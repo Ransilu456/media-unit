@@ -8,6 +8,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
+import { usePathname } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 import type {
@@ -38,15 +39,29 @@ import {
   subscribeFirebaseSubmissions,
 } from './firebaseOperations';
 
+export interface DashboardNotification {
+  id: string;
+  kind: 'registration' | 'submission' | 'update';
+  title: string;
+  message: string;
+  createdAt: number;
+  read: boolean;
+}
+
 // ─── Main media store hook powered by Firebase ───────────────────────────────
 
 function useMediaStoreState() {
+  const pathname = usePathname();
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [schools, setSchools] = useState<RegisteredSchool[]>([]);
   const [publicSchools, setPublicSchools] = useState<PublicSchool[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [session, setSessionState] = useState<AuthSession>({ type: 'guest' });
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isCompetitionsLoaded, setIsCompetitionsLoaded] = useState(false);
+  const [isSchoolsLoaded, setIsSchoolsLoaded] = useState(false);
+  const [isSubmissionsLoaded, setIsSubmissionsLoaded] = useState(false);
+  const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
 
   const _persistSession = (s: AuthSession) => {
     setSessionState(s);
@@ -56,15 +71,17 @@ function useMediaStoreState() {
   useEffect(() => {
     let active = true;
     let authEvent = 0;
-    let subscriptions: Array<() => void> = [];
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       const currentEvent = ++authEvent;
-      subscriptions.forEach((stop) => stop());
-      subscriptions = [];
       setIsLoaded(false);
+      setCompetitions([]);
       setSchools([]);
       setPublicSchools([]);
       setSubmissions([]);
+      setNotifications([]);
+      setIsCompetitionsLoaded(false);
+      setIsSchoolsLoaded(false);
+      setIsSubmissionsLoaded(false);
       void (async () => {
         let currentSession: AuthSession;
         try {
@@ -78,62 +95,199 @@ function useMediaStoreState() {
 
         if (!active || currentEvent !== authEvent) return;
         setSessionState(currentSession);
-        subscriptions.push(
-          subscribeFirebaseCompetitions((loadedCompetitions) => {
-            if (!active || currentEvent !== authEvent) return;
-            setCompetitions(loadedCompetitions);
-          }, (error) => console.warn('[firestore competitions listener]', error))
-        );
-
-        if (currentSession.type === 'admin') {
-          subscriptions.push(
-            subscribeFirebaseSchools((loadedSchools) => {
-              if (!active || currentEvent !== authEvent) return;
-              setSchools(loadedSchools);
-              setPublicSchools(loadedSchools.map((school) => ({
-                id: school.id,
-                name: school.name,
-                province: school.province,
-                district: school.district,
-                badgeCode: school.badgeCode,
-              })));
-            }, (error) => console.warn('[firestore schools listener]', error))
-          );
-          subscriptions.push(
-            subscribeFirebaseSubmissions(undefined, (loadedSubmissions) => {
-              if (active && currentEvent === authEvent) setSubmissions(loadedSubmissions);
-            }, (error) => console.warn('[firestore submissions listener]', error))
-          );
-        } else if (currentSession.type === 'school' && currentSession.school) {
-          subscriptions.push(
-            subscribeFirebaseSchoolStatus(
-              currentSession.school.id,
-              (status, fromCache) => {
-                if (!fromCache && status !== 'active') {
-                  void firebaseLogout().catch((error: unknown) => {
-                    console.warn('[school access revocation]', error);
-                  });
-                }
-              },
-              (error) => console.warn('[firestore school status listener]', error)
-            )
-          );
-          subscriptions.push(
-            subscribeFirebaseSubmissions(currentSession.school.id, (loadedSubmissions) => {
-              if (active && currentEvent === authEvent) setSubmissions(loadedSubmissions);
-            }, (error) => console.warn('[firestore submissions listener]', error))
-          );
-        }
         setIsLoaded(true);
       })();
     });
 
     return () => {
       active = false;
-      subscriptions.forEach((stop) => stop());
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    let active = true;
+    const subscriptions: Array<() => void> = [];
+    const notify = (notification: DashboardNotification) => {
+      setNotifications((current) => {
+        if (current.some((item) => item.id === notification.id)) return current;
+        return [notification, ...current].slice(0, 30);
+      });
+    };
+    const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
+    const isSchoolDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+    const isCompetitionPage = pathname === '/' || pathname === '/competitions';
+    const needsCompetitions = isCompetitionPage
+      || (isSchoolDashboard && session.type === 'school')
+      || (isAdminRoute && session.type === 'admin');
+    const needsAdminData = isAdminRoute && session.type === 'admin';
+    const needsSchoolSubmissions = session.type === 'school'
+      && Boolean(session.school)
+      && (isSchoolDashboard || pathname === '/competitions');
+    setIsCompetitionsLoaded(!needsCompetitions);
+    setIsSchoolsLoaded(!needsAdminData);
+    setIsSubmissionsLoaded(!(needsAdminData || needsSchoolSubmissions));
+
+    if (needsCompetitions) {
+      subscriptions.push(
+        subscribeFirebaseCompetitions((loadedCompetitions) => {
+          if (!active) return;
+          setCompetitions(loadedCompetitions);
+          setIsCompetitionsLoaded(true);
+        }, (error) => {
+          console.warn('[firestore competitions listener]', error);
+          if (active) setIsCompetitionsLoaded(true);
+        })
+      );
+    } else {
+      setCompetitions((current) => current.length === 0 ? current : []);
+    }
+
+    if (isAdminRoute && session.type === 'admin') {
+      let knownSchoolIds: Set<string> | null = null;
+      subscriptions.push(
+        subscribeFirebaseSchools((loadedSchools, fromCache) => {
+          if (!active) return;
+          if (!fromCache && knownSchoolIds) {
+            loadedSchools
+              .filter((school) => !knownSchoolIds?.has(school.id))
+              .forEach((school) => notify({
+                id: `registration:${school.id}`,
+                kind: 'registration',
+                title: 'New school registration',
+                message: `${school.name} has registered and is awaiting review.`,
+                createdAt: Date.now(),
+                read: false,
+              }));
+          }
+          if (!fromCache) knownSchoolIds = new Set(loadedSchools.map((school) => school.id));
+          setSchools(loadedSchools);
+          setPublicSchools(loadedSchools.map((school) => ({
+            id: school.id,
+            name: school.name,
+            province: school.province,
+            district: school.district,
+            badgeCode: school.badgeCode,
+          })));
+          setIsSchoolsLoaded(true);
+        }, (error) => {
+          console.warn('[firestore schools listener]', error);
+          if (active) setIsSchoolsLoaded(true);
+        })
+      );
+      let knownSubmissions: Map<string, Submission> | null = null;
+      subscriptions.push(
+        subscribeFirebaseSubmissions(undefined, (loadedSubmissions, fromCache) => {
+          if (!active) return;
+          if (!fromCache && knownSubmissions) {
+            loadedSubmissions.forEach((submission) => {
+              const previous = knownSubmissions?.get(submission.id);
+              if (!previous) {
+                notify({
+                  id: `submission:${submission.id}`,
+                  kind: 'submission',
+                  title: 'New competition submission',
+                  message: `${submission.schoolName} submitted “${submission.entryTitle}”.`,
+                  createdAt: Date.now(),
+                  read: false,
+                });
+              }
+            });
+          }
+          if (!fromCache) {
+            knownSubmissions = new Map(loadedSubmissions.map((submission) => [submission.id, submission]));
+          }
+          setSubmissions(loadedSubmissions);
+          setIsSubmissionsLoaded(true);
+        }, (error) => {
+          console.warn('[firestore submissions listener]', error);
+          if (active) setIsSubmissionsLoaded(true);
+        })
+      );
+    } else {
+      setSchools((current) => current.length === 0 ? current : []);
+      setPublicSchools((current) => current.length === 0 ? current : []);
+    }
+
+    if (needsSchoolSubmissions && session.type === 'school' && session.school) {
+      let knownSchoolSubmissions: Map<string, Submission> | null = null;
+      if (isSchoolDashboard) {
+        subscriptions.push(
+          subscribeFirebaseSchoolStatus(
+            session.school.id,
+            (status, fromCache) => {
+              if (!fromCache && status !== 'active') {
+                void firebaseLogout().catch((error: unknown) => {
+                  console.warn('[school access revocation]', error);
+                });
+              }
+            },
+            (error) => console.warn('[firestore school status listener]', error)
+          )
+        );
+      }
+      subscriptions.push(
+        subscribeFirebaseSubmissions(session.school.id, (loadedSubmissions, fromCache) => {
+          if (!active) return;
+          if (!fromCache && knownSchoolSubmissions) {
+            loadedSubmissions.forEach((submission) => {
+              const previous = knownSchoolSubmissions?.get(submission.id);
+              if (!previous) {
+                notify({
+                  id: `submission:${submission.id}`,
+                  kind: 'submission',
+                  title: 'Entry received',
+                  message: `“${submission.entryTitle}” was submitted to ${submission.competitionTitle}.`,
+                  createdAt: Date.now(),
+                  read: false,
+                });
+                return;
+              }
+
+              if (
+                previous.status !== submission.status
+                || previous.score !== submission.score
+                || previous.judgeFeedback !== submission.judgeFeedback
+              ) {
+                const updateKey = [
+                  submission.id,
+                  submission.status,
+                  submission.score ?? '',
+                  submission.judgeFeedback ?? '',
+                ].join(':');
+                const createdAt = Date.now();
+                notify({
+                  id: `review:${updateKey}:${createdAt}`,
+                  kind: 'update',
+                  title: 'Entry review updated',
+                  message: `“${submission.entryTitle}” is now ${submission.status.replaceAll('_', ' ')}${submission.score !== undefined ? ` with a score of ${submission.score}` : ''}${submission.judgeFeedback ? `. ${submission.judgeFeedback}` : ''}.`,
+                  createdAt,
+                  read: false,
+                });
+              }
+            });
+          }
+          if (!fromCache) {
+            knownSchoolSubmissions = new Map(loadedSubmissions.map((submission) => [submission.id, submission]));
+          }
+          setSubmissions(loadedSubmissions);
+          setIsSubmissionsLoaded(true);
+        }, (error) => {
+          console.warn('[firestore submissions listener]', error);
+          if (active) setIsSubmissionsLoaded(true);
+        })
+      );
+    } else if (!needsAdminData) {
+      setSubmissions((current) => current.length === 0 ? current : []);
+    }
+
+    return () => {
+      active = false;
+      subscriptions.forEach((stop) => stop());
+    };
+  }, [isLoaded, pathname, session]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
@@ -168,6 +322,12 @@ function useMediaStoreState() {
     _persistSession({ type: 'guest' });
     setSubmissions([]);
   };
+
+  const markNotificationsRead = () => {
+    setNotifications((current) => current.map((notification) => ({ ...notification, read: true })));
+  };
+
+  const clearNotifications = () => setNotifications([]);
 
   const submitEntry = async (
     entry: NewSubmissionInput
@@ -247,10 +407,16 @@ function useMediaStoreState() {
 
   return {
     isLoaded,
+    isCompetitionsLoaded,
+    isSchoolsLoaded,
+    isSubmissionsLoaded,
     competitions,
     schools,
     publicSchools,
     submissions,
+    notifications,
+    markNotificationsRead,
+    clearNotifications,
     session,
     registerSchool,
     loginSchool,

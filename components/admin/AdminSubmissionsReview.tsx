@@ -13,7 +13,6 @@ import {
   FileText,
   Search,
   Save,
-  Sparkles,
   Trophy,
 } from 'lucide-react';
 

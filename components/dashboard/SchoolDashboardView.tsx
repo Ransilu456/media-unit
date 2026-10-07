@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useMediaStore } from '@/lib/store';
 import { Competition } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/Badge';
-import { EntrySubmissionModal } from '@/components/forms/EntrySubmissionModal';
 import { SchoolTab } from '@/components/layout/SchoolPortalLayout';
 import {
   Trophy,
@@ -22,6 +22,11 @@ import {
   Plus,
   Search,
 } from 'lucide-react';
+
+const EntrySubmissionModal = dynamic(
+  () => import('@/components/forms/EntrySubmissionModal').then((module) => module.EntrySubmissionModal),
+  { loading: () => <div role="status" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 text-sm text-white">Loading entry form...</div> }
+);
 
 interface Props {
   activeTab: SchoolTab;

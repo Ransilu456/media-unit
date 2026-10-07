@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
+import { DashboardNotifications } from './DashboardNotifications';
 import {
   LayoutDashboard,
   Users,
@@ -225,6 +226,7 @@ export function SchoolPortalLayout({ children, activeTab, onTabChange }: SchoolP
           </div>
 
           <div className="flex items-center gap-3">
+            <DashboardNotifications />
             {school && (
               <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />

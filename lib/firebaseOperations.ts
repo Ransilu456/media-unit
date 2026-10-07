@@ -374,12 +374,16 @@ export function subscribeFirebaseSchoolStatus(
 }
 
 export function subscribeFirebaseSchools(
-  onData: (schools: RegisteredSchool[]) => void,
+  onData: (schools: RegisteredSchool[], fromCache: boolean) => void,
   onError: (error: Error) => void
 ): () => void {
   return onSnapshot(
     collection(db, COLLECTIONS.schools),
-    (snapshot) => onData(snapshot.docs.map((item) => item.data() as RegisteredSchool)),
+    { includeMetadataChanges: true },
+    (snapshot) => onData(
+      snapshot.docs.map((item) => item.data() as RegisteredSchool),
+      snapshot.metadata.fromCache
+    ),
     (error) => {
       reportFirestoreError(error);
       onError(error);
@@ -389,7 +393,7 @@ export function subscribeFirebaseSchools(
 
 export function subscribeFirebaseSubmissions(
   schoolId: string | undefined,
-  onData: (submissions: Submission[]) => void,
+  onData: (submissions: Submission[], fromCache: boolean) => void,
   onError: (error: Error) => void
 ): () => void {
   const submissions = collection(db, COLLECTIONS.submissions);
@@ -398,10 +402,14 @@ export function subscribeFirebaseSubmissions(
     : submissions;
   return onSnapshot(
     submissionsQuery,
-    (snapshot) => onData(snapshot.docs.map((item) => ({
-      ...item.data(),
-      id: item.id,
-    }) as Submission)),
+    { includeMetadataChanges: true },
+    (snapshot) => onData(
+      snapshot.docs.map((item) => ({
+        ...item.data(),
+        id: item.id,
+      }) as Submission),
+      snapshot.metadata.fromCache
+    ),
     (error) => {
       reportFirestoreError(error);
       onError(error);

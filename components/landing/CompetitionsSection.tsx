@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useMediaStore } from '@/lib/store';
 import { StatusBadge } from '@/components/ui/Badge';
-import { EntrySubmissionModal } from '@/components/forms/EntrySubmissionModal';
 import { Competition } from '@/lib/types';
 import {
   Trophy,
@@ -19,6 +19,11 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+
+const EntrySubmissionModal = dynamic(
+  () => import('@/components/forms/EntrySubmissionModal').then((module) => module.EntrySubmissionModal),
+  { loading: () => <div role="status" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 text-sm text-white">Loading entry form...</div> }
+);
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Short Film & Cinematography': <Film size={18} className="text-amber-700" />,
@@ -38,7 +43,7 @@ export function CompetitionsSection({
   title = 'Competition Tracks',
   subtitle = 'Review rules, grade levels, and deadlines to submit student entries through your school delegation.',
 }: CompetitionsSectionProps) {
-  const { competitions, session } = useMediaStore();
+  const { competitions, session, isCompetitionsLoaded } = useMediaStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedMedium, setSelectedMedium] = useState<string>('All');
@@ -174,7 +179,27 @@ export function CompetitionsSection({
 
         {/* Competitions Cards Grid with Clean White Shadows */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredCompetitions.length === 0 ? (
+          {!isCompetitionsLoaded ? (
+            Array.from({ length: 4 }, (_, index) => (
+              <div
+                key={index}
+                aria-hidden="true"
+                className="space-y-5 rounded-3xl border border-slate-100 bg-white p-7 shadow-xs"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-36 animate-pulse rounded bg-slate-200" />
+                  <div className="h-5 w-20 animate-pulse rounded-full bg-slate-100" />
+                </div>
+                <div className="h-6 w-3/4 animate-pulse rounded bg-slate-200" />
+                <div className="space-y-2">
+                  <div className="h-3 w-full animate-pulse rounded bg-slate-100" />
+                  <div className="h-3 w-5/6 animate-pulse rounded bg-slate-100" />
+                </div>
+                <div className="h-20 animate-pulse rounded-2xl bg-slate-100" />
+                <div className="h-10 animate-pulse rounded-xl bg-slate-200" />
+              </div>
+            ))
+          ) : filteredCompetitions.length === 0 ? (
             <div className="col-span-full py-16 text-center bg-slate-50/50 rounded-3xl border border-slate-100 p-8">
               <Trophy size={32} className="mx-auto text-slate-300 mb-3" />
               <h3 className="text-base font-bold text-slate-800 mb-1">No competition tracks match your search</h3>
