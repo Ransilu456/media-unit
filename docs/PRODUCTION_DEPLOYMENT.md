@@ -12,7 +12,9 @@ The primary admin is an **administrator of this website**, not a Firebase Consol
 
 ## Deploy to Netlify
 
-The repository includes `netlify.toml` with a Next.js build command and adapter. Connect the Git repository in Netlify (**Add new project → Import an existing project**) and use the configured `npm run build` command. Do not upload the `.next` directory as a static site: the app uses Next.js routes and needs the [Netlify Next.js adapter](https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/).
+The repository includes `netlify.toml` with a Next.js build command and adapter, and `.nvmrc` selects Node.js 22 for Netlify builds. Connect the Git repository in Netlify (**Add new project → Import an existing project**) and set the **Base directory** to the repository root (leave it blank if the app is at the root). Use the configured build command `npm run build`; Netlify can install dependencies from the committed `package-lock.json`. The publish directory is `.next` as configured in `netlify.toml`; do not change it to `dist` because this is a Next.js app with server routes and needs the [Netlify Next.js adapter](https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/).
+
+The framework selector showing **Unknown** does not by itself prove the repository is misconfigured: the repository still has the required `package.json`, build script, lockfile, and Netlify config. Commit and push these files (including `.nvmrc`, `package.json`, `package-lock.json`, and `netlify.toml`) to the branch Netlify deploys. If the deploy log stops at “Installing dependencies”, open the full deploy log and inspect the dependency-install phase for the actual npm error. That excerpt alone does not include enough information to identify an install failure. If it still fails after the Node 22 pin, use **Clear cache and deploy site** once; if it fails again, capture the first npm error lines from the full log, omitting environment-variable values.
 
 Set these variables in the Netlify site's environment-variable settings for the production build:
 

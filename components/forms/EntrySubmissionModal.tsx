@@ -268,7 +268,7 @@ export function EntrySubmissionModal({
               {/* Automatically Filled & Locked Medium */}
               <div>
                 <label className={labelCls}>Medium (Auto-Filled)</label>
-                <div className="flex items-center h-[42px] px-3.5 rounded-xl border border-slate-200 bg-white font-semibold text-xs text-slate-800">
+                <div className="flex items-center h-10.5 px-3.5 rounded-xl border border-slate-200 bg-white font-semibold text-xs text-slate-800">
                   {competitionMedium === 'Sinhala' && (
                     <span className="inline-flex items-center gap-1 text-blue-700">
                       <span className="w-2 h-2 rounded-full bg-blue-600" /> Sinhala Medium
