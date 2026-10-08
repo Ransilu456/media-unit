@@ -85,6 +85,17 @@ export function Navbar() {
                 Competitions
               </Link>
 
+              <Link
+                href="/rules"
+                className={`text-sm font-medium transition-colors ${
+                  pathname === '/rules'
+                    ? 'text-slate-900 font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Rules
+              </Link>
+
               {/* Guest Actions */}
               {isGuest && (
                 <div className="flex items-center gap-4 pl-4 border-l border-slate-100">
@@ -190,6 +201,14 @@ export function Navbar() {
               className={`block py-2 text-sm font-medium ${pathname === '/competitions' ? 'text-slate-900 font-bold' : 'text-slate-600'}`}
             >
               Competitions
+            </Link>
+
+            <Link
+              href="/rules"
+              onClick={() => setMobileOpen(false)}
+              className={`block py-2 text-sm font-medium ${pathname === '/rules' ? 'text-slate-900 font-bold' : 'text-slate-600'}`}
+            >
+              Rules &amp; Regulations
             </Link>
 
             {isSchool && session.school && (

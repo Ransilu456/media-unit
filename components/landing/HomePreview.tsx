@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useMediaStore } from '@/lib/store';
+import { FirestoreNetworkError } from '@/components/ui/FirestoreNetworkError';
 import {
   ArrowRight,
   FileCheck2,
@@ -11,7 +12,12 @@ import {
 } from 'lucide-react';
 
 export function HomePreview() {
-  const { competitions, isCompetitionsLoaded } = useMediaStore();
+  const {
+    competitions,
+    isCompetitionsLoaded,
+    competitionsError,
+    retryCompetitions,
+  } = useMediaStore();
   const previewComps = competitions.slice(0, 3);
 
   const steps = [
@@ -54,13 +60,22 @@ export function HomePreview() {
               href="/competitions"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-slate-950 transition-colors"
             >
-              <span>Explore all {competitions.length} tracks</span>
+              <span>{competitionsError ? 'Explore competition tracks' : `Explore all ${competitions.length} tracks`}</span>
               <ArrowRight size={15} />
             </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {!isCompetitionsLoaded
+            {competitionsError ? (
+              <div className="md:col-span-3">
+                <FirestoreNetworkError
+                  compact
+                  title="Featured tracks are temporarily unavailable"
+                  message={competitionsError}
+                  onRetry={retryCompetitions}
+                />
+              </div>
+            ) : !isCompetitionsLoaded
               ? Array.from({ length: 3 }, (_, index) => (
                 <div key={index} aria-hidden="true" className="space-y-4 rounded-2xl border border-slate-100 bg-white p-6">
                   <div className="h-3 w-28 animate-pulse rounded bg-slate-200" />

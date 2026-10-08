@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useMediaStore } from '@/lib/store';
 import { StatusBadge } from '@/components/ui/Badge';
+import { FirestoreNetworkError } from '@/components/ui/FirestoreNetworkError';
 import { Competition } from '@/lib/types';
 import {
   Trophy,
@@ -43,7 +44,13 @@ export function CompetitionsSection({
   title = 'Competition Tracks',
   subtitle = 'Review rules, grade levels, and deadlines to submit student entries through your school delegation.',
 }: CompetitionsSectionProps) {
-  const { competitions, session, isCompetitionsLoaded } = useMediaStore();
+  const {
+    competitions,
+    session,
+    isCompetitionsLoaded,
+    competitionsError,
+    retryCompetitions,
+  } = useMediaStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedMedium, setSelectedMedium] = useState<string>('All');
@@ -179,7 +186,15 @@ export function CompetitionsSection({
 
         {/* Competitions Cards Grid with Clean White Shadows */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {!isCompetitionsLoaded ? (
+          {competitionsError ? (
+            <div className="col-span-full">
+              <FirestoreNetworkError
+                title="Competition tracks are temporarily unavailable"
+                message={competitionsError}
+                onRetry={retryCompetitions}
+              />
+            </div>
+          ) : !isCompetitionsLoaded ? (
             Array.from({ length: 4 }, (_, index) => (
               <div
                 key={index}

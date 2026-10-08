@@ -5,7 +5,7 @@ import { MediaStoreProvider } from "@/lib/store";
 import { FirestoreQuotaGuard } from "@/components/layout/FirestoreQuotaGuard";
 
 export const metadata: Metadata = {
-  title: "Agradhi Media Unit | Saranath College — Inter-School Media Assembly 2026",
+  title: "Agradhi Media Unit | Saranath College",
   description: "Official portal for all-island school media units to register, submit competition entries, and track official adjudications.",
   manifest: "/manifest.webmanifest",
   icons: {

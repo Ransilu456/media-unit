@@ -26,6 +26,9 @@ export function Footer() {
           <Link href="/competitions" className="hover:text-slate-900 transition-colors">
             Competitions
           </Link>
+          <Link href="/rules" className="hover:text-slate-900 transition-colors">
+            Rules &amp; Regulations
+          </Link>
           <Link href="/register" className="hover:text-slate-900 transition-colors">
             Register School
           </Link>
@@ -34,9 +37,14 @@ export function Footer() {
           </Link>
         </div>
 
-        <p className="text-slate-400 text-[11px]">
-          © 2026 {MEDIA_UNIT_INFO.name}.
-        </p>
+        <div className="text-center sm:text-right">
+          <p className="font-medium text-slate-500 text-[11px]">
+            Developed by {MEDIA_UNIT_INFO.name}
+          </p>
+          <p className="mt-1 text-slate-400 text-[11px]">
+            © 2026 {MEDIA_UNIT_INFO.name}.
+          </p>
+        </div>
 
       </div>
     </footer>

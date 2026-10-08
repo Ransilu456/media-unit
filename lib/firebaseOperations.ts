@@ -1,34 +1,10 @@
 'use client';
 
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  deleteUser,
-  signOut,
-  User as FirebaseUser,
-} from 'firebase/auth';
-import {
-  collection,
-  doc,
-  getDoc,
-  onSnapshot,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  getDocs,
-  limit,
-  query,
-  where,
-} from 'firebase/firestore';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, deleteUser, signOut, User as FirebaseUser, } from 'firebase/auth';
+import { collection, doc, getDoc, onSnapshot, setDoc, updateDoc, deleteDoc, getDocs, limit, query, where, } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import { reportFirestoreError, withFirestoreErrorReporting } from './firestoreErrors';
-import type {
-  Competition,
-  RegisteredSchool,
-  Submission,
-  AuthSession,
-  NewSubmissionInput,
-} from './types';
+import { isFirebaseConnectionError, reportFirestoreError, withFirestoreErrorReporting } from './firestoreErrors';
+import type {  Competition,  RegisteredSchool,  Submission,  AuthSession,  NewSubmissionInput, } from './types';
 import { calculateAge } from './validation';
 
 const COLLECTIONS = {
@@ -95,6 +71,9 @@ export async function firebaseLoginSchool(
 
   const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass).catch((error: unknown) => {
     const code = (error as { code?: string }).code;
+    if (isFirebaseConnectionError(error)) {
+      throw new Error('Unable to connect to Firebase. Check your internet connection and try signing in again.');
+    }
     if (code === 'auth/too-many-requests') {
       throw new Error('Too many failed login attempts. Please wait a few minutes and retry.');
     }
@@ -115,8 +94,11 @@ export async function firebaseLoginSchool(
     schoolSnapshot = await withFirestoreErrorReporting(() =>
       getDoc(doc(db, COLLECTIONS.schools, cred.user.uid))
     );
-  } catch {
+  } catch (error) {
     await signOut(auth).catch(() => undefined);
+    if (isFirebaseConnectionError(error)) {
+      throw new Error('Unable to connect to Firebase. Check your internet connection and retry.');
+    }
     throw new Error('Unable to read your school profile from Firestore. Check your connection and Firestore rules.');
   }
   if (!schoolSnapshot.exists()) {
@@ -169,6 +151,9 @@ export async function firebaseLoginAdmin(
   } catch (err: unknown) {
     await fetch('/api/auth/logout', { method: 'POST' });
     const code = (err as { code?: string }).code ?? '';
+    if (isFirebaseConnectionError(err)) {
+      throw new Error('Unable to connect to Firebase. Check your internet connection and try signing in again.');
+    }
     if (code === 'auth/too-many-requests') {
       throw new Error('Too many login attempts. Please wait a few minutes and try again.');
     }
@@ -195,6 +180,9 @@ export async function firebaseRegisterSchool(
     cred = await createUserWithEmailAndPassword(auth, data.email.trim().toLowerCase(), data.password);
   } catch (err: unknown) {
     const authError = err as { code?: string; message?: string };
+    if (isFirebaseConnectionError(err)) {
+      throw new Error('Unable to connect to Firebase. Check your internet connection and try registering again.');
+    }
     if (authError.code === 'auth/email-already-in-use') {
       throw new Error('A school delegation with this email is already registered. Please sign in directly.');
     }
@@ -231,6 +219,9 @@ export async function firebaseRegisterSchool(
       console.error('[school registration cleanup]', cleanupError);
     }
     if ((error as { code?: string })?.code === 'resource-exhausted') throw error;
+    if (isFirebaseConnectionError(error)) {
+      throw new Error('Unable to connect to Firebase. Check your internet connection and retry registration.');
+    }
     throw new Error('The school profile could not be saved to Firestore. Please retry registration.');
   }
 
@@ -341,12 +332,16 @@ export async function firebaseUpdateSubmission(
 }
 
 export function subscribeFirebaseCompetitions(
-  onData: (competitions: Competition[]) => void,
+  onData: (competitions: Competition[], fromCache: boolean) => void,
   onError: (error: Error) => void
 ): () => void {
   return onSnapshot(
     collection(db, COLLECTIONS.competitions),
-    (snapshot) => onData(snapshot.docs.map((item) => item.data() as Competition)),
+    { includeMetadataChanges: true },
+    (snapshot) => onData(
+      snapshot.docs.map((item) => item.data() as Competition),
+      snapshot.metadata.fromCache
+    ),
     (error) => {
       reportFirestoreError(error);
       onError(error);

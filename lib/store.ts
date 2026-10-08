@@ -1,43 +1,53 @@
 'use client';
 
-import {
-  createContext,
-  createElement,
-  useContext,
-  useState,
-  useEffect,
-  type ReactNode,
-} from 'react';
+import { createContext, createElement, useCallback, useContext, useState, useEffect, useRef, type ReactNode, } from 'react';
 import { usePathname } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
-import type {
-  Competition,
-  RegisteredSchool,
-  PublicSchool,
-  Submission,
-  AuthSession,
-  SubmissionStatus,
-  NewSubmissionInput,
-} from './types';
+import type { Competition, RegisteredSchool, PublicSchool, Submission, AuthSession, SubmissionStatus, NewSubmissionInput, } from './types';
 import { validateSubmissionInput } from './validation';
-import {
-  getFirebaseSession,
-  firebaseLoginSchool,
-  firebaseLoginAdmin,
-  firebaseRegisterSchool,
-  firebaseLogout,
-  firebaseAddCompetition,
-  firebaseUpdateCompetition,
-  firebaseDeleteCompetition,
-  firebaseUpdateSchoolStatus,
-  firebaseSubmitEntry,
-  firebaseUpdateSubmission,
-  subscribeFirebaseCompetitions,
-  subscribeFirebaseSchools,
-  subscribeFirebaseSchoolStatus,
-  subscribeFirebaseSubmissions,
-} from './firebaseOperations';
+import { getFirebaseSession, firebaseLoginSchool, firebaseLoginAdmin, firebaseRegisterSchool, firebaseLogout, firebaseAddCompetition, firebaseUpdateCompetition, firebaseDeleteCompetition, firebaseUpdateSchoolStatus, firebaseSubmitEntry, firebaseUpdateSubmission, subscribeFirebaseCompetitions, subscribeFirebaseSchools, subscribeFirebaseSchoolStatus, subscribeFirebaseSubmissions, } from './firebaseOperations';
+
+const FIRESTORE_CACHE_WAIT_MS = 7000;
+const SESSION_ERROR_WAIT_MS = 4000;
+const COMPETITIONS_CACHE_TTL_MS = 5 * 60 * 1000;
+const COMPETITIONS_SESSION_CACHE_KEY = 'agradhi_public_competitions_v1';
+
+interface CachedCompetitions {
+  fetchedAt: number;
+  items: Competition[];
+}
+
+function clearCachedCompetitions(): void {
+  try {
+    sessionStorage.removeItem(COMPETITIONS_SESSION_CACHE_KEY);
+  } catch (error) {
+    console.warn('[competitions session cache removal]', error);
+  }
+}
+
+function readCachedCompetitions(): CachedCompetitions | null {
+  try {
+    const cached = sessionStorage.getItem(COMPETITIONS_SESSION_CACHE_KEY);
+    if (!cached) return null;
+
+    const parsed = JSON.parse(cached) as Partial<CachedCompetitions>;
+    if (
+      typeof parsed.fetchedAt !== 'number' ||
+      !Array.isArray(parsed.items) ||
+      Date.now() - parsed.fetchedAt >= COMPETITIONS_CACHE_TTL_MS ||
+      parsed.items.some((item) => !item || typeof item.id !== 'string' || typeof item.title !== 'string')
+    ) {
+      sessionStorage.removeItem(COMPETITIONS_SESSION_CACHE_KEY);
+      return null;
+    }
+
+    return parsed as CachedCompetitions;
+  } catch (error) {
+    console.warn('[competitions session cache]', error);
+    return null;
+  }
+}
 
 export interface DashboardNotification {
   id: string;
@@ -47,8 +57,6 @@ export interface DashboardNotification {
   createdAt: number;
   read: boolean;
 }
-
-// ─── Main media store hook powered by Firebase ───────────────────────────────
 
 function useMediaStoreState() {
   const pathname = usePathname();
@@ -61,20 +69,50 @@ function useMediaStoreState() {
   const [isCompetitionsLoaded, setIsCompetitionsLoaded] = useState(false);
   const [isSchoolsLoaded, setIsSchoolsLoaded] = useState(false);
   const [isSubmissionsLoaded, setIsSubmissionsLoaded] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [competitionsError, setCompetitionsError] = useState<string | null>(null);
+  const [schoolsError, setSchoolsError] = useState<string | null>(null);
+  const [submissionsError, setSubmissionsError] = useState<string | null>(null);
+  const [sessionRetry, setSessionRetry] = useState(0);
+  const [competitionsRetry, setCompetitionsRetry] = useState(0);
+  const [schoolsRetry, setSchoolsRetry] = useState(0);
+  const [submissionsRetry, setSubmissionsRetry] = useState(0);
   const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
+  const competitionsServerFetchedAt = useRef(0);
+
+  const retrySession = useCallback(() => {
+    setSessionError(null);
+    setIsLoaded(false);
+    setSessionRetry((attempt) => attempt + 1);
+  }, []);
+  const retryCompetitions = useCallback(() => {
+    competitionsServerFetchedAt.current = 0;
+    if (typeof window !== 'undefined') clearCachedCompetitions();
+    setCompetitionsError(null);
+    setIsCompetitionsLoaded(false);
+    setCompetitionsRetry((attempt) => attempt + 1);
+  }, []);
+  const retrySchools = useCallback(() => {
+    setSchoolsError(null);
+    setIsSchoolsLoaded(false);
+    setSchoolsRetry((attempt) => attempt + 1);
+  }, []);
+  const retrySubmissions = useCallback(() => {
+    setSubmissionsError(null);
+    setIsSubmissionsLoaded(false);
+    setSubmissionsRetry((attempt) => attempt + 1);
+  }, []);
 
   const _persistSession = (s: AuthSession) => {
     setSessionState(s);
   };
 
-  // Firebase Auth is the session source; Firestore supplies the user profile.
   useEffect(() => {
     let active = true;
     let authEvent = 0;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       const currentEvent = ++authEvent;
       setIsLoaded(false);
-      setCompetitions([]);
       setSchools([]);
       setPublicSchools([]);
       setSubmissions([]);
@@ -82,19 +120,33 @@ function useMediaStoreState() {
       setIsCompetitionsLoaded(false);
       setIsSchoolsLoaded(false);
       setIsSubmissionsLoaded(false);
+      setSessionError(null);
       void (async () => {
         let currentSession: AuthSession;
         try {
           currentSession = await getFirebaseSession(user);
         } catch (error) {
           console.warn('[firebase session initialization]', error);
-          if (active && currentEvent === authEvent) setSessionState({ type: 'guest' });
-          if (active && currentEvent === authEvent) setIsLoaded(true);
+          await new Promise<void>((resolve) => setTimeout(resolve, SESSION_ERROR_WAIT_MS));
+          if (active && currentEvent === authEvent) {
+            setSessionState({ type: 'guest' });
+            setSessionError(error instanceof Error ? error.message : 'Unable to verify your sign-in session.');
+            setIsLoaded(true);
+          }
           return;
         }
 
         if (!active || currentEvent !== authEvent) return;
         setSessionState(currentSession);
+        setIsLoaded(true);
+      })();
+    }, (error) => {
+      console.warn('[firebase auth session]', error);
+      void (async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, SESSION_ERROR_WAIT_MS));
+        if (!active) return;
+        setSessionState({ type: 'guest' });
+        setSessionError(error.message || 'Unable to verify your sign-in session.');
         setIsLoaded(true);
       })();
     });
@@ -103,13 +155,159 @@ function useMediaStoreState() {
       active = false;
       unsubscribe();
     };
-  }, []);
+  }, [sessionRetry]);
+
+  useEffect(() => {
+    if (!sessionError && !competitionsError && !schoolsError && !submissionsError) return;
+    const retryFailedLoads = () => {
+      if (sessionError) retrySession();
+      if (competitionsError) retryCompetitions();
+      if (schoolsError) retrySchools();
+      if (submissionsError) retrySubmissions();
+    };
+    window.addEventListener('online', retryFailedLoads);
+    return () => window.removeEventListener('online', retryFailedLoads);
+  }, [
+    competitionsError,
+    retryCompetitions,
+    retrySchools,
+    retrySession,
+    retrySubmissions,
+    schoolsError,
+    sessionError,
+    submissionsError,
+  ]);
+
+  const isPublicCompetitionRoute = pathname === '/' || pathname === '/competitions';
+  const competitionSessionReady = isPublicCompetitionRoute || isLoaded;
+  const competitionSessionType = isPublicCompetitionRoute ? 'public' : session.type;
+  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isSchoolDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+  const needsCompetitions = isPublicCompetitionRoute
+    || (isSchoolDashboard && session.type === 'school')
+    || (isAdminRoute && session.type === 'admin');
+
+  useEffect(() => {
+    if (!needsCompetitions) {
+      setIsCompetitionsLoaded(true);
+      setCompetitionsError(null);
+      return;
+    }
+
+    if (typeof window !== 'undefined' && competitionsServerFetchedAt.current === 0) {
+      const cached = readCachedCompetitions();
+      if (cached) {
+        competitionsServerFetchedAt.current = cached.fetchedAt;
+        setCompetitions(cached.items);
+      }
+    }
+
+    if (Date.now() - competitionsServerFetchedAt.current < COMPETITIONS_CACHE_TTL_MS) {
+      setIsCompetitionsLoaded(true);
+      setCompetitionsError(null);
+      return;
+    }
+
+    let active = true;
+    let cacheTimer: ReturnType<typeof setTimeout> | undefined;
+    setIsCompetitionsLoaded(false);
+    setCompetitionsError(null);
+
+    const unsubscribe = subscribeFirebaseCompetitions((loadedCompetitions, fromCache) => {
+      if (!active) return;
+      setCompetitions(loadedCompetitions);
+      if (fromCache) {
+        if (!cacheTimer) {
+          cacheTimer = setTimeout(() => {
+            if (!active) return;
+            setCompetitionsError(
+              'Competition data could not be confirmed with the server. Check your connection and retry.'
+            );
+            setIsCompetitionsLoaded(true);
+          }, FIRESTORE_CACHE_WAIT_MS);
+        }
+        return;
+      }
+
+      competitionsServerFetchedAt.current = Date.now();
+      try {
+        sessionStorage.setItem(COMPETITIONS_SESSION_CACHE_KEY, JSON.stringify({
+          fetchedAt: competitionsServerFetchedAt.current,
+          items: loadedCompetitions,
+        }));
+      } catch (error) {
+        console.warn('[competitions session cache write]', error);
+      }
+      if (cacheTimer) clearTimeout(cacheTimer);
+      setCompetitionsError(null);
+      setIsCompetitionsLoaded(true);
+    }, (error) => {
+      console.warn('[firestore competitions listener]', error);
+      if (!active) return;
+      if (cacheTimer) clearTimeout(cacheTimer);
+      setCompetitionsError('Competition data could not be loaded. Check your connection and retry.');
+      setIsCompetitionsLoaded(true);
+    });
+
+    return () => {
+      active = false;
+      if (cacheTimer) clearTimeout(cacheTimer);
+      unsubscribe();
+    };
+  }, [
+    competitionSessionReady,
+    competitionSessionType,
+    competitionsRetry,
+    isPublicCompetitionRoute,
+    needsCompetitions,
+    pathname,
+  ]);
 
   useEffect(() => {
     if (!isLoaded) return;
 
     let active = true;
     const subscriptions: Array<() => void> = [];
+    const cacheTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    const clearCacheTimer = (key: string) => {
+      const timer = cacheTimers.get(key);
+      if (timer) clearTimeout(timer);
+      cacheTimers.delete(key);
+    };
+    const handleSnapshotStatus = (
+      key: string,
+      fromCache: boolean,
+      setError: (message: string | null) => void,
+      setLoaded: (loaded: boolean) => void,
+      message: string
+    ) => {
+      if (fromCache) {
+        if (!cacheTimers.has(key)) {
+          cacheTimers.set(key, setTimeout(() => {
+            if (!active) return;
+            setError(message);
+            setLoaded(true);
+          }, FIRESTORE_CACHE_WAIT_MS));
+        }
+        return;
+      }
+      clearCacheTimer(key);
+      setError(null);
+      setLoaded(true);
+    };
+    const handleListenerError = (
+      key: string,
+      error: Error,
+      setError: (message: string | null) => void,
+      setLoaded: (loaded: boolean) => void,
+      message: string
+    ) => {
+      console.warn(`[firestore ${key} listener]`, error);
+      clearCacheTimer(key);
+      if (!active) return;
+      setError(message);
+      setLoaded(true);
+    };
     const notify = (notification: DashboardNotification) => {
       setNotifications((current) => {
         if (current.some((item) => item.id === notification.id)) return current;
@@ -118,38 +316,21 @@ function useMediaStoreState() {
     };
     const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
     const isSchoolDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
-    const isCompetitionPage = pathname === '/' || pathname === '/competitions';
-    const needsCompetitions = isCompetitionPage
-      || (isSchoolDashboard && session.type === 'school')
-      || (isAdminRoute && session.type === 'admin');
     const needsAdminData = isAdminRoute && session.type === 'admin';
     const needsSchoolSubmissions = session.type === 'school'
       && Boolean(session.school)
       && (isSchoolDashboard || pathname === '/competitions');
-    setIsCompetitionsLoaded(!needsCompetitions);
     setIsSchoolsLoaded(!needsAdminData);
     setIsSubmissionsLoaded(!(needsAdminData || needsSchoolSubmissions));
-
-    if (needsCompetitions) {
-      subscriptions.push(
-        subscribeFirebaseCompetitions((loadedCompetitions) => {
-          if (!active) return;
-          setCompetitions(loadedCompetitions);
-          setIsCompetitionsLoaded(true);
-        }, (error) => {
-          console.warn('[firestore competitions listener]', error);
-          if (active) setIsCompetitionsLoaded(true);
-        })
-      );
-    } else {
-      setCompetitions((current) => current.length === 0 ? current : []);
-    }
+    setSchoolsError(null);
+    setSubmissionsError(null);
 
     if (isAdminRoute && session.type === 'admin') {
       let knownSchoolIds: Set<string> | null = null;
       subscriptions.push(
         subscribeFirebaseSchools((loadedSchools, fromCache) => {
           if (!active) return;
+
           if (!fromCache && knownSchoolIds) {
             loadedSchools
               .filter((school) => !knownSchoolIds?.has(school.id))
@@ -162,7 +343,9 @@ function useMediaStoreState() {
                 read: false,
               }));
           }
+
           if (!fromCache) knownSchoolIds = new Set(loadedSchools.map((school) => school.id));
+
           setSchools(loadedSchools);
           setPublicSchools(loadedSchools.map((school) => ({
             id: school.id,
@@ -171,10 +354,22 @@ function useMediaStoreState() {
             district: school.district,
             badgeCode: school.badgeCode,
           })));
-          setIsSchoolsLoaded(true);
+
+          handleSnapshotStatus(
+            'schools',
+            fromCache,
+            setSchoolsError,
+            setIsSchoolsLoaded,
+            'School data could not be confirmed with the server. Check your connection and retry.'
+          );
         }, (error) => {
-          console.warn('[firestore schools listener]', error);
-          if (active) setIsSchoolsLoaded(true);
+          handleListenerError(
+            'schools',
+            error,
+            setSchoolsError,
+            setIsSchoolsLoaded,
+            'School data could not be loaded. Check your connection and retry.'
+          );
         })
       );
       let knownSubmissions: Map<string, Submission> | null = null;
@@ -200,10 +395,21 @@ function useMediaStoreState() {
             knownSubmissions = new Map(loadedSubmissions.map((submission) => [submission.id, submission]));
           }
           setSubmissions(loadedSubmissions);
-          setIsSubmissionsLoaded(true);
+          handleSnapshotStatus(
+            'submissions',
+            fromCache,
+            setSubmissionsError,
+            setIsSubmissionsLoaded,
+            'Submission data could not be confirmed with the server. Check your connection and retry.'
+          );
         }, (error) => {
-          console.warn('[firestore submissions listener]', error);
-          if (active) setIsSubmissionsLoaded(true);
+          handleListenerError(
+            'submissions',
+            error,
+            setSubmissionsError,
+            setIsSubmissionsLoaded,
+            'Submission data could not be loaded. Check your connection and retry.'
+          );
         })
       );
     } else {
@@ -273,10 +479,21 @@ function useMediaStoreState() {
             knownSchoolSubmissions = new Map(loadedSubmissions.map((submission) => [submission.id, submission]));
           }
           setSubmissions(loadedSubmissions);
-          setIsSubmissionsLoaded(true);
+          handleSnapshotStatus(
+            'submissions',
+            fromCache,
+            setSubmissionsError,
+            setIsSubmissionsLoaded,
+            'Submission data could not be confirmed with the server. Check your connection and retry.'
+          );
         }, (error) => {
-          console.warn('[firestore submissions listener]', error);
-          if (active) setIsSubmissionsLoaded(true);
+          handleListenerError(
+            'submissions',
+            error,
+            setSubmissionsError,
+            setIsSubmissionsLoaded,
+            'Submission data could not be loaded. Check your connection and retry.'
+          );
         })
       );
     } else if (!needsAdminData) {
@@ -285,22 +502,16 @@ function useMediaStoreState() {
 
     return () => {
       active = false;
+      cacheTimers.forEach((timer) => clearTimeout(timer));
       subscriptions.forEach((stop) => stop());
     };
-  }, [isLoaded, pathname, session]);
+  }, [isLoaded, pathname, session, schoolsRetry, submissionsRetry]);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
-
-  const registerSchool = async (
-    data: Omit<RegisteredSchool, 'id' | 'registeredAt' | 'badgeCode' | 'status'>
-  ): Promise<RegisteredSchool> => {
+  const registerSchool = async ( data: Omit<RegisteredSchool, 'id' | 'registeredAt' | 'badgeCode' | 'status'> ): Promise<RegisteredSchool> => {
     return firebaseRegisterSchool(data);
   };
 
-  const loginSchool = async (
-    email: string,
-    pass: string
-  ): Promise<RegisteredSchool | null> => {
+  const loginSchool = async ( email: string, pass: string ): Promise<RegisteredSchool | null> => {
     const school = await firebaseLoginSchool(email, pass);
     if (!school) return null;
 
@@ -329,10 +540,9 @@ function useMediaStoreState() {
 
   const clearNotifications = () => setNotifications([]);
 
-  const submitEntry = async (
-    entry: NewSubmissionInput
-  ): Promise<Submission> => {
+  const submitEntry = async ( entry: NewSubmissionInput ): Promise<Submission> => {
     const validationErrors = validateSubmissionInput(entry, competitions);
+
     if (Object.keys(validationErrors).length > 0) {
       throw new Error(Object.values(validationErrors)[0]);
     }
@@ -345,17 +555,8 @@ function useMediaStoreState() {
     return newSub;
   };
 
-  const updateSubmissionStatus = async (
-    id: string,
-    status: SubmissionStatus,
-    score?: number,
-    feedback?: string
-  ): Promise<void> => {
-    await firebaseUpdateSubmission(id, {
-      status,
-      score,
-      judgeFeedback: feedback,
-    });
+  const updateSubmissionStatus = async ( id: string, status: SubmissionStatus, score?: number, feedback?: string ): Promise<void> => {
+    await firebaseUpdateSubmission(id, { status, score, judgeFeedback: feedback,});
 
     setSubmissions((prev) =>
       prev.map((s) =>
@@ -366,34 +567,31 @@ function useMediaStoreState() {
     );
   };
 
-  const updateSchoolStatus = async (
-    id: string,
-    status: 'active' | 'pending' | 'suspended' | 'banned'
-  ): Promise<void> => {
+  const updateSchoolStatus = async ( id: string, status: 'active' | 'pending' | 'suspended' | 'banned' ): Promise<void> => {
     await firebaseUpdateSchoolStatus(id, status);
     setSchools((prev) =>
       prev.map((school) => (school.id === id ? { ...school, status } : school))
     );
   };
 
-  const addCompetition = async (
-    comp: Omit<Competition, 'id'>
-  ): Promise<Competition> => {
+  const addCompetition = async ( comp: Omit<Competition, 'id'> ): Promise<Competition> => {
+
     if (competitions.some((existing) => existing.slug === comp.slug)) {
       throw new Error('A competition with this URL slug already exists.');
     }
+
     const newComp = await firebaseAddCompetition(comp);
     setCompetitions((prev) => [...prev, newComp]);
+
     return newComp;
   };
 
-  const updateCompetition = async (
-    id: string,
-    updates: Partial<Omit<Competition, 'id'>>
-  ): Promise<void> => {
+  const updateCompetition = async ( id: string, updates: Partial<Omit<Competition, 'id'>> ): Promise<void> => {
+
     if (updates.slug && competitions.some((existing) => existing.id !== id && existing.slug === updates.slug)) {
       throw new Error('A competition with this URL slug already exists.');
     }
+
     await firebaseUpdateCompetition(id, updates);
     setCompetitions((prev) =>
       prev.map((comp) => (comp.id === id ? { ...comp, ...updates } : comp))
@@ -410,6 +608,14 @@ function useMediaStoreState() {
     isCompetitionsLoaded,
     isSchoolsLoaded,
     isSubmissionsLoaded,
+    sessionError,
+    competitionsError,
+    schoolsError,
+    submissionsError,
+    retrySession,
+    retryCompetitions,
+    retrySchools,
+    retrySubmissions,
     competitions,
     schools,
     publicSchools,

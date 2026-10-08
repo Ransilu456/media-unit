@@ -147,7 +147,7 @@ export function SchoolRegisterForm() {
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto">
+    <div className="w-full max-w-xl mx-auto auth-register-form">
       <div className="text-center mb-8">
         <div className="w-14 h-14 mx-auto mb-3 bg-slate-950 rounded-xl border border-slate-700 p-2 flex items-center justify-center shadow-xs">
           <Image src="/Agradhi.png" alt="Agradhi" width={44} height={44} className="object-contain" />

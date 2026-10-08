@@ -6,13 +6,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
 import { useAuth } from '@/contexts/AuthContext';
+import { isFirebaseConnectionError } from '@/lib/firestoreErrors';
 import {
   GraduationCap,
   ShieldCheck,
   Mail,
   Lock,
   AlertCircle,
-  Info,
   Eye,
   EyeOff,
   ArrowRight,
@@ -77,9 +77,12 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed. Please check credentials.';
       const isAccountStatusMessage = /awaiting approval|account is suspended|account is banned/i.test(message);
-      const isNowLimited = isAccountStatusMessage ? false : recordFailedAttempt();
+      const isConnectionFailure = isFirebaseConnectionError(err);
+      const isNowLimited = isAccountStatusMessage || isConnectionFailure ? false : recordFailedAttempt();
       if (!isNowLimited) {
-        setError(message);
+        setError(isConnectionFailure
+          ? 'Unable to connect right now. Check your internet connection and retry.'
+          : message);
       }
     } finally {
       setLoading(false);
@@ -87,25 +90,18 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto auth-form-wrapper">
       {/* Brand Header */}
       <div className="text-center mb-8">
-        <div className="w-14 h-14 mx-auto mb-3 bg-slate-950 rounded-xl border border-slate-700 p-2 flex items-center justify-center shadow-xs">
+        <div className="w-14 h-14 mx-auto mb-3 bg-slate-950 rounded-xl border border-slate-700 p-2 flex items-center justify-center shadow-xs auth-form-logo">
           <Image src="/Agradhi.png" alt="Agradhi" width={44} height={44} className="object-contain" />
         </div>
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Staff &amp; Delegation Login</h1>
-        <p className="text-xs text-slate-500 mt-1">For School Teachers-in-Charge &amp; Agradhi Media Board</p>
-      </div>
-
-      {/* Student notice */}
-      <div className="flex items-start gap-2.5 p-3.5 mb-6 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed">
-        <Info size={16} className="shrink-0 mt-0.5 text-amber-700" />
-        <span>
-          <strong>Student Competitors:</strong> You do not need to sign in directly. Entries are submitted by your registered teacher.{' '}
-          <Link href="/competitions" className="underline font-bold hover:text-amber-950">
-            Browse competition guidelines →
-          </Link>
-        </span>
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+          {activeTab === 'school' ? 'Welcome back' : 'Welcome back'}
+        </h1>
+        <p className="text-xs text-slate-500 mt-1">
+          {activeTab === 'school' ? 'Sign in to your school portal' : 'Sign in to the admin dashboard'}
+        </p>
       </div>
 
       {/* Tabs */}
@@ -120,7 +116,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
           }`}
         >
           <GraduationCap size={15} />
-          <span>School Teacher</span>
+          <span>School account</span>
         </button>
         <button
           type="button"
@@ -132,12 +128,12 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
           }`}
         >
           <ShieldCheck size={15} />
-          <span>Admin Board</span>
+          <span>Admin account</span>
         </button>
       </div>
 
       {/* Card */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 sm:p-8">
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 sm:p-8 auth-form-card">
 
         {/* ── Rate-limit banner ── */}
         {rateLimited && (
@@ -174,7 +170,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
           {/* Email */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-              {activeTab === 'school' ? 'School Email Address' : 'Admin Email'}
+              {activeTab === 'school' ? 'Email address' : 'Admin email'}
             </label>
             <div className="relative">
               <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
