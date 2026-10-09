@@ -234,18 +234,10 @@ export function SchoolPortalLayout({ children, activeTab, onTabChange }: SchoolP
               </span>
             )}
 
-            <button
-              onClick={() => onTabChange('apply')}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-xs"
-            >
-              <Plus size={14} />
-              <span className="hidden sm:inline">Submit Student Entry</span>
-              <span className="sm:hidden">Submit</span>
-            </button>
+            
           </div>
         </header>
 
-        {/* Scrollable Content Workspace with generous spaces */}
         <main className="flex-1 overflow-y-auto p-6 sm:p-10 min-h-0 bg-slate-50/50">
           <div className="max-w-5xl mx-auto">{children}</div>
         </main>

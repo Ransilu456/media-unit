@@ -94,7 +94,10 @@ export async function POST(request: NextRequest) {
     }
 
     const existingCount = db.submissions.filter(
-      (entry) => entry.competitionId === competition.id && entry.schoolId === school.id
+      (entry) =>
+        entry.competitionId === competition.id &&
+        entry.schoolId === school.id &&
+        entry.status !== 'disqualified'
     ).length;
     if (existingCount >= competition.maxEntriesPerSchool) {
       return Response.json(

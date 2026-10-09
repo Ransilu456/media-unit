@@ -7,7 +7,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return signedIn()
-        && request.auth.token.email == 'adminsara@scladmin.com';
+        && (request.auth.token.email == 'adminsara@scladmin.com' || request.auth.token.admin == true);
     }
 
     function isActiveSchool(schoolId) {
@@ -51,6 +51,21 @@ service cloud.firestore {
         && request.resource.data.status == 'submitted';
       allow update: if isAdmin();
       allow delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.target == 'school' && resource.data.schoolId == request.auth.uid);
+      allow create: if signedIn()
+        && (
+          isAdmin()
+          || request.resource.data.target == 'admin'
+          || (request.resource.data.target == 'school' && request.resource.data.schoolId == request.auth.uid)
+        );
+      allow update: if isAdmin()
+        || (signedIn() && resource.data.target == 'school' && resource.data.schoolId == request.auth.uid);
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.target == 'school' && resource.data.schoolId == request.auth.uid);
     }
   }
 }

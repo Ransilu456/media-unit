@@ -22,7 +22,9 @@ export function StudentEntryForm() {
   );
   const entriesForCompetition = selectedOpenCompetition && school
     ? submissions.filter((entry) =>
-        entry.competitionId === selectedOpenCompetition.id && entry.schoolId === school.id
+        entry.competitionId === selectedOpenCompetition.id &&
+        entry.schoolId === school.id &&
+        entry.status !== 'disqualified'
       ).length
     : 0;
   const entryLimitReached = selectedOpenCompetition

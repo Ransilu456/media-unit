@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Moon, Sun } from 'lucide-react';
 
@@ -41,6 +41,38 @@ function toggleAuthTheme(current: 'dark' | 'light'): void {
 export function AuthPageShell({ children }: { children: ReactNode }) {
   const theme = useSyncExternalStore(subscribeToAuthTheme, getAuthTheme, getServerAuthTheme);
   const dark = theme === 'dark';
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+
+    root.setAttribute('data-theme', theme);
+    body.setAttribute('data-theme', theme);
+
+    if (dark) {
+      root.classList.add('dark');
+      body.classList.add('dark');
+      root.style.backgroundColor = '#090a0c';
+      body.style.backgroundColor = '#090a0c';
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      body.classList.remove('dark');
+      root.style.backgroundColor = '#f8fafc';
+      body.style.backgroundColor = '#f8fafc';
+      root.style.colorScheme = 'light';
+    }
+
+    return () => {
+      root.removeAttribute('data-theme');
+      body.removeAttribute('data-theme');
+      root.classList.remove('dark');
+      body.classList.remove('dark');
+      root.style.backgroundColor = '';
+      body.style.backgroundColor = '';
+      root.style.colorScheme = '';
+    };
+  }, [theme, dark]);
 
   return (
     <div className="auth-shell" data-theme={theme}>

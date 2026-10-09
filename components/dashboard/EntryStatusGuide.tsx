@@ -30,11 +30,13 @@ export function EntryStatusGuide() {
         </span>
         <ChevronDown size={16} className="shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
       </summary>
-      <div className="grid gap-2 border-t border-slate-100 px-4 py-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-2.5 border-t border-slate-100 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {STATUS_HELP.map(({ status, description }) => (
-          <div key={status} className="flex min-w-0 items-center gap-2.5 rounded-lg bg-slate-50 px-3 py-2.5">
-            <StatusBadge status={status} />
-            <p className="min-w-0 text-[11px] leading-4 text-slate-600">{description}</p>
+          <div key={status} className="flex flex-col gap-1.5 rounded-xl bg-slate-50/70 border border-slate-100 p-3">
+            <div className="flex items-center">
+              <StatusBadge status={status} />
+            </div>
+            <p className="text-[11px] leading-4 text-slate-600 mt-1">{description}</p>
           </div>
         ))}
       </div>

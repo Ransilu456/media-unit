@@ -20,6 +20,15 @@
   --color-sara-slate: #f8fafc;
 }
 
+/* Pre-Hydration Zero-Flash Splash Screen */
+html.no-splash #agradhi-splash-root {
+  display: none !important;
+}
+
+html.splash-active {
+  overflow: hidden !important;
+}
+
 @layer base {
   :root {
     --bg-page: #f8fafc;
@@ -90,6 +99,26 @@
     }
   }
 
+  @keyframes soundWave {
+    0%, 100% {
+      height: 6px;
+      opacity: 0.4;
+    }
+    50% {
+      height: 24px;
+      opacity: 1;
+    }
+  }
+
+  @keyframes progress {
+    0% {
+      width: 0%;
+    }
+    100% {
+      width: 100%;
+    }
+  }
+
   .scrollbar-none {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -103,6 +132,16 @@
   }
 }
 
+html[data-theme="dark"],
+html.dark,
+body[data-theme="dark"],
+body.dark,
+html:has(.auth-shell[data-theme="dark"]),
+body:has(.auth-shell[data-theme="dark"]) {
+  background-color: #090a0c !important;
+  color-scheme: dark;
+}
+
 .auth-shell {
   --auth-surface: #ffffff;
   --auth-text: #0f172a;
@@ -111,9 +150,9 @@
   position: relative;
   display: flex;
   min-height: 100vh;
+  width: 100%;
   align-items: center;
   justify-content: center;
-  overflow: auto;
   color: var(--auth-text);
   font-family: var(--font-body);
   background:

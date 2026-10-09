@@ -11,7 +11,22 @@ const COLLECTIONS = {
   competitions: 'competitions',
   schools: 'schools',
   submissions: 'submissions',
+  notifications: 'notifications',
 };
+
+export type NotificationKind = 'registration' | 'submission' | 'update' | 'disqualification';
+
+export interface AppNotification {
+  id: string;
+  target: 'admin' | 'school';
+  schoolId?: string;
+  kind: NotificationKind;
+  status?: import('./types').SubmissionStatus;
+  title: string;
+  message: string;
+  createdAt: number;
+  read: boolean;
+}
 
 function generateBadgeCode(province: string): string {
   const provinceCodes: Record<string, string> = {
@@ -225,6 +240,16 @@ export async function firebaseRegisterSchool(
     throw new Error('The school profile could not be saved to Firestore. Please retry registration.');
   }
 
+  // Notify Admin Console of registration
+  void firebaseCreateNotification({
+    target: 'admin',
+    kind: 'registration',
+    title: 'New School Registration',
+    message: `${newSchool.name} (${newSchool.district}) has registered and is pending approval.`,
+    createdAt: Date.now(),
+    read: false,
+  });
+
   await signOut(auth);
   return newSchool;
 }
@@ -319,16 +344,59 @@ export async function firebaseSubmitEntry(
     setDoc(doc(db, COLLECTIONS.submissions, newSub.id), newSub)
   );
 
+  // Notify Admin Console
+  void firebaseCreateNotification({
+    target: 'admin',
+    kind: 'submission',
+    title: 'New Competition Submission',
+    message: `${newSub.schoolName || 'A school'} submitted “${newSub.entryTitle}” for ${newSub.competitionTitle || newSub.category}.`,
+    createdAt: Date.now(),
+    read: false,
+  });
+
+  // Notify ONLY the submitting school
+  void firebaseCreateNotification({
+    target: 'school',
+    schoolId: newSub.schoolId,
+    kind: 'submission',
+    title: 'Entry Submitted Successfully',
+    message: `“${newSub.entryTitle}” was received for ${newSub.competitionTitle || newSub.category} and is queued for jury review.`,
+    createdAt: Date.now(),
+    read: false,
+  });
+
   return newSub;
 }
 
 export async function firebaseUpdateSubmission(
   id: string,
-  updates: Partial<Submission>
+  updates: Partial<Submission>,
+  submissionContext?: { schoolId: string; entryTitle: string }
 ): Promise<void> {
   await withFirestoreErrorReporting(() =>
     updateDoc(doc(db, COLLECTIONS.submissions, id), updates)
   );
+
+  // Notify ONLY the reviewed school
+  if (submissionContext?.schoolId) {
+    const isDisqualified = updates.status === 'disqualified';
+    const statusLabel = updates.status ? updates.status.replace('_', ' ') : 'updated';
+    const scoreText = updates.score !== undefined ? ` Score: ${updates.score}/100.` : '';
+    const feedbackText = updates.judgeFeedback ? ` Note: “${updates.judgeFeedback}”` : '';
+    const guidanceText = isDisqualified
+      ? ' Your school quota slot for this competition track has been reopened so you may submit a replacement entry for another eligible student.'
+      : '';
+    void firebaseCreateNotification({
+      target: 'school',
+      schoolId: submissionContext.schoolId,
+      kind: isDisqualified ? 'disqualification' : 'update',
+      status: updates.status,
+      title: isDisqualified ? 'Entry Disqualified · Quota Slot Reopened' : 'Submission Adjudication Update',
+      message: `“${submissionContext.entryTitle}” status is now ${statusLabel}.${scoreText}${feedbackText}${guidanceText}`,
+      createdAt: Date.now(),
+      read: false,
+    });
+  }
 }
 
 export function subscribeFirebaseCompetitions(
@@ -405,6 +473,89 @@ export function subscribeFirebaseSubmissions(
       }) as Submission),
       snapshot.metadata.fromCache
     ),
+    (error) => {
+      reportFirestoreError(error);
+      onError(error);
+    }
+  );
+}
+
+export async function firebaseCreateNotification(
+  notification: Omit<AppNotification, 'id'> & { id?: string }
+): Promise<void> {
+  const notifId = notification.id || `notif_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const docData: AppNotification = {
+    ...notification,
+    id: notifId,
+    read: notification.read ?? false,
+    createdAt: notification.createdAt || Date.now(),
+  };
+  try {
+    await withFirestoreErrorReporting(() =>
+      setDoc(doc(db, COLLECTIONS.notifications, notifId), docData)
+    );
+  } catch (error) {
+    console.warn('[firebase notification write skipped]', error);
+  }
+}
+
+export async function firebaseMarkNotificationRead(id: string): Promise<void> {
+  try {
+    await withFirestoreErrorReporting(() =>
+      updateDoc(doc(db, COLLECTIONS.notifications, id), { read: true })
+    );
+  } catch (error) {
+    console.warn('[firebase mark notification read]', error);
+  }
+}
+
+export async function firebaseClearNotifications(
+  target: 'admin' | 'school',
+  schoolId?: string
+): Promise<void> {
+  try {
+    const notifsRef = collection(db, COLLECTIONS.notifications);
+    const q = target === 'admin'
+      ? query(notifsRef, where('target', '==', 'admin'))
+      : schoolId
+      ? query(notifsRef, where('target', '==', 'school'), where('schoolId', '==', schoolId))
+      : null;
+
+    if (!q) return;
+    const snap = await getDocs(q);
+    const deletions = snap.docs.map((d) => deleteDoc(d.ref));
+    await Promise.all(deletions);
+  } catch (error) {
+    console.warn('[firebase clear notifications]', error);
+  }
+}
+
+export function subscribeFirebaseNotifications(
+  target: 'admin' | 'school',
+  schoolId: string | undefined,
+  onData: (notifications: AppNotification[]) => void,
+  onError: (error: Error) => void
+): () => void {
+  const notifsRef = collection(db, COLLECTIONS.notifications);
+  const notifsQuery = target === 'admin'
+    ? query(notifsRef, where('target', '==', 'admin'))
+    : schoolId
+    ? query(notifsRef, where('target', '==', 'school'), where('schoolId', '==', schoolId))
+    : null;
+
+  if (!notifsQuery) {
+    onData([]);
+    return () => {};
+  }
+
+  return onSnapshot(
+    notifsQuery,
+    { includeMetadataChanges: true },
+    (snapshot) => {
+      const items = snapshot.docs.map((item) => item.data() as AppNotification);
+      items.sort((a, b) => b.createdAt - a.createdAt);
+      onData(items);
+    },
     (error) => {
       reportFirestoreError(error);
       onError(error);

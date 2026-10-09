@@ -75,9 +75,8 @@ export default function RulesPage() {
               {rules.map(({ title, description, icon: Icon }, index) => (
                 <article
                   key={title}
-                  className={`rounded-2xl border border-slate-200 bg-white p-6 ${
-                    index === rules.length - 1 ? 'md:col-span-2' : ''
-                  }`}
+                  className={`rounded-2xl border border-slate-200 bg-white p-6 ${index === rules.length - 1 ? 'md:col-span-2' : ''
+                    }`}
                 >
                   <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
                     <Icon size={19} aria-hidden="true" />

@@ -152,11 +152,14 @@ export function EntrySubmissionModal({
       return 'Your school profile is not active. Please contact Agradhi Administration.';
     }
 
-    const schoolSubmissions = submissions.filter(
-      (e) => e.competitionId === activeCompetition.id && e.schoolId === school.id
+    const activeSchoolSubmissions = submissions.filter(
+      (e) =>
+        e.competitionId === activeCompetition.id &&
+        e.schoolId === school.id &&
+        e.status !== 'disqualified'
     );
-    if (schoolSubmissions.length >= activeCompetition.maxEntriesPerSchool) {
-      return `Your school has reached the maximum quota of ${activeCompetition.maxEntriesPerSchool} entries for this track.`;
+    if (activeSchoolSubmissions.length >= activeCompetition.maxEntriesPerSchool) {
+      return `Your school has reached the maximum quota of ${activeCompetition.maxEntriesPerSchool} active entries for this track.`;
     }
 
     if (ageEligibilityError) {

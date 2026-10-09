@@ -6,7 +6,27 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 import type { Competition, RegisteredSchool, PublicSchool, Submission, AuthSession, SubmissionStatus, NewSubmissionInput, } from './types';
 import { validateSubmissionInput } from './validation';
-import { getFirebaseSession, firebaseLoginSchool, firebaseLoginAdmin, firebaseRegisterSchool, firebaseLogout, firebaseAddCompetition, firebaseUpdateCompetition, firebaseDeleteCompetition, firebaseUpdateSchoolStatus, firebaseSubmitEntry, firebaseUpdateSubmission, subscribeFirebaseCompetitions, subscribeFirebaseSchools, subscribeFirebaseSchoolStatus, subscribeFirebaseSubmissions, } from './firebaseOperations';
+import {
+  getFirebaseSession,
+  firebaseLoginSchool,
+  firebaseLoginAdmin,
+  firebaseRegisterSchool,
+  firebaseLogout,
+  firebaseAddCompetition,
+  firebaseUpdateCompetition,
+  firebaseDeleteCompetition,
+  firebaseUpdateSchoolStatus,
+  firebaseSubmitEntry,
+  firebaseUpdateSubmission,
+  subscribeFirebaseCompetitions,
+  subscribeFirebaseSchools,
+  subscribeFirebaseSchoolStatus,
+  subscribeFirebaseSubmissions,
+  subscribeFirebaseNotifications,
+  firebaseMarkNotificationRead,
+  firebaseClearNotifications,
+  type AppNotification,
+} from './firebaseOperations';
 
 const FIRESTORE_CACHE_WAIT_MS = 7000;
 const SESSION_ERROR_WAIT_MS = 4000;
@@ -49,14 +69,7 @@ function readCachedCompetitions(): CachedCompetitions | null {
   }
 }
 
-export interface DashboardNotification {
-  id: string;
-  kind: 'registration' | 'submission' | 'update';
-  title: string;
-  message: string;
-  createdAt: number;
-  read: boolean;
-}
+export type DashboardNotification = AppNotification;
 
 function useMediaStoreState() {
   const pathname = usePathname();
@@ -308,12 +321,6 @@ function useMediaStoreState() {
       setError(message);
       setLoaded(true);
     };
-    const notify = (notification: DashboardNotification) => {
-      setNotifications((current) => {
-        if (current.some((item) => item.id === notification.id)) return current;
-        return [notification, ...current].slice(0, 30);
-      });
-    };
     const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
     const isSchoolDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
     const needsAdminData = isAdminRoute && session.type === 'admin';
@@ -326,26 +333,9 @@ function useMediaStoreState() {
     setSubmissionsError(null);
 
     if (isAdminRoute && session.type === 'admin') {
-      let knownSchoolIds: Set<string> | null = null;
       subscriptions.push(
         subscribeFirebaseSchools((loadedSchools, fromCache) => {
           if (!active) return;
-
-          if (!fromCache && knownSchoolIds) {
-            loadedSchools
-              .filter((school) => !knownSchoolIds?.has(school.id))
-              .forEach((school) => notify({
-                id: `registration:${school.id}`,
-                kind: 'registration',
-                title: 'New school registration',
-                message: `${school.name} has registered and is awaiting review.`,
-                createdAt: Date.now(),
-                read: false,
-              }));
-          }
-
-          if (!fromCache) knownSchoolIds = new Set(loadedSchools.map((school) => school.id));
-
           setSchools(loadedSchools);
           setPublicSchools(loadedSchools.map((school) => ({
             id: school.id,
@@ -372,28 +362,9 @@ function useMediaStoreState() {
           );
         })
       );
-      let knownSubmissions: Map<string, Submission> | null = null;
       subscriptions.push(
         subscribeFirebaseSubmissions(undefined, (loadedSubmissions, fromCache) => {
           if (!active) return;
-          if (!fromCache && knownSubmissions) {
-            loadedSubmissions.forEach((submission) => {
-              const previous = knownSubmissions?.get(submission.id);
-              if (!previous) {
-                notify({
-                  id: `submission:${submission.id}`,
-                  kind: 'submission',
-                  title: 'New competition submission',
-                  message: `${submission.schoolName} submitted “${submission.entryTitle}”.`,
-                  createdAt: Date.now(),
-                  read: false,
-                });
-              }
-            });
-          }
-          if (!fromCache) {
-            knownSubmissions = new Map(loadedSubmissions.map((submission) => [submission.id, submission]));
-          }
           setSubmissions(loadedSubmissions);
           handleSnapshotStatus(
             'submissions',
@@ -418,7 +389,6 @@ function useMediaStoreState() {
     }
 
     if (needsSchoolSubmissions && session.type === 'school' && session.school) {
-      let knownSchoolSubmissions: Map<string, Submission> | null = null;
       if (isSchoolDashboard) {
         subscriptions.push(
           subscribeFirebaseSchoolStatus(
@@ -437,47 +407,6 @@ function useMediaStoreState() {
       subscriptions.push(
         subscribeFirebaseSubmissions(session.school.id, (loadedSubmissions, fromCache) => {
           if (!active) return;
-          if (!fromCache && knownSchoolSubmissions) {
-            loadedSubmissions.forEach((submission) => {
-              const previous = knownSchoolSubmissions?.get(submission.id);
-              if (!previous) {
-                notify({
-                  id: `submission:${submission.id}`,
-                  kind: 'submission',
-                  title: 'Entry received',
-                  message: `“${submission.entryTitle}” was submitted to ${submission.competitionTitle}.`,
-                  createdAt: Date.now(),
-                  read: false,
-                });
-                return;
-              }
-
-              if (
-                previous.status !== submission.status
-                || previous.score !== submission.score
-                || previous.judgeFeedback !== submission.judgeFeedback
-              ) {
-                const updateKey = [
-                  submission.id,
-                  submission.status,
-                  submission.score ?? '',
-                  submission.judgeFeedback ?? '',
-                ].join(':');
-                const createdAt = Date.now();
-                notify({
-                  id: `review:${updateKey}:${createdAt}`,
-                  kind: 'update',
-                  title: 'Entry review updated',
-                  message: `“${submission.entryTitle}” is now ${submission.status.replaceAll('_', ' ')}${submission.score !== undefined ? ` with a score of ${submission.score}` : ''}${submission.judgeFeedback ? `. ${submission.judgeFeedback}` : ''}.`,
-                  createdAt,
-                  read: false,
-                });
-              }
-            });
-          }
-          if (!fromCache) {
-            knownSchoolSubmissions = new Map(loadedSubmissions.map((submission) => [submission.id, submission]));
-          }
           setSubmissions(loadedSubmissions);
           handleSnapshotStatus(
             'submissions',
@@ -498,6 +427,26 @@ function useMediaStoreState() {
       );
     } else if (!needsAdminData) {
       setSubmissions((current) => current.length === 0 ? current : []);
+    }
+
+    // Subscribe to targeted Firestore notifications
+    const currentUser = auth.currentUser;
+    if (session.type === 'admin' && currentUser) {
+      subscriptions.push(
+        subscribeFirebaseNotifications('admin', undefined, (items) => {
+          if (!active) return;
+          setNotifications(items);
+        }, (err) => console.warn('[firestore notifications listener]', err))
+      );
+    } else if (session.type === 'school' && session.school?.id && currentUser?.uid === session.school.id) {
+      subscriptions.push(
+        subscribeFirebaseNotifications('school', session.school.id, (items) => {
+          if (!active) return;
+          setNotifications(items);
+        }, (err) => console.warn('[firestore notifications listener]', err))
+      );
+    } else {
+      setNotifications([]);
     }
 
     return () => {
@@ -535,10 +484,18 @@ function useMediaStoreState() {
   };
 
   const markNotificationsRead = () => {
+    notifications.forEach((n) => {
+      if (!n.read) void firebaseMarkNotificationRead(n.id);
+    });
     setNotifications((current) => current.map((notification) => ({ ...notification, read: true })));
   };
 
-  const clearNotifications = () => setNotifications([]);
+  const clearNotifications = () => {
+    const target = session.type === 'admin' ? 'admin' : 'school';
+    const schoolId = session.type === 'school' ? session.school?.id : undefined;
+    void firebaseClearNotifications(target, schoolId);
+    setNotifications([]);
+  };
 
   const submitEntry = async ( entry: NewSubmissionInput ): Promise<Submission> => {
     const validationErrors = validateSubmissionInput(entry, competitions);
@@ -556,7 +513,9 @@ function useMediaStoreState() {
   };
 
   const updateSubmissionStatus = async ( id: string, status: SubmissionStatus, score?: number, feedback?: string ): Promise<void> => {
-    await firebaseUpdateSubmission(id, { status, score, judgeFeedback: feedback,});
+    const existing = submissions.find((s) => s.id === id);
+    const context = existing ? { schoolId: existing.schoolId, entryTitle: existing.entryTitle } : undefined;
+    await firebaseUpdateSubmission(id, { status, score, judgeFeedback: feedback }, context);
 
     setSubmissions((prev) =>
       prev.map((s) =>
@@ -643,6 +602,10 @@ const MediaStoreContext = createContext<MediaStoreValue | null>(null);
 export function MediaStoreProvider({ children }: { children: ReactNode }) {
   const store = useMediaStoreState();
   return createElement(MediaStoreContext.Provider, { value: store }, children);
+}
+
+export function useOptionalMediaStore(): MediaStoreValue | null {
+  return useContext(MediaStoreContext);
 }
 
 export function useMediaStore(): MediaStoreValue {
