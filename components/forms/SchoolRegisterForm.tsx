@@ -150,7 +150,7 @@ export function SchoolRegisterForm() {
     <div className="w-full max-w-xl mx-auto auth-register-form">
       <div className="text-center mb-8">
         <div className="w-14 h-14 mx-auto mb-3 bg-slate-950 rounded-xl border border-slate-700 p-2 flex items-center justify-center shadow-xs">
-          <Image src="/Agradhi.png" alt="Agradhi" width={44} height={44} className="object-contain" />
+          <Image src="/icons/icon-192.png" alt="Agradhi" width={44} height={44} unoptimized className="object-contain" />
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Register Your School</h1>
         <p className="text-xs text-slate-500 mt-1">Official Delegation Portal · Agradhi Media Assembly 2026</p>

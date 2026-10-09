@@ -94,7 +94,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
       {/* Brand Header */}
       <div className="text-center mb-8">
         <div className="w-14 h-14 mx-auto mb-3 bg-slate-950 rounded-xl border border-slate-700 p-2 flex items-center justify-center shadow-xs auth-form-logo">
-          <Image src="/Agradhi.png" alt="Agradhi" width={44} height={44} className="object-contain" />
+          <Image src="/icons/icon-192.png" alt="Agradhi" width={44} height={44} unoptimized className="object-contain" />
         </div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
           {activeTab === 'school' ? 'Welcome back' : 'Welcome back'}
@@ -105,10 +105,12 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-slate-100 border border-slate-200 mb-6">
+      <div className="auth-tab-list grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-slate-100 border border-slate-200 mb-6">
         <button
           type="button"
           onClick={() => { setActiveTab('school'); setError(null); }}
+          aria-pressed={activeTab === 'school'}
+          data-active={activeTab === 'school'}
           className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'school'
               ? 'bg-white text-slate-900 shadow-sm'
@@ -121,6 +123,8 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
         <button
           type="button"
           onClick={() => { setActiveTab('admin'); setError(null); }}
+          aria-pressed={activeTab === 'admin'}
+          data-active={activeTab === 'admin'}
           className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'admin'
               ? 'bg-slate-950 text-white shadow-sm'
@@ -182,7 +186,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={activeTab === 'school' ? 'teacher@school.sch.lk' : 'admin@agradhi.lk'}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="auth-input w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -196,7 +200,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
               <button
                 type="button"
                 onClick={() => setShowPassword((p) => !p)}
-                className="text-xs text-slate-400 hover:text-slate-700 flex items-center gap-1"
+                className="auth-password-toggle text-xs text-slate-400 hover:text-slate-700 flex items-center gap-1"
               >
                 {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                 <span>{showPassword ? 'Hide' : 'Show'}</span>
@@ -212,7 +216,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="auth-input w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -221,11 +225,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
             type="submit"
             id="login-submit"
             disabled={loading || rateLimited}
-            className={`w-full py-3 rounded-xl text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-              activeTab === 'school'
-                ? 'bg-amber-600 hover:bg-amber-700'
-                : 'bg-slate-950 hover:bg-slate-800'
-            }`}
+            className="auth-submit w-full py-3 rounded-xl text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>

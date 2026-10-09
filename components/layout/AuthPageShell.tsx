@@ -1,14 +1,49 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useSyncExternalStore, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Moon, Sun } from 'lucide-react';
 
+const AUTH_THEME_KEY = 'agradhi_auth_theme_v1';
+const AUTH_THEME_CHANGE_EVENT = 'agradhi:auth-theme-change';
+
+function subscribeToAuthTheme(onChange: () => void): () => void {
+  window.addEventListener('storage', onChange);
+  window.addEventListener(AUTH_THEME_CHANGE_EVENT, onChange);
+  return () => {
+    window.removeEventListener('storage', onChange);
+    window.removeEventListener(AUTH_THEME_CHANGE_EVENT, onChange);
+  };
+}
+
+function getAuthTheme(): 'dark' | 'light' {
+  try {
+    return window.localStorage.getItem(AUTH_THEME_KEY) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
+function getServerAuthTheme(): 'light' {
+  return 'light';
+}
+
+function toggleAuthTheme(current: 'dark' | 'light'): void {
+  const next = current === 'dark' ? 'light' : 'dark';
+  try {
+    window.localStorage.setItem(AUTH_THEME_KEY, next);
+  } catch {
+    // Keep the current page theme functional when storage is unavailable.
+  }
+  window.dispatchEvent(new Event(AUTH_THEME_CHANGE_EVENT));
+}
+
 export function AuthPageShell({ children }: { children: ReactNode }) {
-  const [dark, setDark] = useState(false);
+  const theme = useSyncExternalStore(subscribeToAuthTheme, getAuthTheme, getServerAuthTheme);
+  const dark = theme === 'dark';
 
   return (
-    <div className="auth-shell" data-theme={dark ? 'dark' : 'light'}>
+    <div className="auth-shell" data-theme={theme}>
       <div className="auth-toolbar">
         <Link href="/" className="auth-back">
           <ArrowLeft size={15} />
@@ -17,7 +52,7 @@ export function AuthPageShell({ children }: { children: ReactNode }) {
         <button
           type="button"
           className="auth-theme-toggle"
-          onClick={() => setDark((current) => !current)}
+          onClick={() => toggleAuthTheme(theme)}
           aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`}
           title={`Switch to ${dark ? 'light' : 'dark'} mode`}
         >

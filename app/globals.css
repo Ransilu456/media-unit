@@ -1,8 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/poppins-400.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 @theme {
-  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-serif: "Georgia", "Times New Roman", serif;
 
   --color-sara-navy: #0f172a;
@@ -108,6 +115,7 @@
   justify-content: center;
   overflow: auto;
   color: var(--auth-text);
+  font-family: var(--font-body);
   background:
     radial-gradient(ellipse at 50% 100%, rgba(217, 119, 6, 0.08), transparent 36%),
     radial-gradient(ellipse at 100% 0%, rgba(15, 23, 42, 0.06), transparent 34%),
@@ -364,6 +372,133 @@
   background-color: #252525;
 }
 
+.auth-shell[data-theme="dark"] .auth-tab-list {
+  border-color: #3f3f46;
+  background: #27272a;
+}
+
+.auth-shell[data-theme="dark"] .auth-tab-list button {
+  color: #d4d4d8;
+}
+
+.auth-shell[data-theme="dark"] .auth-tab-list button[data-active="true"] {
+  border: 1px solid #52525b;
+  color: #ffffff;
+  background: #3f3f46;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.auth-shell[data-theme="dark"] .auth-tab-list button:not([data-active="true"]):hover {
+  color: #fbbf24;
+  background: #303035;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper label {
+  color: #e4e4e7;
+}
+
+.auth-shell[data-theme="dark"] .auth-input {
+  border-color: #45454b;
+  color: #f4f4f5;
+  background: #242426;
+  caret-color: #fbbf24;
+  color-scheme: dark;
+}
+
+.auth-shell[data-theme="dark"] .auth-input::placeholder {
+  color: #a1a1aa;
+  opacity: 1;
+}
+
+.auth-shell[data-theme="dark"] .auth-input:focus {
+  border-color: #d97706;
+  outline: 2px solid rgba(217, 119, 6, 0.25);
+  outline-offset: 1px;
+}
+
+.auth-shell[data-theme="dark"] .auth-password-toggle {
+  color: #fbbf24;
+}
+
+.auth-shell[data-theme="dark"] .auth-password-toggle:hover {
+  color: #fcd34d;
+}
+
+.auth-shell[data-theme="dark"] .auth-submit {
+  border-color: #b45309;
+  color: #ffffff;
+  background: #b45309;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper #login-submit {
+  border-color: #b45309;
+  color: #ffffff;
+  background: #b45309;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper .auth-password-toggle {
+  color: #fbbf24;
+}
+
+.auth-shell[data-theme="dark"] .auth-submit:hover:not(:disabled) {
+  border-color: #d97706;
+  background: #d97706;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper #login-submit:hover:not(:disabled) {
+  border-color: #d97706;
+  background: #d97706;
+}
+
+.auth-shell[data-theme="dark"] .auth-submit:disabled {
+  border-color: #52525b;
+  color: #d4d4d8;
+  background: #3f3f46;
+  opacity: 1;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper .text-slate-400,
+.auth-shell[data-theme="dark"] .auth-form-wrapper .text-slate-500,
+.auth-shell[data-theme="dark"] .auth-form-wrapper .text-slate-600 {
+  color: #c4c4cc;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper .auth-password-toggle {
+  color: #fbbf24;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper .auth-password-toggle:hover {
+  color: #fcd34d;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper a {
+  color: #d4d4d8;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper a:hover,
+.auth-shell[data-theme="dark"] .auth-form-wrapper a strong {
+  color: #fbbf24;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper .bg-red-50 {
+  border-color: #713737;
+  color: #fecaca;
+  background: #301b1b;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper .text-red-700,
+.auth-shell[data-theme="dark"] .auth-form-wrapper .text-red-800,
+.auth-shell[data-theme="dark"] .auth-form-wrapper .text-red-600,
+.auth-shell[data-theme="dark"] .auth-form-wrapper .text-red-500 {
+  color: #fca5a5;
+}
+
+.auth-shell[data-theme="dark"] .auth-form-wrapper .bg-red-100 {
+  border-color: #713737;
+  background: #472222;
+}
+
 .auth-shell[data-theme="dark"] .auth-form-card {
   background: transparent;
 }
@@ -438,7 +573,8 @@
 }
 
 .auth-shell[data-theme="dark"] .auth-register-form input::placeholder {
-  color: #71717a;
+  color: #a1a1aa;
+  opacity: 1;
 }
 
 @media (max-width: 800px) {
