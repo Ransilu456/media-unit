@@ -12,9 +12,12 @@ import {
   ExternalLink,
   FileCheck2,
   FileText,
+  Lock,
+  RotateCcw,
   Search,
   Save,
   Trophy,
+  Unlock,
 } from 'lucide-react';
 
 type QueueFilter = 'all' | 'needs-review' | 'in-progress' | 'decided';
@@ -62,6 +65,7 @@ export function AdminSubmissionsReview() {
   const [editingScores, setEditingScores] = useState<Record<string, number>>({});
   const [editingFeedback, setEditingFeedback] = useState<Record<string, string>>({});
   const [editingStatuses, setEditingStatuses] = useState<Record<string, SubmissionStatus>>({});
+  const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [saveErrors, setSaveErrors] = useState<Record<string, string>>({});
@@ -120,6 +124,7 @@ export function AdminSubmissionsReview() {
     try {
       await updateSubmissionStatus(id, status, score, feedback);
       setSavedIds((previous) => [...previous, id]);
+      setUnlockedIds((previous) => previous.filter((unlockedId) => unlockedId !== id));
     } catch (error: unknown) {
       setSaveErrors((previous) => ({
         ...previous,
@@ -128,6 +133,36 @@ export function AdminSubmissionsReview() {
     } finally {
       setSavingIds((previous) => previous.filter((savingId) => savingId !== id));
     }
+  };
+
+  const handleUnlock = (submissionItem: (typeof submissions)[0]) => {
+    setEditingStatuses((previous) => ({ ...previous, [submissionItem.id]: submissionItem.status }));
+    if (submissionItem.score !== undefined) {
+      setEditingScores((previous) => ({ ...previous, [submissionItem.id]: submissionItem.score! }));
+    }
+    setEditingFeedback((previous) => ({ ...previous, [submissionItem.id]: submissionItem.judgeFeedback || '' }));
+    setUnlockedIds((previous) => [...previous, submissionItem.id]);
+    clearSaveMessage(submissionItem.id);
+  };
+
+  const handleLock = (id: string) => {
+    setUnlockedIds((previous) => previous.filter((unlockedId) => unlockedId !== id));
+    setEditingStatuses((previous) => {
+      const next = { ...previous };
+      delete next[id];
+      return next;
+    });
+    setEditingScores((previous) => {
+      const next = { ...previous };
+      delete next[id];
+      return next;
+    });
+    setEditingFeedback((previous) => {
+      const next = { ...previous };
+      delete next[id];
+      return next;
+    });
+    clearSaveMessage(id);
   };
 
   const clearSaveMessage = (id: string) => {
@@ -272,6 +307,9 @@ export function AdminSubmissionsReview() {
             const customAnswers = Object.entries(submission.customValues ?? {})
               .filter(([, answer]) => answer.trim().length > 0);
 
+            const isAlreadyDecided = submission.status !== 'submitted' || submission.score !== undefined || Boolean(submission.judgeFeedback);
+            const isUnlocked = unlockedIds.includes(submission.id) || !isAlreadyDecided;
+
             return (
               <article
                 key={submission.id}
@@ -353,217 +391,326 @@ export function AdminSubmissionsReview() {
                   </section>
                 )}
 
-                <section aria-label={`Review ${submission.entryTitle}`} className="border-t border-amber-100 bg-amber-50/45 px-4 py-4 sm:px-5 sm:py-5">
-                  <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-amber-800">
-                        <Trophy size={14} />
-                      </span>
-                      <div>
-                        <h3 className="text-sm font-semibold text-slate-900">Review decision</h3>
-                        <p className="text-[11px] text-slate-500">Changes are shared with the school when saved.</p>
-                      </div>
-                    </div>
-                    {isSaved && (
-                      <span role="status" className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-800">
-                        <Check size={14} /> Review saved
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Top Row: Decision and Score in balanced 2 columns */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* 1. Adjudication Decision */}
-                      <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs flex flex-col justify-between">
+                {/* Locked / Protected Adjudication Summary Card (Prevents accidental edits) */}
+                {!isUnlocked ? (
+                  <section aria-label={`Adjudication summary for ${submission.entryTitle}`} className="border-t border-slate-200 bg-slate-50/60 px-4 py-4 sm:px-5 sm:py-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3.5 border-b border-slate-200/80">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 shrink-0">
+                          <Lock size={15} />
+                        </span>
                         <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <label htmlFor={`status-${submission.id}`} className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                              1. Adjudication Decision
-                            </label>
-                            <StatusBadge status={currentStatus} />
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm font-bold text-slate-900">Review Decision</h3>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-200/80 px-2.5 py-0.5 text-[10px] font-semibold text-slate-700">
+                              🔒 Adjudication Locked
+                            </span>
                           </div>
-                          <select
-                            id={`status-${submission.id}`}
-                            value={currentStatus}
-                            onChange={(event) => {
-                              setEditingStatuses((previous) => ({
-                                ...previous,
-                                [submission.id]: event.target.value as SubmissionStatus,
-                              }));
-                              clearSaveMessage(submission.id);
-                            }}
-                            aria-describedby={`decision-help-${submission.id}`}
-                            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none transition-colors focus:border-amber-500 focus:bg-white"
-                          >
-                            {(Object.keys(statusLabels) as SubmissionStatus[]).map((status) => (
-                              <option key={status} value={status}>{statusLabels[status]}</option>
-                            ))}
-                          </select>
+                          <p className="text-[11px] text-slate-500">Locked to prevent accidental changes. Changes visible to {submission.schoolName}.</p>
                         </div>
-                        <p id={`decision-help-${submission.id}`} className="mt-3 flex items-start gap-1.5 text-[11px] leading-4 text-slate-500 pt-2 border-t border-slate-100">
-                          {currentStatus === 'submitted' || currentStatus === 'under_review'
-                            ? <Clock3 size={13} className="mt-0.5 shrink-0 text-amber-600" />
-                            : <BadgeCheck size={13} className="mt-0.5 shrink-0 text-emerald-600" />}
-                          <span>{getDecisionHelp(currentStatus)}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleUnlock(submission)}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 shadow-2xs hover:bg-slate-50 hover:border-slate-400 transition-colors"
+                      >
+                        <Unlock size={14} className="text-amber-600" />
+                        Unlock to Edit Decision
+                      </button>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Decision pill */}
+                      <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Adjudication Decision</p>
+                        <div className="mt-2 flex items-center gap-2.5">
+                          <StatusBadge status={submission.status} />
+                          <span className="text-xs font-semibold text-slate-700">({statusLabels[submission.status]})</span>
+                        </div>
+                        <p className="mt-2 text-[11px] text-slate-500 flex items-start gap-1">
+                          <BadgeCheck size={13} className="mt-0.5 shrink-0 text-emerald-600" />
+                          <span>{getDecisionHelp(submission.status)}</span>
                         </p>
                       </div>
 
-                      {/* 2. Jury Score */}
-                      <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs flex flex-col justify-between">
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <label htmlFor={`score-${submission.id}`} className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                              2. Jury Score <span className="font-normal text-slate-400">/ 100</span>
-                            </label>
-                            {currentScore !== '' && Number(currentScore) >= 0 && (
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                Number(currentScore) >= 90
-                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                  : Number(currentScore) >= 75
-                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                                  : Number(currentScore) >= 60
-                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                  : 'bg-slate-100 text-slate-700'
-                              }`}>
-                                {Number(currentScore) >= 90
-                                  ? '★ Gold Tier'
-                                  : Number(currentScore) >= 75
-                                  ? '★ Silver Tier'
-                                  : Number(currentScore) >= 60
-                                  ? '★ Bronze Tier'
-                                  : 'Evaluated'}
-                              </span>
-                            )}
-                          </div>
+                      {/* Score pill */}
+                      <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Jury Score</p>
+                          {submission.score !== undefined && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              Number(submission.score) >= 90
+                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                : Number(submission.score) >= 75
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                : Number(submission.score) >= 60
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {Number(submission.score) >= 90
+                                ? '★ Gold Tier'
+                                : Number(submission.score) >= 75
+                                ? '★ Silver Tier'
+                                : Number(submission.score) >= 60
+                                ? '★ Bronze Tier'
+                                : 'Evaluated'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+                          {submission.score !== undefined ? `${submission.score} ` : '— '}
+                          <span className="text-xs font-normal text-slate-400">/ 100</span>
+                        </p>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          {submission.score !== undefined ? 'Score visible on school delegation portal.' : 'No score recorded yet.'}
+                        </p>
+                      </div>
+                    </div>
 
-                          <div className="flex items-center gap-2">
-                            <input
-                              id={`score-${submission.id}`}
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={currentScore}
+                    {/* Feedback block */}
+                    <div className="mt-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        {submission.status === 'disqualified' ? 'Rejection Reason / Grounds' : 'Official Jury Feedback'}
+                      </p>
+                      {submission.judgeFeedback ? (
+                        <p className="mt-2 whitespace-pre-wrap rounded-lg bg-slate-50/70 p-3 text-xs leading-relaxed text-slate-800 border border-slate-100">
+                          {submission.judgeFeedback}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-xs italic text-slate-400">
+                          No written feedback provided.
+                        </p>
+                      )}
+                    </div>
+                  </section>
+                ) : (
+                  /* Editable Adjudication Mode */
+                  <section aria-label={`Review ${submission.entryTitle}`} className="border-t border-amber-100 bg-amber-50/45 px-4 py-4 sm:px-5 sm:py-5">
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-amber-800 shadow-2xs">
+                          <Trophy size={14} />
+                        </span>
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-900">Review decision</h3>
+                          <p className="text-[11px] text-slate-500">Changes are shared with the school when saved.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {isSaved && (
+                          <span role="status" className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
+                            <Check size={14} /> Review saved
+                          </span>
+                        )}
+                        {isAlreadyDecided && (
+                          <button
+                            type="button"
+                            onClick={() => handleLock(submission.id)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-2xs"
+                          >
+                            <RotateCcw size={13} />
+                            Cancel / Lock
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Top Row: Decision and Score in balanced 2 columns */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* 1. Adjudication Decision */}
+                        <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <label htmlFor={`status-${submission.id}`} className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                                1. Adjudication Decision
+                              </label>
+                              <StatusBadge status={currentStatus} />
+                            </div>
+                            <select
+                              id={`status-${submission.id}`}
+                              value={currentStatus}
                               onChange={(event) => {
-                                const value = event.target.value;
-                                setEditingScores((previous) => {
-                                  if (value === '') {
-                                    const next = { ...previous };
-                                    delete next[submission.id];
-                                    return next;
-                                  }
-                                  return { ...previous, [submission.id]: Number(value) };
-                                });
+                                setEditingStatuses((previous) => ({
+                                  ...previous,
+                                  [submission.id]: event.target.value as SubmissionStatus,
+                                }));
                                 clearSaveMessage(submission.id);
                               }}
-                              placeholder="e.g. 85"
-                              className="w-28 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-amber-500 focus:bg-white text-center"
-                            />
-
-                            {/* Quick score presets */}
-                            <div className="flex items-center gap-1 overflow-x-auto text-xs">
-                              {[60, 75, 85, 95].map((preset) => (
-                                <button
-                                  key={preset}
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingScores((previous) => ({ ...previous, [submission.id]: preset }));
-                                    clearSaveMessage(submission.id);
-                                  }}
-                                  className="px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                                >
-                                  {preset}
-                                </button>
+                              aria-describedby={`decision-help-${submission.id}`}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none transition-colors focus:border-amber-500 focus:bg-white"
+                            >
+                              {(Object.keys(statusLabels) as SubmissionStatus[]).map((status) => (
+                                <option key={status} value={status}>{statusLabels[status]}</option>
                               ))}
-                              {currentScore !== '' && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingScores((previous) => {
+                            </select>
+                          </div>
+                          <p id={`decision-help-${submission.id}`} className="mt-3 flex items-start gap-1.5 text-[11px] leading-4 text-slate-500 pt-2 border-t border-slate-100">
+                            {currentStatus === 'submitted' || currentStatus === 'under_review'
+                              ? <Clock3 size={13} className="mt-0.5 shrink-0 text-amber-600" />
+                              : <BadgeCheck size={13} className="mt-0.5 shrink-0 text-emerald-600" />}
+                            <span>{getDecisionHelp(currentStatus)}</span>
+                          </p>
+                        </div>
+
+                        {/* 2. Jury Score */}
+                        <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <label htmlFor={`score-${submission.id}`} className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                                2. Jury Score <span className="font-normal text-slate-400">/ 100</span>
+                              </label>
+                              {currentScore !== '' && Number(currentScore) >= 0 && (
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  Number(currentScore) >= 90
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    : Number(currentScore) >= 75
+                                    ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                    : Number(currentScore) >= 60
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                    : 'bg-slate-100 text-slate-700'
+                                }`}>
+                                  {Number(currentScore) >= 90
+                                    ? '★ Gold Tier'
+                                    : Number(currentScore) >= 75
+                                    ? '★ Silver Tier'
+                                    : Number(currentScore) >= 60
+                                    ? '★ Bronze Tier'
+                                    : 'Evaluated'}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <input
+                                id={`score-${submission.id}`}
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={currentScore}
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  setEditingScores((previous) => {
+                                    if (value === '') {
                                       const next = { ...previous };
                                       delete next[submission.id];
                                       return next;
-                                    });
-                                    clearSaveMessage(submission.id);
-                                  }}
-                                  className="px-2 py-1 rounded-lg text-[10px] text-slate-400 hover:text-rose-600 transition-colors"
-                                >
-                                  Clear
-                                </button>
-                              )}
+                                    }
+                                    return { ...previous, [submission.id]: Number(value) };
+                                  });
+                                  clearSaveMessage(submission.id);
+                                }}
+                                placeholder="e.g. 85"
+                                className="w-28 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-amber-500 focus:bg-white text-center"
+                              />
+
+                              {/* Quick score presets */}
+                              <div className="flex items-center gap-1 overflow-x-auto text-xs">
+                                {[60, 75, 85, 95].map((preset) => (
+                                  <button
+                                    key={preset}
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingScores((previous) => ({ ...previous, [submission.id]: preset }));
+                                      clearSaveMessage(submission.id);
+                                    }}
+                                    className="px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                                  >
+                                    {preset}
+                                  </button>
+                                ))}
+                                {currentScore !== '' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingScores((previous) => {
+                                        const next = { ...previous };
+                                        delete next[submission.id];
+                                        return next;
+                                      });
+                                      clearSaveMessage(submission.id);
+                                    }}
+                                    className="px-2 py-1 rounded-lg text-[10px] text-slate-400 hover:text-rose-600 transition-colors"
+                                  >
+                                    Clear
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
+
+                          <p className="mt-3 text-[11px] leading-4 text-slate-500 pt-2 border-t border-slate-100">
+                            Official jury evaluation score visible to registered school delegation.
+                          </p>
                         </div>
-
-                        <p className="mt-3 text-[11px] leading-4 text-slate-500 pt-2 border-t border-slate-100">
-                          Official jury evaluation score visible to registered school delegation.
-                        </p>
                       </div>
-                    </div>
 
-                    {/* 3. Feedback for School (Full Width, Spacious) */}
-                    <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs">
-                      <div className="flex items-center justify-between mb-2">
-                        <label htmlFor={`feedback-${submission.id}`} className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                          3. {currentStatus === 'disqualified' ? 'Rejection Reason / Grounds' : 'Official Jury Feedback'}
-                        </label>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {currentFeedback.length}/2,000 characters
-                        </span>
-                      </div>
-                      <textarea
-                        id={`feedback-${submission.id}`}
-                        rows={3}
-                        value={currentFeedback}
-                        maxLength={2000}
-                        onChange={(event) => {
-                          setEditingFeedback((previous) => ({ ...previous, [submission.id]: event.target.value }));
-                          clearSaveMessage(submission.id);
-                        }}
-                        placeholder={currentStatus === 'disqualified'
-                          ? 'Explain the technical or eligibility grounds for disqualification so the school can review feedback…'
-                          : 'Provide constructive feedback, strengths, and areas of refinement for the student…'}
-                        className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 text-xs leading-relaxed text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-amber-500 focus:bg-white"
-                      />
-                    </div>
-
-                    {/* Action Bar Footer */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                      <p className="text-[11px] text-slate-500">
-                        Saving dispatches a real-time notification directly to <strong className="text-slate-700 font-semibold">{submission.schoolName}</strong>.
-                      </p>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        {isSaved && (
-                          <span role="status" className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700">
-                            <Check size={14} /> Review Saved & Sent
+                      {/* 3. Feedback for School (Full Width, Spacious) */}
+                      <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs">
+                        <div className="flex items-center justify-between mb-2">
+                          <label htmlFor={`feedback-${submission.id}`} className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                            3. {currentStatus === 'disqualified' ? 'Rejection Reason / Grounds' : 'Official Jury Feedback'}
+                          </label>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {currentFeedback.length}/2,000 characters
                           </span>
-                        )}
+                        </div>
+                        <textarea
+                          id={`feedback-${submission.id}`}
+                          rows={3}
+                          value={currentFeedback}
+                          maxLength={2000}
+                          onChange={(event) => {
+                            setEditingFeedback((previous) => ({ ...previous, [submission.id]: event.target.value }));
+                            clearSaveMessage(submission.id);
+                          }}
+                          placeholder={currentStatus === 'disqualified'
+                            ? 'Explain the technical or eligibility grounds for disqualification so the school can review feedback…'
+                            : 'Provide constructive feedback, strengths, and areas of refinement for the student…'}
+                          className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 text-xs leading-relaxed text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-amber-500 focus:bg-white"
+                        />
+                      </div>
 
-                        <button
-                          type="button"
-                          disabled={isSaving}
-                          onClick={() => void handleSaveReview(submission.id, submission.status)}
-                          className="inline-flex min-w-[130px] items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60 shadow-xs"
-                        >
-                          {isSaving ? (
-                            <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Saving Decision…</>
-                          ) : isSaved ? (
-                            <><Check size={14} /> Saved</>
-                          ) : (
-                            <><Save size={14} /> Save Review Decision</>
+                      {/* Action Bar Footer */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                        <p className="text-[11px] text-slate-500">
+                          Saving dispatches a real-time notification directly to <strong className="text-slate-700 font-semibold">{submission.schoolName}</strong>.
+                        </p>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          {isSaved && (
+                            <span role="status" className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700">
+                              <Check size={14} /> Review Saved & Sent
+                            </span>
                           )}
-                        </button>
+
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() => void handleSaveReview(submission.id, submission.status)}
+                            className="inline-flex min-w-[130px] items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60 shadow-xs"
+                          >
+                            {isSaving ? (
+                              <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Saving Decision…</>
+                            ) : isSaved ? (
+                              <><Check size={14} /> Saved</>
+                            ) : (
+                              <><Save size={14} /> Save Review Decision</>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {saveErrors[submission.id] && (
-                    <p role="alert" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-800">
-                      {saveErrors[submission.id]}
-                    </p>
-                  )}
-                </section>
+                    {saveErrors[submission.id] && (
+                      <p role="alert" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-800">
+                        {saveErrors[submission.id]}
+                      </p>
+                    )}
+                  </section>
+                )}
               </article>
             );
           })}

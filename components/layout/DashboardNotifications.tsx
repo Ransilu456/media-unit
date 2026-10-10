@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Bell,
@@ -9,11 +9,17 @@ import {
   Clock3,
   FileText,
   School,
+  Smartphone,
   Trash2,
   Trophy,
   X,
 } from 'lucide-react';
 import { useMediaStore, type DashboardNotification } from '@/lib/store';
+import {
+  getDeviceNotificationStatus,
+  requestDeviceNotificationPermission,
+  type DeviceNotificationPermission,
+} from '@/lib/browserNotifications';
 
 function getNotificationConfig(notification: DashboardNotification) {
   const title = (notification.title || '').toLowerCase();
@@ -134,6 +140,39 @@ export function DashboardNotifications() {
   const { notifications, markNotificationsRead, clearNotifications } = useMediaStore();
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [devicePerm, setDevicePerm] = useState<DeviceNotificationPermission>('default');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setDevicePerm(getDeviceNotificationStatus());
+  }, []);
+
+  // Close notification panel when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.read).length,
@@ -169,7 +208,7 @@ export function DashboardNotifications() {
   };
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={toggleNotifications}
@@ -196,68 +235,100 @@ export function DashboardNotifications() {
       </button>
 
       {isOpen && (
-        <section
-          aria-label="Notifications"
-          className="absolute right-0 top-12 z-50 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
-        >
-          {/* Header */}
-          <div className="border-b border-slate-100 px-4 py-3 bg-slate-50/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-slate-900">Notifications</h2>
-                {unreadCount > 0 && (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                    {unreadCount} new
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {unreadCount > 0 && (
+        <>
+          {/* Backdrop for mobile devices */}
+          <div
+            className="fixed inset-0 z-40 bg-slate-950/20 backdrop-blur-2xs sm:hidden"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+
+          <section
+            aria-label="Notifications"
+            className="absolute right-0 top-12 z-50 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xl animate-in fade-in-0 zoom-in-95 duration-150"
+          >
+            {/* Header */}
+            <div className="border-b border-slate-100 px-4 py-3 bg-slate-50/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-900">Notifications</h2>
+                  {unreadCount > 0 && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={markNotificationsRead}
+                      className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 px-2 py-1 rounded-md hover:bg-slate-100 transition-colors"
+                    >
+                      Mark read
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={markNotificationsRead}
-                    className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 px-2 py-1 rounded-md hover:bg-slate-100 transition-colors"
+                    onClick={() => setIsOpen(false)}
+                    aria-label="Close notifications"
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                   >
-                    Mark read
+                    <X size={16} />
                   </button>
-                )}
+                </div>
+              </div>
+
+              {/* Sub-filter tabs */}
+              <div className="mt-2.5 flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setIsOpen(false)}
-                  aria-label="Close notifications"
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  onClick={() => setFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    filter === 'all'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-200/60'
+                  }`}
                 >
-                  <X size={16} />
+                  All ({notifications.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilter('unread')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    filter === 'unread'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-200/60'
+                  }`}
+                >
+                  Unread ({unreadCount})
                 </button>
               </div>
-            </div>
 
-            {/* Sub-filter tabs */}
-            <div className="mt-2.5 flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setFilter('all')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                  filter === 'all'
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'text-slate-600 hover:bg-slate-200/60'
-                }`}
-              >
-                All ({notifications.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilter('unread')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                  filter === 'unread'
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'text-slate-600 hover:bg-slate-200/60'
-                }`}
-              >
-                Unread ({unreadCount})
-              </button>
+              {/* Device Push Notification Prompt / Status */}
+              {devicePerm === 'default' && (
+                <div className="mt-2.5 flex items-center justify-between rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <Smartphone size={14} className="text-amber-700 shrink-0" />
+                    <span className="text-[11px] font-semibold text-amber-900 truncate">
+                      Enable Desktop &amp; Mobile push alerts
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const next = await requestDeviceNotificationPermission();
+                      setDevicePerm(next);
+                    }}
+                    className="shrink-0 text-[10px] font-bold bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg transition-colors shadow-2xs"
+                  >
+                    Enable
+                  </button>
+                </div>
+              )}
+
+              
             </div>
-          </div>
 
           {/* List */}
           {displayedNotifications.length > 0 ? (
@@ -342,7 +413,8 @@ export function DashboardNotifications() {
             </div>
           )}
         </section>
-      )}
-    </div>
-  );
+      </>
+    )}
+  </div>
+);
 }

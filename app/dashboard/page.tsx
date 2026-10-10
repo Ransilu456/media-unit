@@ -51,35 +51,41 @@ function DashboardContent() {
     );
   }
   if (session.type !== 'school') return null;
-  if (!isCompetitionsLoaded || !isSubmissionsLoaded) return <PortalSkeleton sections={3} />;
 
   const entryComp = searchParams.get('entryComp') || undefined;
+  const isDataLoading = !isCompetitionsLoaded || !isSubmissionsLoaded;
 
   return (
     <SchoolPortalLayout activeTab={activeTab} onTabChange={setActiveTab}>
-      <div className="mb-6 space-y-3">
-        {competitionsError && (
-          <FirestoreNetworkError
-            compact
-            title="Competition data is temporarily unavailable"
-            message={competitionsError}
-            onRetry={retryCompetitions}
+      {isDataLoading ? (
+        <PortalSkeleton sections={3} />
+      ) : (
+        <>
+          <div className="mb-6 space-y-3">
+            {competitionsError && (
+              <FirestoreNetworkError
+                compact
+                title="Competition data is temporarily unavailable"
+                message={competitionsError}
+                onRetry={retryCompetitions}
+              />
+            )}
+            {submissionsError && (
+              <FirestoreNetworkError
+                compact
+                title="Submission data is temporarily unavailable"
+                message={submissionsError}
+                onRetry={retrySubmissions}
+              />
+            )}
+          </div>
+          <SchoolDashboardView
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            initialCompetitionId={entryComp}
           />
-        )}
-        {submissionsError && (
-          <FirestoreNetworkError
-            compact
-            title="Submission data is temporarily unavailable"
-            message={submissionsError}
-            onRetry={retrySubmissions}
-          />
-        )}
-      </div>
-      <SchoolDashboardView
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        initialCompetitionId={entryComp}
-      />
+        </>
+      )}
     </SchoolPortalLayout>
   );
 }

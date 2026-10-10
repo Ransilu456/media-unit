@@ -71,46 +71,47 @@ export default function AdminPage() {
     );
   }
   if (session.type !== 'admin') return null;
-  if (!isCompetitionsLoaded || !isSchoolsLoaded || !isSubmissionsLoaded) {
-    return (
-      <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
-        <PortalSkeleton sections={2} />
-      </main>
-    );
-  }
+
+  const isDataLoading = !isCompetitionsLoaded || !isSchoolsLoaded || !isSubmissionsLoaded;
 
   return (
     <AdminPortalLayout activeTab={activeTab} onTabChange={setActiveTab}>
-      <div className="mb-6 space-y-3">
-        {competitionsError && (
-          <FirestoreNetworkError
-            compact
-            title="Competition data is temporarily unavailable"
-            message={competitionsError}
-            onRetry={retryCompetitions}
-          />
-        )}
-        {schoolsError && (
-          <FirestoreNetworkError
-            compact
-            title="School data is temporarily unavailable"
-            message={schoolsError}
-            onRetry={retrySchools}
-          />
-        )}
-        {submissionsError && (
-          <FirestoreNetworkError
-            compact
-            title="Submission data is temporarily unavailable"
-            message={submissionsError}
-            onRetry={retrySubmissions}
-          />
-        )}
-      </div>
-      {activeTab === 'overview' && <AdminOverview onTabChange={setActiveTab} />}
-      {activeTab === 'submissions' && <AdminSubmissionsReview />}
-      {activeTab === 'competitions' && <AdminCompetitionsManager />}
-      {activeTab === 'schools' && <AdminSchoolsManager />}
+      {isDataLoading ? (
+        <PortalSkeleton sections={3} />
+      ) : (
+        <>
+          <div className="mb-6 space-y-3">
+            {competitionsError && (
+              <FirestoreNetworkError
+                compact
+                title="Competition data is temporarily unavailable"
+                message={competitionsError}
+                onRetry={retryCompetitions}
+              />
+            )}
+            {schoolsError && (
+              <FirestoreNetworkError
+                compact
+                title="School data is temporarily unavailable"
+                message={schoolsError}
+                onRetry={retrySchools}
+              />
+            )}
+            {submissionsError && (
+              <FirestoreNetworkError
+                compact
+                title="Submission data is temporarily unavailable"
+                message={submissionsError}
+                onRetry={retrySubmissions}
+              />
+            )}
+          </div>
+          {activeTab === 'overview' && <AdminOverview onTabChange={setActiveTab} />}
+          {activeTab === 'submissions' && <AdminSubmissionsReview />}
+          {activeTab === 'competitions' && <AdminCompetitionsManager />}
+          {activeTab === 'schools' && <AdminSchoolsManager />}
+        </>
+      )}
     </AdminPortalLayout>
   );
 }

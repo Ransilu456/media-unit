@@ -27,6 +27,7 @@ import {
   firebaseClearNotifications,
   type AppNotification,
 } from './firebaseOperations';
+import { sendDeviceNotification, registerServiceWorker } from './browserNotifications';
 
 const FIRESTORE_CACHE_WAIT_MS = 7000;
 const SESSION_ERROR_WAIT_MS = 4000;
@@ -92,6 +93,11 @@ function useMediaStoreState() {
   const [submissionsRetry, setSubmissionsRetry] = useState(0);
   const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
   const competitionsServerFetchedAt = useRef(0);
+  const knownNotificationIds = useRef<Set<string> | null>(null);
+
+  useEffect(() => {
+    void registerServiceWorker();
+  }, []);
 
   const retrySession = useCallback(() => {
     setSessionError(null);
@@ -431,21 +437,37 @@ function useMediaStoreState() {
 
     // Subscribe to targeted Firestore notifications
     const currentUser = auth.currentUser;
+    const handleIncomingNotifications = (items: AppNotification[]) => {
+      if (!active) return;
+      if (knownNotificationIds.current !== null) {
+        items.forEach((item) => {
+          if (!knownNotificationIds.current!.has(item.id) && !item.read) {
+            void sendDeviceNotification(item.title, {
+              body: item.message,
+              tag: item.id,
+              url: session.type === 'admin' ? '/admin' : '/dashboard',
+            });
+          }
+        });
+      }
+      knownNotificationIds.current = new Set(items.map((i) => i.id));
+      setNotifications(items);
+    };
+
     if (session.type === 'admin' && currentUser) {
       subscriptions.push(
-        subscribeFirebaseNotifications('admin', undefined, (items) => {
-          if (!active) return;
-          setNotifications(items);
-        }, (err) => console.warn('[firestore notifications listener]', err))
+        subscribeFirebaseNotifications('admin', undefined, handleIncomingNotifications, (err) =>
+          console.warn('[firestore notifications listener]', err)
+        )
       );
     } else if (session.type === 'school' && session.school?.id && currentUser?.uid === session.school.id) {
       subscriptions.push(
-        subscribeFirebaseNotifications('school', session.school.id, (items) => {
-          if (!active) return;
-          setNotifications(items);
-        }, (err) => console.warn('[firestore notifications listener]', err))
+        subscribeFirebaseNotifications('school', session.school.id, handleIncomingNotifications, (err) =>
+          console.warn('[firestore notifications listener]', err)
+        )
       );
     } else {
+      knownNotificationIds.current = null;
       setNotifications([]);
     }
 

@@ -17,7 +17,6 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
 
   const [dismissed, setDismissed] = useState(false);
   const [fading, setFading] = useState(false);
-  const [preloadStatus, setPreloadStatus] = useState('Initializing portal...');
 
   const isTestRoute = pathname.startsWith('/test') || forceShow;
 
@@ -37,7 +36,7 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
         document.documentElement.classList.add('no-splash');
       }
       onFinish?.();
-    }, 300);
+    }, 280);
   }, [isTestRoute, onFinish]);
 
   useEffect(() => {
@@ -74,26 +73,11 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
         }
       }
 
-      // Splash is active - guarantee classes are applied
+      // Splash is active
       document.documentElement.classList.remove('no-splash');
       document.documentElement.classList.add('splash-active');
 
-      if (typeof document !== 'undefined' && 'fonts' in document) {
-        setPreloadStatus('Loading collegiate typography...');
-        document.fonts.load('400 16px Poppins').catch(() => {});
-        document.fonts.load('600 16px Poppins').catch(() => {});
-      }
-
-      const imagesToWarm = ['/Agradhi.png', '/hero-studio.jpg', '/apple-touch-icon.png'];
-      imagesToWarm.forEach((src) => {
-        try {
-          const img = new window.Image();
-          img.src = src;
-        } catch {
-          // ignore
-        }
-      });
-
+      // Pre-warm essential routes & images
       try {
         router.prefetch('/competitions');
         router.prefetch('/rules');
@@ -102,20 +86,11 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
         // ignore
       }
 
-      const t1 = setTimeout(() => {
-        setPreloadStatus('Caching brand & studio media...');
-      }, 500);
-
-      const t2 = setTimeout(() => {
-        setPreloadStatus('Preparing competition tracks...');
-      }, 1000);
-
-      const t3 = setTimeout(() => {
-        setPreloadStatus('Welcome to Agradhi Media Unit');
+      const fadeTimer = setTimeout(() => {
         setFading(true);
-      }, 1800);
+      }, 950);
 
-      const t4 = setTimeout(() => {
+      const dismissTimer = setTimeout(() => {
         setDismissed(true);
         try {
           if (!isTestRoute) {
@@ -127,13 +102,11 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
         document.documentElement.classList.remove('splash-active');
         document.documentElement.classList.add('no-splash');
         if (onFinish) onFinish();
-      }, 2250);
+      }, 1250);
 
       return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-        clearTimeout(t4);
+        clearTimeout(fadeTimer);
+        clearTimeout(dismissTimer);
       };
     } catch {
       setDismissed(true);
@@ -149,59 +122,40 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
       aria-label="Welcome to Agradhi Media Unit"
       aria-live="polite"
       onClick={dismissSplash}
-      className={`fixed inset-0 z-[99999] flex items-center justify-center bg-slate-50/98 backdrop-blur-md transition-opacity duration-400 ease-out select-none cursor-pointer ${
+      className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-slate-950 text-white transition-opacity duration-300 ease-out select-none cursor-pointer ${
         fading ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
-      style={{
-        background:
-          'radial-gradient(ellipse at 50% 40%, rgba(217, 119, 6, 0.08), transparent 70%), #f8fafc',
-      }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative mx-4 flex w-full max-w-sm flex-col items-center rounded-3xl border border-slate-200/90 bg-white p-8 text-center shadow-[0_20px_50px_rgba(15,23,42,0.08)] ring-1 ring-slate-100 sm:p-9"
-      >
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50 px-3.5 py-1 text-[11px] font-semibold text-amber-800">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-600 animate-pulse" />
-          <span>Saranath College · All-Island Media Assembly 2026</span>
-        </div>
+      {/* Subtle ambient amber backdrop glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-600/15 via-transparent to-transparent pointer-events-none" />
 
-        <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-2xl border border-slate-200/80 bg-slate-50 p-2.5 shadow-xs">
+      <div className="relative flex flex-col items-center text-center px-6">
+        {/* Crest */}
+        <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white/5 p-3.5 backdrop-blur-md border border-white/10 shadow-2xl">
           <Image
             src="/Agradhi.png"
             alt="Agradhi Media Unit Crest"
-            width={64}
-            height={64}
+            width={72}
+            height={72}
             priority
-            className="h-full w-full object-contain"
+            className="h-full w-full object-contain drop-shadow"
           />
         </div>
 
-        <div className="space-y-1">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-serif">
-            Agradhi Media Unit
-          </h1>
-          <p className="text-xs font-medium text-slate-500">
-            Official All-Island Competition &amp; Broadcast Portal
-          </p>
-        </div>
-
-        <div className="mt-7 w-48 overflow-hidden rounded-full border border-slate-100 bg-slate-100 p-0.5">
-          <div className="h-1 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 animate-[progress_1.6s_ease-out_forwards]" />
-        </div>
-
-        <p className="mt-2.5 text-[11px] font-medium text-slate-400">
-          {preloadStatus}
+        {/* Clean typography */}
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-serif">
+          Agradhi Media Unit
+        </h1>
+        <p className="mt-1 text-xs font-medium text-amber-300/80 tracking-wide uppercase">
+          Saranath College · Media Assembly 2026
         </p>
 
-        <button
-          type="button"
-          onClick={dismissSplash}
-          className="mt-5 text-[11px] font-semibold text-slate-400 hover:text-slate-700 transition-colors py-1 px-3 rounded-lg hover:bg-slate-50"
-        >
-          Click to enter portal
-        </button>
+        {/* Sleek minimal loader bar */}
+        <div className="mt-6 w-36 h-1 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full w-full bg-gradient-to-r from-amber-500 to-amber-300 animate-[progress_1s_ease-out_forwards]" />
+        </div>
       </div>
     </div>
   );
 }
+
