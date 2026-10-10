@@ -200,11 +200,7 @@ export function DashboardNotifications() {
   );
 
   const toggleNotifications = () => {
-    const opening = !isOpen;
-    setIsOpen(opening);
-    if (opening && unreadCount > 0) {
-      markNotificationsRead();
-    }
+    setIsOpen((open) => !open);
   };
 
   return (
@@ -265,7 +261,7 @@ export function DashboardNotifications() {
                       onClick={markNotificationsRead}
                       className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 px-2 py-1 rounded-md hover:bg-slate-100 transition-colors"
                     >
-                      Mark read
+                      Mark all read
                     </button>
                   )}
                   <button

@@ -50,20 +50,47 @@ service cloud.firestore {
       allow create: if isActiveSchool(request.resource.data.schoolId)
         && request.resource.data.status == 'submitted';
       allow update: if isAdmin();
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     match /notifications/{notificationId} {
       allow read: if isAdmin()
-        || (signedIn() && resource.data.target == 'school' && resource.data.schoolId == request.auth.uid);
+        || (signedIn() && resource.data.schoolId == request.auth.uid);
       allow create: if signedIn()
         && (
           isAdmin()
-          || request.resource.data.target == 'admin'
+          || (
+            request.resource.data.target == 'admin'
+            && request.resource.data.schoolId == request.auth.uid
+            && (
+              request.resource.data.kind == 'registration'
+              || request.resource.data.kind == 'submission'
+              || (
+                request.resource.data.kind == 'entry_replacement_request'
+                && request.resource.data.resolved == false
+                && request.resource.data.submissionId is string
+                && exists(/databases/$(database)/documents/submissions/$(request.resource.data.submissionId))
+                && get(/databases/$(database)/documents/submissions/$(request.resource.data.submissionId)).data.schoolId == request.auth.uid
+                && get(/databases/$(database)/documents/submissions/$(request.resource.data.submissionId)).data.status != 'disqualified'
+                && get(/databases/$(database)/documents/submissions/$(request.resource.data.submissionId)).data.competitionId == request.resource.data.competitionId
+              )
+            )
+          )
           || (request.resource.data.target == 'school' && request.resource.data.schoolId == request.auth.uid)
         );
       allow update: if isAdmin()
-        || (signedIn() && resource.data.target == 'school' && resource.data.schoolId == request.auth.uid);
+        || (
+          signedIn()
+          && resource.data.target == 'school'
+          && resource.data.schoolId == request.auth.uid
+        )
+        || (
+          signedIn()
+          && resource.data.target == 'admin'
+          && resource.data.schoolId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+          && request.resource.data.read == true
+        );
       allow delete: if isAdmin()
         || (signedIn() && resource.data.target == 'school' && resource.data.schoolId == request.auth.uid);
     }

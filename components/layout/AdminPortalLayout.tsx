@@ -39,12 +39,13 @@ const NAV: {
 
 export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPortalLayoutProps) {
   const router = useRouter();
-  const { logout, submissions } = useMediaStore();
+  const { logout, submissions, schools } = useMediaStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const pendingSubmissions = submissions.filter(
     (s) => s.status === 'submitted' || s.status === 'under_review'
   ).length;
+  const pendingSchools = schools.filter((school) => school.status === 'pending').length;
 
   const handleLogout = async () => {
     try {
@@ -125,6 +126,14 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
                   }`}
                 >
                   {pendingSubmissions}
+                </span>
+              )}
+              {item.id === 'schools' && pendingSchools > 0 && (
+                <span
+                  aria-label={`${pendingSchools} pending school registrations`}
+                  className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold"
+                >
+                  {pendingSchools > 99 ? '99+' : pendingSchools}
                 </span>
               )}
             </button>

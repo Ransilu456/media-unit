@@ -25,6 +25,9 @@ import {
   subscribeFirebaseNotifications,
   firebaseMarkNotificationRead,
   firebaseClearNotifications,
+  firebaseRequestEntryReplacement,
+  firebaseRemoveSubmission,
+  firebaseResolveReplacementRequest,
   type AppNotification,
 } from './firebaseOperations';
 import { sendDeviceNotification, registerServiceWorker } from './browserNotifications';
@@ -478,7 +481,9 @@ function useMediaStoreState() {
     };
   }, [isLoaded, pathname, session, schoolsRetry, submissionsRetry]);
 
-  const registerSchool = async ( data: Omit<RegisteredSchool, 'id' | 'registeredAt' | 'badgeCode' | 'status'> ): Promise<RegisteredSchool> => {
+  const registerSchool = async (
+    data: Omit<RegisteredSchool, 'id' | 'registeredAt' | 'badgeCode' | 'status'>
+  ): Promise<RegisteredSchool> => {
     return firebaseRegisterSchool(data);
   };
 
@@ -534,15 +539,35 @@ function useMediaStoreState() {
     return newSub;
   };
 
-  const updateSubmissionStatus = async ( id: string, status: SubmissionStatus, score?: number, feedback?: string ): Promise<void> => {
+  const updateSubmissionStatus = async (
+    id: string,
+    status: SubmissionStatus,
+    score?: number,
+    feedback?: string,
+    clearScore = false
+  ): Promise<void> => {
     const existing = submissions.find((s) => s.id === id);
     const context = existing ? { schoolId: existing.schoolId, entryTitle: existing.entryTitle } : undefined;
-    await firebaseUpdateSubmission(id, { status, score, judgeFeedback: feedback }, context);
+    await firebaseUpdateSubmission(
+      id,
+      { status, ...(score !== undefined ? { score } : {}), judgeFeedback: feedback },
+      context,
+      clearScore
+    );
 
     setSubmissions((prev) =>
       prev.map((s) =>
         s.id === id
-          ? { ...s, status, score: score !== undefined ? score : s.score, judgeFeedback: feedback !== undefined ? feedback : s.judgeFeedback }
+          ? {
+              ...s,
+              status,
+              ...(clearScore
+                ? { score: undefined }
+                : score !== undefined
+                ? { score }
+                : {}),
+              judgeFeedback: feedback !== undefined ? feedback : s.judgeFeedback,
+            }
           : s
       )
     );
@@ -553,6 +578,104 @@ function useMediaStoreState() {
     setSchools((prev) =>
       prev.map((school) => (school.id === id ? { ...school, status } : school))
     );
+  };
+
+  const requestEntryReplacement = async (submissionId: string, reason: string): Promise<void> => {
+    const submission = submissions.find((entry) => entry.id === submissionId);
+    if (!submission || session.type !== 'school' || !session.school) {
+      throw new Error('This entry is not available to your school.');
+    }
+    const school = session.school;
+    if (submission.schoolId !== school.id) {
+      throw new Error('This entry is not available to your school.');
+    }
+    if (submission.status === 'disqualified') {
+      throw new Error('A rejected entry already has its competition slot reopened.');
+    }
+    const cleanReason = reason.trim();
+    if (!cleanReason) throw new Error('Please explain why this entry should be removed.');
+    if (notifications.some((item) =>
+      item.kind === 'entry_replacement_request' &&
+      item.submissionId === submissionId &&
+      item.resolved !== true
+    )) {
+      throw new Error('A replacement request for this entry is already awaiting review.');
+    }
+    const requestId = await firebaseRequestEntryReplacement(
+      submission,
+      school.name,
+      cleanReason
+    );
+    setNotifications((current) => [{
+      id: requestId,
+      target: 'admin',
+      schoolId: submission.schoolId,
+      submissionId,
+      competitionId: submission.competitionId,
+      kind: 'entry_replacement_request',
+      title: 'Entry removal / replacement requested',
+      message: `${school.name} requests removal of ${submission.studentName}'s entry “${submission.entryTitle}” from ${submission.competitionTitle}. Reason: ${cleanReason}`,
+      createdAt: Date.now(),
+      read: false,
+      resolved: false,
+    }, ...current]);
+  };
+
+  const removeSubmission = async (submissionId: string): Promise<void> => {
+    if (session.type !== 'admin') throw new Error('Admin access is required to remove an entry.');
+    await firebaseRemoveSubmission(submissionId);
+    setSubmissions((current) => current.filter((item) => item.id !== submissionId));
+    setNotifications((current) => current.map((item) =>
+      item.kind === 'entry_replacement_request' && item.submissionId === submissionId
+        ? {
+            ...item,
+            read: true,
+            resolved: true,
+            message: 'The administrator removed the entry. Your competition slot is open for a replacement student entry.',
+          }
+        : item
+    ));
+  };
+
+  const resolveEntryReplacementRequest = async (
+    requestId: string,
+    approved: boolean
+  ): Promise<void> => {
+    if (session.type !== 'admin') throw new Error('Admin access is required to review a replacement request.');
+    const request = notifications.find((item) =>
+      item.id === requestId && item.kind === 'entry_replacement_request'
+    );
+    if (!request || request.resolved) throw new Error('This replacement request is no longer pending.');
+    if (approved) {
+      if (!request.submissionId) throw new Error('The replacement request does not identify an entry.');
+      const entry = submissions.find((item) => item.id === request.submissionId);
+      if (
+        !entry ||
+        entry.schoolId !== request.schoolId ||
+        entry.competitionId !== request.competitionId
+      ) {
+        throw new Error('The requested entry could not be verified against this school and competition.');
+      }
+      await firebaseRemoveSubmission(request.submissionId);
+      setSubmissions((current) => current.filter((item) => item.id !== request.submissionId));
+    } else {
+      await firebaseResolveReplacementRequest(requestId, false);
+    }
+    setNotifications((current) => current.map((item) =>
+      item.kind === 'entry_replacement_request' &&
+      (approved
+        ? item.submissionId === request.submissionId
+        : item.id === requestId)
+        ? {
+            ...item,
+            read: true,
+            resolved: true,
+            message: approved
+              ? 'The administrator removed the entry. Your competition slot is open for a replacement student entry.'
+              : 'The administrator reviewed your removal request and kept the submitted entry.',
+          }
+        : item
+    ));
   };
 
   const addCompetition = async ( comp: Omit<Competition, 'id'> ): Promise<Competition> => {
@@ -615,6 +738,9 @@ function useMediaStoreState() {
     deleteCompetition,
     updateSubmissionStatus,
     updateSchoolStatus,
+    requestEntryReplacement,
+    removeSubmission,
+    resolveEntryReplacementRequest,
   };
 }
 

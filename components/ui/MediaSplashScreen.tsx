@@ -147,7 +147,7 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
           Agradhi Media Unit
         </h1>
         <p className="mt-1 text-xs font-medium text-amber-300/80 tracking-wide uppercase">
-          Saranath College · Media Assembly 2026
+          Saranath College
         </p>
 
         {/* Sleek minimal loader bar */}

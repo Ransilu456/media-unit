@@ -63,6 +63,7 @@ export function AdminSubmissionsReview() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [queueFilter, setQueueFilter] = useState<QueueFilter>('needs-review');
   const [editingScores, setEditingScores] = useState<Record<string, number>>({});
+  const [clearedScoreIds, setClearedScoreIds] = useState<string[]>([]);
   const [editingFeedback, setEditingFeedback] = useState<Record<string, string>>({});
   const [editingStatuses, setEditingStatuses] = useState<Record<string, SubmissionStatus>>({});
   const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
@@ -110,6 +111,7 @@ export function AdminSubmissionsReview() {
     const status = editingStatuses[id] ?? originalStatus;
     const score = editingScores[id];
     const feedback = editingFeedback[id] ?? '';
+    const clearScore = clearedScoreIds.includes(id);
     if (status === 'disqualified' && !feedback.trim()) {
       setSaveErrors((previous) => ({
         ...previous,
@@ -122,9 +124,10 @@ export function AdminSubmissionsReview() {
     setSavedIds((previous) => previous.filter((savedId) => savedId !== id));
     setSaveErrors((previous) => ({ ...previous, [id]: '' }));
     try {
-      await updateSubmissionStatus(id, status, score, feedback);
+      await updateSubmissionStatus(id, status, score, feedback, clearScore);
       setSavedIds((previous) => [...previous, id]);
       setUnlockedIds((previous) => previous.filter((unlockedId) => unlockedId !== id));
+      setClearedScoreIds((previous) => previous.filter((entryId) => entryId !== id));
     } catch (error: unknown) {
       setSaveErrors((previous) => ({
         ...previous,
@@ -147,6 +150,7 @@ export function AdminSubmissionsReview() {
 
   const handleLock = (id: string) => {
     setUnlockedIds((previous) => previous.filter((unlockedId) => unlockedId !== id));
+    setClearedScoreIds((previous) => previous.filter((entryId) => entryId !== id));
     setEditingStatuses((previous) => {
       const next = { ...previous };
       delete next[id];
@@ -295,7 +299,9 @@ export function AdminSubmissionsReview() {
         <div className="space-y-4">
           {filtered.map((submission) => {
             const currentStatus = editingStatuses[submission.id] ?? submission.status;
-            const currentScore = editingScores[submission.id] !== undefined
+            const currentScore = clearedScoreIds.includes(submission.id)
+              ? ''
+              : editingScores[submission.id] !== undefined
               ? editingScores[submission.id]
               : submission.score ?? '';
             const currentFeedback = editingFeedback[submission.id] !== undefined
@@ -600,6 +606,11 @@ export function AdminSubmissionsReview() {
                                     }
                                     return { ...previous, [submission.id]: Number(value) };
                                   });
+                                  setClearedScoreIds((previous) =>
+                                    value === '' && submission.score !== undefined
+                                      ? [...new Set([...previous, submission.id])]
+                                      : previous.filter((entryId) => entryId !== submission.id)
+                                  );
                                   clearSaveMessage(submission.id);
                                 }}
                                 placeholder="e.g. 85"
@@ -614,6 +625,7 @@ export function AdminSubmissionsReview() {
                                     type="button"
                                     onClick={() => {
                                       setEditingScores((previous) => ({ ...previous, [submission.id]: preset }));
+                                      setClearedScoreIds((previous) => previous.filter((entryId) => entryId !== submission.id));
                                       clearSaveMessage(submission.id);
                                     }}
                                     className="px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
@@ -630,6 +642,9 @@ export function AdminSubmissionsReview() {
                                         delete next[submission.id];
                                         return next;
                                       });
+                                      setClearedScoreIds((previous) =>
+                                        previous.includes(submission.id) ? previous : [...previous, submission.id]
+                                      );
                                       clearSaveMessage(submission.id);
                                     }}
                                     className="px-2 py-1 rounded-lg text-[10px] text-slate-400 hover:text-rose-600 transition-colors"

@@ -84,7 +84,15 @@ function MediumChip({ medium }: { medium: string }) {
 }
 
 export function SchoolDashboardView({ activeTab, onTabChange, initialCompetitionId }: Props) {
-  const { session, competitions, submissions, isSubmissionsLoaded, isCompetitionsLoaded } = useMediaStore();
+  const {
+    session,
+    competitions,
+    submissions,
+    notifications,
+    requestEntryReplacement,
+    isSubmissionsLoaded,
+    isCompetitionsLoaded,
+  } = useMediaStore();
   const school = session.school;
 
   const [selectedComp, setSelectedComp] = useState<Competition | null>(() => {
@@ -93,6 +101,24 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
 
   const [searchEntryQuery, setSearchEntryQuery] = useState('');
   const [filterEntryStatus, setFilterEntryStatus] = useState<string>('all');
+  const [replacementRequestOpenId, setReplacementRequestOpenId] = useState<string | null>(null);
+  const [replacementReason, setReplacementReason] = useState('');
+  const [replacementRequestError, setReplacementRequestError] = useState<string | null>(null);
+  const [replacementSubmitting, setReplacementSubmitting] = useState(false);
+
+  const submitReplacementRequest = async (submissionId: string) => {
+    setReplacementRequestError(null);
+    setReplacementSubmitting(true);
+    try {
+      await requestEntryReplacement(submissionId, replacementReason);
+      setReplacementRequestOpenId(null);
+      setReplacementReason('');
+    } catch (error: unknown) {
+      setReplacementRequestError(error instanceof Error ? error.message : 'Unable to send the request.');
+    } finally {
+      setReplacementSubmitting(false);
+    }
+  };
 
   // Hooks must be declared before any early return
   const mySubmissions = useMemo(() => {
@@ -645,6 +671,11 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
             <div className="space-y-4">
               {filteredEntries.map((sub) => {
                 const CatIcon = CATEGORY_ICONS[sub.category] ?? Trophy;
+                const pendingReplacementRequest = notifications.find((item) =>
+                  item.kind === 'entry_replacement_request' &&
+                  item.submissionId === sub.id &&
+                  item.resolved !== true
+                );
 
                 return (
                   <div
@@ -711,6 +742,71 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
                       <div className="text-xs text-slate-600 bg-white p-3.5 rounded-xl border border-slate-100">
                         <span className="font-semibold text-slate-700 block mb-1">Concept Synopsis:</span>
                         <p className="leading-relaxed">{sub.synopsis}</p>
+                      </div>
+                    )}
+
+                    {pendingReplacementRequest ? (
+                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                        Agradhi Administration is reviewing your request to remove this entry. You can submit a replacement after it is removed.
+                      </div>
+                    ) : sub.status !== 'disqualified' && (
+                      <div className="mt-3">
+                        {replacementRequestOpenId === sub.id ? (
+                          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <p className="text-xs text-slate-700">
+                              Submitted entries cannot be edited. Ask the administrator to remove this entry; once approved, your slot will reopen for another student in this competition.
+                            </p>
+                            <label htmlFor={`replacement-reason-${sub.id}`} className="block text-xs font-semibold text-slate-700">
+                              Reason for removal
+                            </label>
+                            <textarea
+                              id={`replacement-reason-${sub.id}`}
+                              value={replacementReason}
+                              onChange={(event) => setReplacementReason(event.target.value)}
+                              rows={2}
+                              maxLength={500}
+                              className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-900"
+                              placeholder="Explain why this entry should be removed."
+                            />
+                            {replacementRequestError && (
+                              <p role="alert" className="text-xs text-rose-700">{replacementRequestError}</p>
+                            )}
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                disabled={replacementSubmitting}
+                                onClick={() => void submitReplacementRequest(sub.id)}
+                                className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                              >
+                                {replacementSubmitting ? 'Sending...' : 'Send request to admin'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={replacementSubmitting}
+                                onClick={() => {
+                                  setReplacementRequestOpenId(null);
+                                  setReplacementReason('');
+                                  setReplacementRequestError(null);
+                                }}
+                                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplacementRequestOpenId(sub.id);
+                              setReplacementReason('');
+                              setReplacementRequestError(null);
+                            }}
+                            className="text-xs font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-950"
+                          >
+                            Request admin removal to enter a different student
+                          </button>
+                        )}
                       </div>
                     )}
 

@@ -218,9 +218,8 @@ export function SchoolRegisterForm() {
           <div className="flex items-center gap-2.5 p-4 mb-5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold animate-in fade-in-50">
             <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
             <span>
-              Registration received. Your account is pending approval by the Agradhi administrator.
-              You can <Link href="/login" className="underline">try signing in</Link> after it is approved;
-              this page will not send an automatic email.
+              Registration received. Your account is pending while the Agradhi administrator reviews your school details.
+              You can sign in and submit entries after your account is approved.
             </span>
           </div>
         )}
@@ -355,7 +354,7 @@ export function SchoolRegisterForm() {
                 placeholder="e.g. media@yourschool.sch.lk"
                 className={inputCls}
               />
-              <p className="mt-1 text-[11px] text-slate-400">Use an email address your school checks; the administrator may contact you about approval.</p>
+              <p className="mt-1 text-[11px] text-slate-400">Use an email address the school can be contacted at. The Agradhi administrator will review your registration before activation.</p>
             </div>
 
             <div>
