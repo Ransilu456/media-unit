@@ -7,24 +7,11 @@ import { useMediaStore } from '@/lib/store';
 import { Competition } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/Badge';
 import { SchoolTab } from '@/components/layout/SchoolPortalLayout';
-import {
-  Trophy,
-  ExternalLink,
-  ShieldCheck,
-  Users,
-  Star,
-  AlertCircle,
-  Mic,
-  Camera,
-  Radio,
-  Newspaper,
-  ArrowRight,
-  Plus,
-  Search,
-} from 'lucide-react';
+import { Trophy, ExternalLink, ShieldCheck, Users, Star, AlertCircle, Mic, Camera, Radio, Newspaper, ArrowRight, Plus, Search, Phone, Mail, Building2 } from 'lucide-react';
 
 import { ConcentricOrbitalChart } from './ConcentricOrbitalChart';
 import { EntryStatusGuide } from './EntryStatusGuide';
+import { SchoolDashboardOverview } from './SchoolDashboardOverview';
 
 const EntrySubmissionModal = dynamic(
   () => import('@/components/forms/EntrySubmissionModal').then((module) => module.EntrySubmissionModal),
@@ -49,6 +36,8 @@ function formatDate(iso: string): string {
 interface Props {
   activeTab: SchoolTab;
   onTabChange: (tab: SchoolTab) => void;
+  searchEntryQuery: string;
+  onSearchEntryQueryChange: (query: string) => void;
   initialCompetitionId?: string;
 }
 
@@ -61,6 +50,15 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   'Live Media Reporting': Mic,
 };
 
+const CATEGORY_ART: Record<string, string> = {
+  'Photography': 'from-sky-100 via-cyan-50 to-white',
+  'News Reading & Announcing': 'from-rose-100 via-orange-50 to-white',
+  'Radio Play & Audio Production': 'from-violet-100 via-fuchsia-50 to-white',
+  'Short Film & Cinematography': 'from-amber-100 via-yellow-50 to-white',
+  'Graphic Design & Digital Art': 'from-emerald-100 via-teal-50 to-white',
+  'Live Media Reporting': 'from-orange-100 via-amber-50 to-white',
+};
+
 function MediumChip({ medium }: { medium: string }) {
   if (medium === 'Sinhala') {
     return (
@@ -69,6 +67,7 @@ function MediumChip({ medium }: { medium: string }) {
       </span>
     );
   }
+
   if (medium === 'English') {
     return (
       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100">
@@ -83,7 +82,13 @@ function MediumChip({ medium }: { medium: string }) {
   );
 }
 
-export function SchoolDashboardView({ activeTab, onTabChange, initialCompetitionId }: Props) {
+function LegacySchoolDashboardView({
+  activeTab,
+  onTabChange,
+  searchEntryQuery,
+  onSearchEntryQueryChange,
+  initialCompetitionId,
+}: Props) {
   const {
     session,
     competitions,
@@ -99,7 +104,6 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
     return initialCompetitionId ? competitions.find((c) => c.id === initialCompetitionId) ?? null : null;
   });
 
-  const [searchEntryQuery, setSearchEntryQuery] = useState('');
   const [filterEntryStatus, setFilterEntryStatus] = useState<string>('all');
   const [replacementRequestOpenId, setReplacementRequestOpenId] = useState<string | null>(null);
   const [replacementReason, setReplacementReason] = useState('');
@@ -211,31 +215,33 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
   return (
     <>
       {activeTab === 'overview' && (
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
+          <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
           
-          <div className="rounded-3xl bg-white p-7 sm:p-9 border border-slate-100 shadow-[0_4px_25px_rgba(0,0,0,0.03)]">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="relative isolate overflow-hidden rounded-3xl border border-amber-200/70 bg-gradient-to-br from-amber-100/80 via-white to-orange-50 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.05)] sm:p-8 lg:col-span-7">
+            <div className="pointer-events-none absolute -right-10 -top-20 -z-10 h-64 w-64 rounded-full border-[36px] border-white/60" />
+            <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
               
               <div className="flex items-center gap-4 min-w-0">
-                <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200/80 font-bold text-xl flex items-center justify-center shrink-0">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-200 bg-white text-xl font-bold text-amber-800 shadow-sm">
                   {school.name.charAt(0)}
                 </div>
 
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-slate-700">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <span className="rounded-md border border-amber-200 bg-white/80 px-2 py-0.5 font-mono text-[11px] font-bold text-amber-900">
                       {school.badgeCode}
                     </span>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-600">
                       {school.district} · {school.province}
                     </span>
                   </div>
 
-                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight truncate">
+                  <h2 className="truncate text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
                     {school.name}
-                  </h1>
+                  </h2>
 
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="mt-1.5 text-xs text-slate-600">
                     Teacher-in-Charge: <strong className="text-slate-700 font-semibold">{school.teacherInCharge}</strong>
                     {school.mediaPresident && (
                       <span className="hidden md:inline"> · Media President: <strong className="text-slate-700 font-semibold">{school.mediaPresident}</strong></span>
@@ -248,7 +254,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
                 <button
                   onClick={() => openComps[0] && setSelectedComp(openComps[0])}
                   disabled={openComps.length === 0}
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-sm disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-sara-navy px-5 py-3 text-xs font-semibold text-white shadow-sm transition-all hover:bg-slate-800 disabled:opacity-50"
                 >
                   <Plus size={15} />
                   <span>Submit Student Entry</span>
@@ -258,10 +264,50 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex flex-col rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_4px_25px_rgba(0,0,0,0.03)] lg:col-span-5">
+            <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Delegation contacts</h3>
+                <p className="mt-1 text-xs text-slate-400">Your school registration details</p>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-800">
+                <Building2 size={18} />
+              </div>
+            </div>
+            <div className="space-y-4">
+              {[
+                { role: 'Teacher in charge', name: school.teacherInCharge, phone: school.teacherPhone },
+                { role: 'Media president', name: school.mediaPresident, phone: school.presidentPhone },
+              ].map((contact) => (
+                <div key={contact.role} className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-100 bg-amber-50 text-sm font-bold text-amber-800">
+                    {contact.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-800">{contact.name}</p>
+                    <p className="text-[11px] text-slate-400">{contact.role}</p>
+                  </div>
+                  {contact.phone && (
+                    <a href={`tel:${contact.phone}`} aria-label={`Call ${contact.name}`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-800">
+                      <Phone size={15} />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="mt-auto pt-5">
+              <a href={`mailto:${school.email}`} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3.5 py-3 text-xs font-medium text-slate-600 transition hover:bg-amber-50 hover:text-amber-900">
+                <Mail size={15} className="shrink-0 text-amber-700" />
+                <span className="truncate">{school.email}</span>
+              </a>
+            </div>
+          </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             
-            <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">Total Entries</span>
+            <div className="p-6 rounded-2xl bg-sky-50/70 border border-sky-200/80 shadow-[0_4px_20px_rgba(14,116,144,0.05)]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800 block mb-2">Total Entries</span>
               <div className="flex items-baseline justify-between">
                 {!isSubmissionsLoaded ? (
                   <div className="h-8 w-14 rounded-lg bg-slate-100 animate-pulse my-0.5" />
@@ -272,8 +318,8 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 block mb-2">Awaiting Review</span>
+            <div className="p-6 rounded-2xl bg-amber-50/80 border border-amber-200 shadow-[0_4px_20px_rgba(217,119,6,0.05)]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block mb-2">Awaiting Review</span>
               <div className="flex items-baseline justify-between">
                 {!isSubmissionsLoaded ? (
                   <div className="h-8 w-14 rounded-lg bg-amber-100/70 animate-pulse my-0.5" />
@@ -284,8 +330,8 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700 block mb-2">Under Evaluation</span>
+            <div className="p-6 rounded-2xl bg-blue-50/75 border border-blue-200 shadow-[0_4px_20px_rgba(37,99,235,0.05)]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 block mb-2">Under Evaluation</span>
               <div className="flex items-baseline justify-between">
                 {!isSubmissionsLoaded ? (
                   <div className="h-8 w-14 rounded-lg bg-blue-100/70 animate-pulse my-0.5" />
@@ -296,8 +342,8 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 block mb-2">Advanced</span>
+            <div className="p-6 rounded-2xl bg-emerald-50/75 border border-emerald-200 shadow-[0_4px_20px_rgba(5,150,105,0.05)]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 block mb-2">Advanced</span>
               <div className="flex items-baseline justify-between">
                 {!isSubmissionsLoaded ? (
                   <div className="h-8 w-14 rounded-lg bg-emerald-100/70 animate-pulse my-0.5" />
@@ -601,7 +647,7 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
                 type="text"
                 placeholder="Search entries by student name or title..."
                 value={searchEntryQuery}
-                onChange={(e) => setSearchEntryQuery(e.target.value)}
+                onChange={(e) => onSearchEntryQueryChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
               />
             </div>
@@ -917,81 +963,67 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
                 return (
                   <div
                     key={comp.id}
-                    className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:border-slate-200 transition-all flex flex-col justify-between"
+                    className="group overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:border-amber-200 hover:shadow-[0_18px_40px_rgba(15,23,42,0.10)]"
                   >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 text-slate-700 flex items-center justify-center">
-                            <CatIcon size={16} />
-                          </div>
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            {comp.category}
-                          </span>
-                        </div>
+                    <div className={`relative flex h-36 items-center justify-center overflow-hidden bg-gradient-to-br ${CATEGORY_ART[comp.category] ?? 'from-slate-100 to-white'}`}>
+                      <span className="absolute -right-7 -top-14 h-44 w-44 rounded-full border-[22px] border-white/50 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110" />
+                      <span className="absolute -bottom-12 -left-6 h-32 w-32 rounded-full bg-white/50 blur-xl" />
+                      <span className="absolute left-3 top-3 rounded-full border border-white/80 bg-white/85 px-2.5 py-1 text-[9px] font-semibold text-slate-600">
+                        {comp.medium === 'None' ? 'Any language' : comp.medium}
+                      </span>
+                      <span className="absolute right-3 top-3"><StatusBadge status={comp.status} /></span>
+                      <span className="relative flex h-[68px] w-[68px] items-center justify-center rounded-[24px] border border-white/80 bg-white/85 text-slate-800 shadow-[0_12px_30px_rgba(15,23,42,0.10)] transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110">
+                        <CatIcon size={30} strokeWidth={1.6} />
+                      </span>
+                    </div>
 
-                        <div className="flex items-center gap-1.5">
-                          {comp.medium && <MediumChip medium={comp.medium} />}
-                          <StatusBadge status={comp.status} />
-                        </div>
-                      </div>
-
-                      <h3 className="text-base font-bold text-slate-900 leading-snug mb-2">
-                        {comp.title}
-                      </h3>
-
-                      <p className="text-xs text-slate-500 leading-relaxed mb-5 line-clamp-3">
-                        {comp.description}
-                      </p>
-
-                      <div className="grid grid-cols-2 gap-2 p-3.5 rounded-xl bg-slate-50/70 border border-slate-100 text-xs mb-5">
+                    <div className="p-5">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">{comp.category}</p>
+                      <h3 className="mt-1.5 line-clamp-2 min-h-12 text-base font-bold leading-6 text-slate-900">{comp.title}</h3>
+                      <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-slate-500">{comp.description}</p>
+                      <div className="mt-4 grid grid-cols-2 gap-2.5 rounded-2xl bg-slate-50 p-3">
                         <div>
-                          <span className="text-[10px] text-slate-400 font-semibold block uppercase">Deadline</span>
-                          <span className="font-semibold text-slate-800">{comp.deadline}</span>
+                          <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Deadline</span>
+                          <span className="mt-1 block truncate text-[11px] font-semibold text-slate-800">{comp.deadline}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-slate-400 font-semibold block uppercase">School Quota</span>
-                          <span className={`font-semibold ${full ? 'text-red-600' : 'text-slate-800'}`}>
-                            {mine} / {comp.maxEntriesPerSchool} active
+                          <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Entries used</span>
+                          <span className={`mt-1 block text-[11px] font-semibold ${full ? 'text-rose-700' : 'text-slate-800'}`}>
+                            {mine} of {comp.maxEntriesPerSchool}
                           </span>
-                          {disqualifiedSubs.length > 0 && (
-                            <span className="block text-[10px] text-rose-600 font-bold">
-                              ({disqualifiedSubs.length} slot reopened)
-                            </span>
-                          )}
                         </div>
-                        <div className="col-span-2">
-                          <span className="text-[10px] text-slate-400 font-semibold block uppercase">Age & Grade Criteria</span>
-                          <span className="font-semibold text-slate-800">{comp.eligibility}</span>
+                        <div className="col-span-2 border-t border-slate-200/80 pt-2">
+                          <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Who can enter</span>
+                          <span className="mt-1 block text-[11px] font-medium leading-5 text-slate-700">{comp.eligibility}</span>
                         </div>
                       </div>
+                      {disqualifiedSubs.length > 0 && (
+                        <p className="mt-2 text-[10px] font-semibold text-rose-700">
+                          {disqualifiedSubs.length} entry was disqualified; a place is available again.
+                        </p>
+                      )}
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => setSelectedComp(comp)}
                       disabled={full || comp.status !== 'open'}
-                      className={`w-full py-3 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                      className={`mx-5 mb-5 flex min-h-11 w-[calc(100%-2.5rem)] items-center justify-center gap-2 rounded-xl text-xs font-bold transition-colors ${
                         full
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                          ? 'cursor-not-allowed bg-slate-100 text-slate-400'
                           : comp.status !== 'open'
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                          : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
+                          ? 'cursor-not-allowed bg-slate-100 text-slate-400'
+                          : 'bg-sara-navy text-white shadow-sm hover:bg-slate-800'
                       }`}
                     >
                       {full ? (
-                        <>
-                          <AlertCircle size={14} /> Quota Full
-                        </>
+                        'Entry limit reached'
                       ) : comp.status !== 'open' ? (
-                        'Closed'
+                        'Entries are closed'
                       ) : disqualifiedSubs.length > 0 ? (
-                        <>
-                          <Plus size={14} /> Submit Replacement Entry
-                        </>
+                        'Add a replacement entry'
                       ) : (
-                        <>
-                          <Plus size={14} /> Submit Student Entry
-                        </>
+                        <>Add a student <ArrowRight size={14} /></>
                       )}
                     </button>
                   </div>
@@ -1085,6 +1117,46 @@ export function SchoolDashboardView({ activeTab, onTabChange, initialCompetition
           school={school}
           onSubmitted={() => {
             onTabChange('students');
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+export function SchoolDashboardView(props: Props) {
+  const { session, competitions, submissions } = useMediaStore();
+  const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
+  const school = session.type === 'school' ? session.school : undefined;
+
+  React.useEffect(() => {
+    if (!props.initialCompetitionId) return;
+    const competition = competitions.find((item) => item.id === props.initialCompetitionId);
+    if (competition) setSelectedCompetition(competition);
+  }, [props.initialCompetitionId, competitions]);
+
+  if (props.activeTab !== 'overview' || !school) {
+    return <LegacySchoolDashboardView {...props} />;
+  }
+
+  return (
+    <>
+      <SchoolDashboardOverview
+        school={school}
+        competitions={competitions}
+        submissions={submissions.filter((submission) => submission.schoolId === school.id)}
+        onTabChange={props.onTabChange}
+        onSelectCompetition={setSelectedCompetition}
+      />
+      {selectedCompetition && (
+        <EntrySubmissionModal
+          isOpen
+          onClose={() => setSelectedCompetition(null)}
+          competition={selectedCompetition}
+          school={school}
+          onSubmitted={() => {
+            setSelectedCompetition(null);
+            props.onTabChange('students');
           }}
         />
       )}

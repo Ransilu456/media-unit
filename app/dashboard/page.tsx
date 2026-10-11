@@ -29,6 +29,11 @@ function DashboardContent() {
     isSubmissionsLoaded,
   } = useMediaStore();
   const [activeTab, setActiveTab] = useState<SchoolTab>('overview');
+  const [searchQuery, setSearchQuery] = useState('');
+  const handleSearchQueryChange = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) setActiveTab('students');
+  };
 
   React.useEffect(() => {
     if (isLoaded && !sessionError && session.type !== 'school') {
@@ -56,7 +61,12 @@ function DashboardContent() {
   const isDataLoading = !isCompetitionsLoaded || !isSubmissionsLoaded;
 
   return (
-    <SchoolPortalLayout activeTab={activeTab} onTabChange={setActiveTab}>
+    <SchoolPortalLayout
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      searchQuery={searchQuery}
+      onSearchQueryChange={handleSearchQueryChange}
+    >
       {isDataLoading ? (
         <PortalSkeleton sections={3} />
       ) : (
@@ -82,6 +92,8 @@ function DashboardContent() {
           <SchoolDashboardView
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            searchEntryQuery={searchQuery}
+            onSearchEntryQueryChange={setSearchQuery}
             initialCompetitionId={entryComp}
           />
         </>

@@ -7,12 +7,7 @@ interface FirestoreNetworkErrorProps {
   compact?: boolean;
 }
 
-export function FirestoreNetworkError({
-  title,
-  message,
-  onRetry,
-  compact = false,
-}: FirestoreNetworkErrorProps) {
+export function FirestoreNetworkError({ title, message, onRetry, compact = false, }: FirestoreNetworkErrorProps) {
   return (
     <section
       role="alert"

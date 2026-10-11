@@ -1,169 +1,96 @@
 'use client';
 
-import React from 'react';
 import Link from 'next/link';
 import { useMediaStore } from '@/lib/store';
 import {
   ArrowRight,
-  Trophy,
-  Film,
   Camera,
-  Mic,
+  Check,
+  Film,
+  Mic2,
   Radio,
-  FileCheck2,
-  CheckCircle2,
+  Trophy,
 } from 'lucide-react';
 
 export function HeroSection() {
   const { session } = useMediaStore();
-
-  const disciplines = [
-    {
-      title: 'Short Film & Cinema',
-      category: 'Cinematography',
-      desc: 'Narrative short films and investigative documentaries judged on direction, lighting, and pacing.',
-      icon: Film,
-      badge: '4K / HD Video',
-      color: 'text-amber-700 bg-amber-50 border-amber-200/60',
-    },
-    {
-      title: 'News Reading & Announcing',
-      category: 'Broadcasting',
-      desc: 'Formal news delivery in Sinhala and English evaluated on diction, poise, and broadcast standards.',
-      icon: Mic,
-      badge: 'Sinhala & English',
-      color: 'text-blue-700 bg-blue-50 border-blue-200/60',
-    },
-    {
-      title: 'Press & Documentary Photography',
-      category: 'Visual Arts',
-      desc: 'Single-frame storytelling capturing cultural heritage, nature, sports, and street photojournalism.',
-      icon: Camera,
-      badge: 'Digital Stills',
-      color: 'text-emerald-700 bg-emerald-50 border-emerald-200/60',
-    },
-    {
-      title: 'Radio Play & Sound Production',
-      category: 'Audio Arts',
-      desc: 'SLBC gold-standard acoustic audio plays, voice modulation, and binaural sound design.',
-      icon: Radio,
-      badge: 'Acoustic Audio',
-      color: 'text-purple-700 bg-purple-50 border-purple-200/60',
-    },
-  ];
+  const dashboardHref = session.type === 'school' ? '/dashboard' : '/register';
+  const dashboardLabel = session.type === 'school' ? 'Go to your dashboard' : 'Register your school';
 
   return (
-    <section className="relative bg-white pt-16 pb-24 md:pt-24 md:pb-32 overflow-hidden border-b border-slate-100">
-      <div className="max-w-6xl mx-auto px-6">
-        
-        {/* Header Block */}
-        <div className="max-w-3xl mx-auto text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-semibold text-slate-700 mb-6 shadow-2xs">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
-            <span>Saranath College · All-Island Media Assembly 2026</span>
-          </div>
+    <section className="relative isolate overflow-hidden bg-[#fffefa]">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_0%,rgba(251,191,36,0.13),transparent_45%),linear-gradient(180deg,#fffefa_0%,#faf9f6_100%)]" />
+      <div aria-hidden="true" className="pointer-events-none absolute -left-20 top-24 -z-10 h-48 w-48 rounded-full border border-amber-200/60 sm:left-[8%] sm:top-32 sm:h-64 sm:w-64" />
+      <div aria-hidden="true" className="pointer-events-none absolute -right-24 top-40 -z-10 h-56 w-56 rounded-full bg-orange-100/60 blur-3xl sm:right-[7%] sm:top-36 sm:h-72 sm:w-72" />
 
-          <h1 className="text-4xl sm:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.12] mb-6">
-            National Stage for <br className="hidden sm:inline" />
-            <span className="text-amber-700">Student Broadcasters</span>
-          </h1>
+      <div className="relative mx-auto flex min-h-147.5 w-full max-w-7xl flex-col items-center justify-center px-5 pb-16 pt-16 text-center sm:min-h-[660px] sm:px-8 sm:pb-20 sm:pt-20">
+        <div aria-hidden="true" className="pointer-events-none absolute left-[8%] top-[23%] hidden -rotate-12 items-center justify-center rounded-[20px] border border-white bg-white/90 p-3 text-amber-800 shadow-[0_12px_35px_rgba(15,23,42,0.10)] md:flex">
+          <Film size={25} strokeWidth={1.7} />
+        </div>
+        <div aria-hidden="true" className="pointer-events-none absolute right-[8%] top-[30%] hidden rotate-12 items-center justify-center rounded-full border border-white bg-white/90 p-4 text-slate-800 shadow-[0_12px_35px_rgba(15,23,42,0.10)] md:flex">
+          <Camera size={25} strokeWidth={1.7} />
+        </div>
+        <div aria-hidden="true" className="pointer-events-none absolute bottom-[22%] left-[17%] hidden rotate-6 items-center justify-center rounded-full bg-amber-100 p-3 text-amber-900 md:flex">
+          <Radio size={19} strokeWidth={1.8} />
+        </div>
+        <div aria-hidden="true" className="pointer-events-none absolute bottom-[25%] right-[16%] hidden -rotate-6 items-center justify-center rounded-[18px] bg-slate-900 p-3 text-amber-300 shadow-lg md:flex">
+          <Mic2 size={20} strokeWidth={1.8} />
+        </div>
 
-          <p className="text-base sm:text-lg text-slate-500 leading-relaxed mb-10 max-w-2xl mx-auto">
-            Sri Lanka&apos;s premier collegiate media festival uniting student filmmakers, announcers, photographers, and audio artists across all 25 districts.
-          </p>
+        <p className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-white/90 px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 shadow-sm sm:text-xs">
+          Saranath College · Media Assembly 2026
+        </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/competitions"
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-all shadow-sm hover:shadow"
+        <h1 className="mt-7 max-w-4xl text-[2.65rem] font-bold leading-[1.08] tracking-[-0.05em] text-slate-950 sm:mt-8 sm:text-6xl lg:text-[5rem]">
+          The place for your
+          <span className="relative mt-1 block text-amber-700">
+            story to shine
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 360 18"
+              preserveAspectRatio="none"
+              className="mx-auto mt-1 h-3 w-52 text-amber-300 sm:h-4 sm:w-72"
+              fill="none"
             >
-              <Trophy size={16} className="text-amber-400" />
-              <span>Browse Competition Tracks</span>
-              <ArrowRight size={15} />
-            </Link>
+              <path d="M4 12C78 3 222 3 356 11" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
+            </svg>
+          </span>
+        </h1>
 
-            {session.type === 'school' && session.school ? (
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-sm font-semibold transition-colors shadow-2xs"
-              >
-                <span>Open School Dashboard</span>
-              </Link>
-            ) : (
-              <Link
-                href="/register"
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-sm font-semibold transition-colors shadow-2xs"
-              >
-                <FileCheck2 size={16} className="text-amber-700" />
-                <span>Register Outer School</span>
-              </Link>
-            )}
-          </div>
+        <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-600 sm:mt-6 sm:text-base sm:leading-8">
+          Bring your ideas to life. Share student-made films, photographs, audio, and news stories with school media creators across Sri Lanka.
+        </p>
+
+        <div className="mt-7 flex w-full max-w-md flex-col items-stretch justify-center gap-3 min-[460px]:w-auto min-[460px]:flex-row">
+          <Link
+            href="/competitions"
+            className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-sara-navy px-6 text-sm font-semibold text-white shadow-[0_10px_26px_rgba(15,23,42,0.17)] transition hover:-translate-y-0.5 hover:bg-slate-800"
+          >
+            Explore competitions
+            <ArrowRight size={16} className="text-amber-300 transition-transform group-hover:translate-x-1" />
+          </Link>
+          <Link
+            href={dashboardHref}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/90 px-6 text-sm font-semibold text-slate-800 transition hover:border-amber-300 hover:bg-amber-50"
+          >
+            {dashboardLabel}
+          </Link>
         </div>
 
-        {/* Disciplines Bento Grid with Clean Soft Shadows */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-14">
-          {disciplines.map((d, i) => {
-            const Icon = d.icon;
-            return (
-              <Link
-                key={i}
-                href="/competitions"
-                className="group rounded-2xl bg-white p-6 border border-slate-100 shadow-[0_4px_25px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_35px_rgba(0,0,0,0.06)] hover:border-slate-200 transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700 group-hover:bg-amber-50 group-hover:text-amber-700 transition-colors">
-                      <Icon size={18} />
-                    </div>
-                    <span className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
-                      {d.badge}
-                    </span>
-                  </div>
+        <ul className="mt-7 flex flex-wrap justify-center gap-x-5 gap-y-2.5 text-[11px] font-medium text-slate-600 sm:mt-8 sm:gap-x-7 sm:text-xs">
+          {['Free to enter', 'Grades 6–13', 'Sinhala & English'].map((item) => (
+            <li key={item} className="inline-flex items-center gap-1.5">
+              <Check size={13} strokeWidth={2.5} className="text-emerald-700" />
+              {item}
+            </li>
+          ))}
+        </ul>
 
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                    {d.category}
-                  </p>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-amber-700 transition-colors mb-2 leading-snug">
-                    {d.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    {d.desc}
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t border-slate-50 mt-5 flex items-center justify-between text-xs text-slate-400 group-hover:text-slate-700">
-                  <span>View Track Rules</span>
-                  <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            );
-          })}
+        <div aria-hidden="true" className="mt-10 flex items-center gap-2 text-amber-600/80 sm:mt-12">
+          <span className="h-px w-8 bg-amber-300" />
+          <Trophy size={15} />
+          <span className="h-px w-8 bg-amber-300" />
         </div>
-
-        {/* Minimal Institutional Trust Bar */}
-        <div className="rounded-2xl bg-slate-50/70 border border-slate-100 p-5 flex flex-wrap items-center justify-around gap-4 text-xs font-medium text-slate-500">
-          <span className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-emerald-600" />
-            <span>100% Free Entry for All Schools</span>
-          </span>
-          <span className="hidden sm:inline text-slate-200">|</span>
-          <span className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-emerald-600" />
-            <span>Sinhala & English Medium Categories</span>
-          </span>
-          <span className="hidden sm:inline text-slate-200">|</span>
-          <span className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-emerald-600" />
-            <span>Grades 6–13 (Junior & Senior Levels)</span>
-          </span>
-          <span className="hidden sm:inline text-slate-200">|</span>
-          <span className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-emerald-600" />
-            <span>National Media Standards</span>
-          </span>
-        </div>
-
       </div>
     </section>
   );

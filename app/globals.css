@@ -58,7 +58,7 @@ html.splash-active {
     text-rendering: optimizeLegibility;
   }
 
-  h1, h2, h3, .font-serif {
+  .font-serif {
     font-family: var(--font-serif);
   }
 }
@@ -536,6 +536,33 @@ body:has(.auth-shell[data-theme="dark"]) {
 .auth-shell[data-theme="dark"] .auth-form-wrapper .bg-red-100 {
   border-color: #713737;
   background: #472222;
+}
+
+@media (max-width: 480px) {
+  .auth-main {
+    justify-content: flex-start;
+    padding: 72px 12px 24px;
+  }
+
+  .auth-toolbar {
+    top: 10px;
+    right: 12px;
+    left: 12px;
+  }
+
+  .auth-back {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .auth-form-wrapper {
+    padding: 20px 16px;
+    border-radius: 18px;
+  }
+
+  .auth-register-form > .bg-white.border {
+    padding: 16px;
+  }
 }
 
 .auth-shell[data-theme="dark"] .auth-form-card {

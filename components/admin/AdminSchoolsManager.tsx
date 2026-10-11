@@ -273,7 +273,7 @@ export function AdminSchoolsManager() {
                 </h3>
 
                 <p className="text-xs text-slate-500 font-light">
-                  {school.district} • {school.province} {school.registrationNumber && `(${school.registrationNumber})`}
+                  {school.district} • {school.province}
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 text-xs text-slate-700 font-mono">
@@ -420,7 +420,7 @@ export function AdminSchoolsManager() {
         const school = schools.find((entry) => entry.id === approvalSchoolId);
         if (!school) return null;
         return (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="presentation">
+          <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/50 p-4" role="presentation">
             <section
               role="dialog"
               aria-modal="true"

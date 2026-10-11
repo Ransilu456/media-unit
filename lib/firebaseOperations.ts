@@ -4,8 +4,8 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, deleteUser,
 import { collection, doc, getDoc, onSnapshot, setDoc, updateDoc, deleteDoc, deleteField, getDocs, limit, query, where, writeBatch, } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { isFirebaseConnectionError, reportFirestoreError, withFirestoreErrorReporting } from './firestoreErrors';
-import type {  Competition,  RegisteredSchool,  Submission,  AuthSession,  NewSubmissionInput, } from './types';
-import { calculateAge } from './validation';
+import type { Competition, RegisteredSchool, Submission, AuthSession, NewSubmissionInput, } from './types';
+import { calculateAge, validateSchoolRegistration } from './validation';
 
 const COLLECTIONS = {
   competitions: 'competitions',
@@ -48,49 +48,50 @@ function generateBadgeCode(province: string): string {
   return `AGR-${code}-${rand}`;
 }
 
-export async function getFirebaseSession(
-  user: FirebaseUser | null = auth.currentUser
-): Promise<AuthSession> {
+export async function getFirebaseSession(user: FirebaseUser | null = auth.currentUser): Promise<AuthSession> {
+
   if (!user) return { type: 'guest' };
 
   const adminResponse = await fetch('/api/auth/session', { cache: 'no-store' });
+
   if (!adminResponse.ok) {
     throw new Error('Unable to verify the website admin session.');
   }
+
   const adminResult = await adminResponse.json() as {
     success: boolean;
     data?: { type?: string; adminEmail?: string };
   };
-  if (
-    adminResult.success &&
-    adminResult.data?.type === 'admin' &&
-    user.email?.trim().toLowerCase() === adminResult.data.adminEmail
-  ) {
+
+  if (adminResult.success && adminResult.data?.type === 'admin' && user.email?.trim().toLowerCase() === adminResult.data.adminEmail) {
     return { type: 'admin' };
   }
 
   const schoolSnapshot = await withFirestoreErrorReporting(() =>
     getDoc(doc(db, COLLECTIONS.schools, user.uid))
   );
+
   if (!schoolSnapshot.exists()) return { type: 'guest' };
 
   const school = schoolSnapshot.data() as RegisteredSchool;
+
   if (school.status !== 'active') return { type: 'guest' };
+
   const safeSchool = { ...school };
   delete safeSchool.password;
+
   return { type: 'school', school: safeSchool as RegisteredSchool };
 }
 
-export async function firebaseLoginSchool(
-  email: string,
-  pass: string
-): Promise<RegisteredSchool | null> {
+export async function firebaseLoginSchool(email: string, pass: string): Promise<RegisteredSchool | null> {
+
   const cleanEmail = email.trim().toLowerCase();
 
   const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass).catch((error: unknown) => {
     const code = (error as { code?: string }).code;
+
     if (isFirebaseConnectionError(error)) {
-      throw new Error('Unable to connect to Firebase. Check your internet connection and try signing in again.');
+      throw new Error('Unable to connect to the server. Check your internet connection and try signing in again.');
     }
     if (code === 'auth/too-many-requests') {
       throw new Error('Too many failed login attempts. Please wait a few minutes and retry.');
@@ -113,29 +114,37 @@ export async function firebaseLoginSchool(
       getDoc(doc(db, COLLECTIONS.schools, cred.user.uid))
     );
   } catch (error) {
+
     await signOut(auth).catch(() => undefined);
     if (isFirebaseConnectionError(error)) {
-      throw new Error('Unable to connect to Firebase. Check your internet connection and retry.');
+      throw new Error('Unable to connect to the server. Check your internet connection and retry.');
     }
-    throw new Error('Unable to read your school profile from Firestore. Check your connection and Firestore rules.');
+    throw new Error('Unable to read your school profile from database. Check your connection.');
+
   }
+
   if (!schoolSnapshot.exists()) {
     await signOut(auth).catch(() => undefined);
-    throw new Error('Your Firebase account has no school profile. Complete school registration or contact the administrator.');
+    throw new Error('Your account has no school profile. Complete school registration or contact the administrator.');
   }
+
   const school = schoolSnapshot.data() as RegisteredSchool;
+
   if (school.status === 'pending') {
     await signOut(auth).catch(() => undefined);
     throw new Error('Your school registration is pending review by the Agradhi administrator.');
   }
+
   if (school.status === 'suspended') {
     await signOut(auth).catch(() => undefined);
     throw new Error('Your school account is suspended. Contact the Agradhi administrator.');
   }
+
   if (school.status === 'banned') {
     await signOut(auth).catch(() => undefined);
     throw new Error('Your school account is banned. Contact the Agradhi administrator.');
   }
+
   if (school.status !== 'active') {
     await signOut(auth).catch(() => undefined);
     throw new Error('Your school account is not active yet. Contact the administrator.');
@@ -145,213 +154,230 @@ export async function firebaseLoginSchool(
   return safeSchool as RegisteredSchool;
 }
 
-  export async function firebaseLoginAdmin(
-    email: string,
-    pass: string
-  ): Promise<boolean> {
-    const cleanEmail = email.trim().toLowerCase();
+export async function firebaseLoginAdmin(email: string, pass: string): Promise<boolean> {
 
-    const response = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, password: pass }),
-    });
-    const result = await response.json() as { success: boolean; error?: string };
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Invalid admin credentials.');
-    }
+  const cleanEmail = email.trim().toLowerCase();
 
-    try {
-      const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
-      if (cred.user.email?.trim().toLowerCase() !== cleanEmail) {
-        throw new Error('The Firebase Authentication account does not match the admin email.');
-      }
-    } catch (err: unknown) {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      const code = (err as { code?: string }).code ?? '';
-      if (isFirebaseConnectionError(err)) {
-        throw new Error('Unable to connect to Firebase. Check your internet connection and try signing in again.');
-      }
-      if (code === 'auth/too-many-requests') {
-        throw new Error('Too many login attempts. Please wait a few minutes and try again.');
-      }
-      if (code === 'auth/operation-not-allowed') {
-        throw new Error('Email and password sign-in is not enabled for this Firebase project.');
-      }
-      if (code.startsWith('auth/')) {
-        throw new Error('Create this admin email and password in Firebase Authentication, then try again.');
-      }
-      throw err;
-    }
-    return true;
+  const response = await fetch('/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: cleanEmail, password: pass }),
+  });
+
+  const result = await response.json() as { success: boolean; error?: string };
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.error || 'Invalid admin credentials.');
   }
 
-  export async function firebaseRegisterSchool(
-    data: Omit<RegisteredSchool, 'id' | 'registeredAt' | 'badgeCode' | 'status'>
-  ): Promise<RegisteredSchool> {
-    if (!data.password || data.password.length < 12) {
-      throw new Error('Password must be at least 12 characters.');
+  try {
+    const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+
+    if (cred.user.email?.trim().toLowerCase() !== cleanEmail) {
+      throw new Error('The Firebase Authentication account does not match the admin email.');
     }
 
-    let cred;
-    try {
-      cred = await createUserWithEmailAndPassword(auth, data.email.trim().toLowerCase(), data.password);
-    } catch (err: unknown) {
-      const authError = err as { code?: string; message?: string };
-      if (isFirebaseConnectionError(err)) {
-        throw new Error('Unable to connect to Firebase. Check your internet connection and try registering again.');
-      }
-      if (authError.code === 'auth/email-already-in-use') {
-        throw new Error('A school delegation with this email is already registered. Please sign in directly.');
-      }
-      if (authError.code === 'auth/weak-password') {
-        throw new Error('Password must be at least 12 characters.');
-      }
-      if (authError.code === 'auth/invalid-email') {
-        throw new Error('Please enter a valid email address.');
-      }
-      throw new Error(authError.message || 'Failed to create school account in Firebase Auth.');
+  } catch (err: unknown) {
+
+    await fetch('/api/auth/logout', { method: 'POST' });
+
+    const code = (err as { code?: string }).code ?? '';
+
+    if (isFirebaseConnectionError(err)) {
+      throw new Error('Unable to connect to the server. Check your internet connection and try signing in again.');
     }
-
-    const badgeCode = generateBadgeCode(data.province);
-    const safeData = { ...data };
-    delete safeData.password;
-    safeData.email = safeData.email.trim().toLowerCase();
-
-    const newSchool: RegisteredSchool = {
-      ...safeData,
-      id: cred.user.uid,
-      status: 'pending',
-      registeredAt: new Date().toISOString(),
-      badgeCode,
-    };
-
-    try {
-      await withFirestoreErrorReporting(() =>
-        setDoc(doc(db, COLLECTIONS.schools, cred.user.uid), newSchool)
-      );
-    } catch (error) {
-      try {
-        await deleteUser(cred.user);
-      } catch (cleanupError) {
-        console.error('[school registration cleanup]', cleanupError);
-      }
-      if ((error as { code?: string })?.code === 'resource-exhausted') throw error;
-      if (isFirebaseConnectionError(error)) {
-        throw new Error('Unable to connect to Firebase. Check your internet connection and retry registration.');
-      }
-      throw new Error('The school profile could not be saved to Firestore. Please retry registration.');
+    if (code === 'auth/too-many-requests') {
+      throw new Error('Too many login attempts. Please wait a few minutes and try again.');
     }
-
-    // Notify Admin Console of registration
-    await firebaseCreateNotification({
-      target: 'admin',
-      schoolId: cred.user.uid,
-      kind: 'registration',
-      title: 'New School Registration',
-      message: `${newSchool.name} (${newSchool.district}) has registered and is awaiting admin review.`,
-      createdAt: Date.now(),
-      read: false,
-    });
-
-    await signOut(auth);
-    return newSchool;
+    if (code === 'auth/operation-not-allowed') {
+      throw new Error('Email and password sign-in is not enabled for this Firebase project.');
+    }
+    if (code.startsWith('auth/')) {
+      throw new Error('Create this admin email and password in database for Authentication, then try again.');
+    }
+    throw err;
   }
 
-  export async function firebaseRequestEntryReplacement(
-    submission: Submission,
-    schoolName: string,
-    reason: string
-  ): Promise<string> {
-    const cleanReason = reason.trim();
-    if (!cleanReason || cleanReason.length > 500) {
-      throw new Error('The removal reason must contain 1 to 500 characters.');
-    }
-    const existingRequests = await withFirestoreErrorReporting(() =>
-      getDocs(query(
-        collection(db, COLLECTIONS.notifications),
-        where('schoolId', '==', submission.schoolId)
-      ))
-    );
-    if (existingRequests.docs.some((item) => {
-      const data = item.data() as AppNotification;
-      return data.kind === 'entry_replacement_request'
-        && data.submissionId === submission.id
-        && data.resolved !== true;
-    })) {
-      throw new Error('A replacement request for this entry is already awaiting review.');
-    }
+  return true;
+}
 
-    const requestId = `replacement_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const request: AppNotification = {
-      id: requestId,
-      target: 'admin',
-      schoolId: submission.schoolId,
-      submissionId: submission.id,
-      competitionId: submission.competitionId,
-      kind: 'entry_replacement_request',
-      title: 'Entry removal / replacement requested',
-      message: `${schoolName} requests removal of ${submission.studentName}'s entry “${submission.entryTitle}” from ${submission.competitionTitle}. Reason: ${cleanReason}`,
-      createdAt: Date.now(),
-      read: false,
-      resolved: false,
-    };
+export async function firebaseRegisterSchool( data: Omit<RegisteredSchool, 'id' | 'registeredAt' | 'badgeCode' | 'status'> ): Promise<RegisteredSchool> {
+ 
+  if (!data.password) throw new Error('Password is required.');
+  const passwordError = validateSchoolRegistration(data).password;
+  if (passwordError) throw new Error(passwordError);
+
+  let cred;
+  try {
+
+    cred = await createUserWithEmailAndPassword(auth, data.email.trim().toLowerCase(), data.password);
+
+  } catch (err: unknown) {
+    
+    const authError = err as { code?: string; message?: string };
+
+    if (isFirebaseConnectionError(err)) {
+      throw new Error('Unable to connect to the server. Check your internet connection and try registering again.');
+    }
+    if (authError.code === 'auth/email-already-in-use') {
+      throw new Error('A school delegation with this email is already registered. Please sign in directly.');
+    }
+    if (authError.code === 'auth/weak-password') {
+      throw new Error('Password must be at least 6 characters.');
+    }
+    if (authError.code === 'auth/invalid-email') {
+      throw new Error('Please enter a valid email address.');
+    }
+    throw new Error(authError.message || 'Failed to create school account in server.');
+
+  }
+
+  const badgeCode = generateBadgeCode(data.province);
+  const safeData = { ...data };
+  delete safeData.password;
+  safeData.email = safeData.email.trim().toLowerCase();
+
+  const newSchool: RegisteredSchool = {
+    ...safeData,
+    id: cred.user.uid,
+    status: 'pending',
+    registeredAt: new Date().toISOString(),
+    badgeCode,
+  };
+
+  try {
     await withFirestoreErrorReporting(() =>
-      setDoc(doc(db, COLLECTIONS.notifications, requestId), request)
+      setDoc(doc(db, COLLECTIONS.schools, cred.user.uid), newSchool)
     );
-    return requestId;
+  } catch (error) {
+    try {
+      await deleteUser(cred.user);
+
+    } catch (cleanupError) {
+      console.error('[school registration cleanup]', cleanupError);
+    }
+
+    if ((error as { code?: string })?.code === 'resource-exhausted') throw error;
+
+    if (isFirebaseConnectionError(error)) {
+      throw new Error('Unable to connect to the server. Check your internet connection and retry registration.');
+    }
+
+    throw new Error('The school profile could not be saved to Firestore. Please retry registration.');
+
   }
 
-  export async function firebaseRemoveSubmission(submissionId: string): Promise<void> {
-    const relatedRequests = await withFirestoreErrorReporting(() =>
-      getDocs(query(
-        collection(db, COLLECTIONS.notifications),
-        where('submissionId', '==', submissionId)
-      ))
-    );
-    const batch = writeBatch(db);
-    batch.delete(doc(db, COLLECTIONS.submissions, submissionId));
-    relatedRequests.docs.forEach((request) => {
-      const data = request.data() as AppNotification;
-      if (data.kind === 'entry_replacement_request' && data.resolved !== true) {
-        batch.update(request.ref, {
-          resolved: true,
-          read: true,
-          message: 'The administrator removed the entry. Your competition slot is open for a replacement student entry.',
-        });
-      }
-    });
-    await withFirestoreErrorReporting(() => batch.commit());
+  // Notify Admin Console of registration
+  await firebaseCreateNotification({
+    target: 'admin',
+    schoolId: cred.user.uid,
+    kind: 'registration',
+    title: 'New School Registration',
+    message: `${newSchool.name} (${newSchool.district}) has registered and is awaiting admin review.`,
+    createdAt: Date.now(),
+    read: false,
+  });
+
+  return newSchool;
+}
+
+export async function firebaseRequestEntryReplacement( submission: Submission, schoolName: string, reason: string ): Promise<string> {
+  const cleanReason = reason.trim();
+  
+  if (!cleanReason || cleanReason.length > 500) {
+    throw new Error('The removal reason must contain 1 to 500 characters.');
+  }
+  
+  const existingRequests = await withFirestoreErrorReporting(() =>
+    getDocs(query(
+      collection(db, COLLECTIONS.notifications),
+      where('schoolId', '==', submission.schoolId)
+    ))
+  );
+  
+  if (existingRequests.docs.some((item) => {
+    const data = item.data() as AppNotification;
+    return data.kind === 'entry_replacement_request'
+      && data.submissionId === submission.id
+      && data.resolved !== true;
+  })) {
+    throw new Error('A replacement request for this entry is already awaiting review.');
   }
 
-  export async function firebaseResolveReplacementRequest(
-    requestId: string,
-    approved: boolean
-  ): Promise<void> {
-    await withFirestoreErrorReporting(() =>
-      updateDoc(doc(db, COLLECTIONS.notifications, requestId), {
+  const requestId = `replacement_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const request: AppNotification = {
+    id: requestId,
+    target: 'admin',
+    schoolId: submission.schoolId,
+    submissionId: submission.id,
+    competitionId: submission.competitionId,
+    kind: 'entry_replacement_request',
+    title: 'Entry removal / replacement requested',
+    message: `${schoolName} requests removal of ${submission.studentName}'s entry “${submission.entryTitle}” from ${submission.competitionTitle}. Reason: ${cleanReason}`,
+    createdAt: Date.now(),
+    read: false,
+    resolved: false,
+  };
+  
+  await withFirestoreErrorReporting(() =>
+    setDoc(doc(db, COLLECTIONS.notifications, requestId), request)
+  );
+  
+  return requestId;
+}
+
+export async function firebaseRemoveSubmission(submissionId: string): Promise<void> {
+  
+  const relatedRequests = await withFirestoreErrorReporting(() =>
+    getDocs(query(
+      collection(db, COLLECTIONS.notifications),
+      where('submissionId', '==', submissionId)
+    ))
+  );
+  
+  const batch = writeBatch(db);
+  batch.delete(doc(db, COLLECTIONS.submissions, submissionId));
+  
+  relatedRequests.docs.forEach((request) => {
+    const data = request.data() as AppNotification;
+    if (data.kind === 'entry_replacement_request' && data.resolved !== true) {
+      batch.update(request.ref, {
         resolved: true,
         read: true,
-        message: approved
-          ? 'The administrator removed the entry. Your competition slot is open for a replacement student entry.'
-          : 'The administrator reviewed your removal request and kept the submitted entry.',
-      })
-    );
-  }
+        message: 'The administrator removed the entry. Your competition slot is open for a replacement student entry.',
+      });
+    }
+  });
+  
+  await withFirestoreErrorReporting(() => batch.commit());
+}
 
-  export async function firebaseLogout(): Promise<void> {
+export async function firebaseResolveReplacementRequest( requestId: string, approved: boolean ): Promise<void> {
+  await withFirestoreErrorReporting(() =>
+    updateDoc(doc(db, COLLECTIONS.notifications, requestId), {
+      resolved: true,
+      read: true,
+      message: approved
+        ? 'The administrator removed the entry. Your competition slot is open for a replacement student entry.'
+        : 'The administrator reviewed your removal request and kept the submitted entry.',
+    })
+  );
+}
+
+export async function firebaseLogout(): Promise<void> {
+  
   const [signOutResult, cookieResult] = await Promise.allSettled([
     signOut(auth),
     fetch('/api/auth/logout', { method: 'POST' }),
   ]);
+  
   if (cookieResult.status === 'rejected') throw cookieResult.reason;
   if (!cookieResult.value.ok) throw new Error('Unable to end the website session.');
   if (signOutResult.status === 'rejected') throw signOutResult.reason;
+
 }
 
-export async function firebaseAddCompetition(
-  data: Omit<Competition, 'id'>
-): Promise<Competition> {
+export async function firebaseAddCompetition( data: Omit<Competition, 'id'> ): Promise<Competition> {
   const newComp: Competition = {
     ...data,
     id: `comp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -364,10 +390,7 @@ export async function firebaseAddCompetition(
   return newComp;
 }
 
-export async function firebaseUpdateCompetition(
-  id: string,
-  updates: Partial<Competition>
-): Promise<void> {
+export async function firebaseUpdateCompetition( id: string, updates: Partial<Competition> ): Promise<void> {
   await withFirestoreErrorReporting(() =>
     updateDoc(doc(db, COLLECTIONS.competitions, id), updates)
   );
@@ -390,18 +413,28 @@ export async function firebaseDeleteCompetition(id: string): Promise<void> {
   );
 }
 
-export async function firebaseUpdateSchoolStatus(
-  id: string,
-  status: 'active' | 'pending' | 'suspended' | 'banned'
-): Promise<void> {
+export async function firebaseUpdateSchoolStatus( id: string, status: 'active' | 'pending' | 'suspended' | 'banned' ): Promise<void> {
+  const schoolRef = doc(db, COLLECTIONS.schools, id);
+  const currentSchool = await withFirestoreErrorReporting(() => getDoc(schoolRef));
+  const isNewlyActivated = status === 'active' && currentSchool.data()?.status !== 'active';
   await withFirestoreErrorReporting(() =>
-    updateDoc(doc(db, COLLECTIONS.schools, id), { status })
+    updateDoc(schoolRef, { status, registrationNumber: deleteField() })
   );
+
+  if (isNewlyActivated) {
+    await firebaseCreateNotification({
+      target: 'school',
+      schoolId: id,
+      kind: 'update',
+      title: 'School account approved',
+      message: 'Your school account is now active. You can sign in and use the Agradhi school portal.',
+      createdAt: Date.now(),
+      read: false,
+    });
+  }
 }
 
-export async function firebaseSubmitEntry(
-  entry: NewSubmissionInput
-): Promise<Submission> {
+export async function firebaseSubmitEntry( entry: NewSubmissionInput ): Promise<Submission> {
   const newSub: Submission = {
     id: `sub_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     competitionId: entry.competitionId,
@@ -454,17 +487,15 @@ export async function firebaseSubmitEntry(
   return newSub;
 }
 
-export async function firebaseUpdateSubmission(
-  id: string,
-  updates: Partial<Submission>,
-  submissionContext?: { schoolId: string; entryTitle: string },
-  clearScore = false
-): Promise<void> {
+export async function firebaseUpdateSubmission( id: string, updates: Partial<Submission>, submissionContext?: { schoolId: string; entryTitle: string }, clearScore = false ): Promise<void> {
   const safeUpdates: Record<string, unknown> = {};
+  
   Object.entries(updates).forEach(([key, value]) => {
     if (value !== undefined) safeUpdates[key] = value;
   });
+  
   if (clearScore) safeUpdates.score = deleteField();
+  
   await withFirestoreErrorReporting(() =>
     updateDoc(doc(db, COLLECTIONS.submissions, id), safeUpdates)
   );
@@ -491,10 +522,7 @@ export async function firebaseUpdateSubmission(
   }
 }
 
-export function subscribeFirebaseCompetitions(
-  onData: (competitions: Competition[], fromCache: boolean) => void,
-  onError: (error: Error) => void
-): () => void {
+export function subscribeFirebaseCompetitions( onData: (competitions: Competition[], fromCache: boolean) => void, onError: (error: Error) => void ): () => void {
   return onSnapshot(
     collection(db, COLLECTIONS.competitions),
     { includeMetadataChanges: true },
@@ -509,11 +537,7 @@ export function subscribeFirebaseCompetitions(
   );
 }
 
-export function subscribeFirebaseSchoolStatus(
-  schoolId: string,
-  onStatus: (status: RegisteredSchool['status'] | null, fromCache: boolean) => void,
-  onError: (error: Error) => void
-): () => void {
+export function subscribeFirebaseSchoolStatus( schoolId: string, onStatus: (status: RegisteredSchool['status'] | null, fromCache: boolean) => void, onError: (error: Error) => void ): () => void {
   return onSnapshot(
     doc(db, COLLECTIONS.schools, schoolId),
     { includeMetadataChanges: true },
@@ -528,10 +552,7 @@ export function subscribeFirebaseSchoolStatus(
   );
 }
 
-export function subscribeFirebaseSchools(
-  onData: (schools: RegisteredSchool[], fromCache: boolean) => void,
-  onError: (error: Error) => void
-): () => void {
+export function subscribeFirebaseSchools( onData: (schools: RegisteredSchool[], fromCache: boolean) => void, onError: (error: Error) => void ): () => void {
   return onSnapshot(
     collection(db, COLLECTIONS.schools),
     { includeMetadataChanges: true },
@@ -546,11 +567,7 @@ export function subscribeFirebaseSchools(
   );
 }
 
-export function subscribeFirebaseSubmissions(
-  schoolId: string | undefined,
-  onData: (submissions: Submission[], fromCache: boolean) => void,
-  onError: (error: Error) => void
-): () => void {
+export function subscribeFirebaseSubmissions( schoolId: string | undefined, onData: (submissions: Submission[], fromCache: boolean) => void, onError: (error: Error) => void ): () => void {
   const submissions = collection(db, COLLECTIONS.submissions);
   const submissionsQuery = schoolId
     ? query(submissions, where('schoolId', '==', schoolId))
@@ -572,9 +589,7 @@ export function subscribeFirebaseSubmissions(
   );
 }
 
-export async function firebaseCreateNotification(
-  notification: Omit<AppNotification, 'id'> & { id?: string }
-): Promise<void> {
+export async function firebaseCreateNotification( notification: Omit<AppNotification, 'id'> & { id?: string } ): Promise<void> {
   const notifId = notification.id || `notif_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const docData: AppNotification = {
     ...notification,
@@ -588,6 +603,27 @@ export async function firebaseCreateNotification(
     );
   } catch (error) {
     console.warn('[firebase notification write skipped]', error);
+    return;
+  }
+
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    const idToken = await user.getIdToken();
+    const response = await fetch('/api/push/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ notificationId: notifId }),
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => null) as { error?: string } | null;
+      console.warn('[web push delivery skipped]', result?.error || response.status);
+    }
+  } catch (error) {
+    console.warn('[web push delivery skipped]', error);
   }
 }
 
@@ -601,17 +637,14 @@ export async function firebaseMarkNotificationRead(id: string): Promise<void> {
   }
 }
 
-export async function firebaseClearNotifications(
-  target: 'admin' | 'school',
-  schoolId?: string
-): Promise<void> {
+export async function firebaseClearNotifications( target: 'admin' | 'school', schoolId?: string ): Promise<void> {
   try {
     const notifsRef = collection(db, COLLECTIONS.notifications);
     const q = target === 'admin'
       ? query(notifsRef, where('target', '==', 'admin'))
       : schoolId
-      ? query(notifsRef, where('target', '==', 'school'), where('schoolId', '==', schoolId))
-      : null;
+        ? query(notifsRef, where('target', '==', 'school'), where('schoolId', '==', schoolId))
+        : null;
 
     if (!q) return;
     const snap = await getDocs(q);
@@ -624,22 +657,17 @@ export async function firebaseClearNotifications(
   }
 }
 
-export function subscribeFirebaseNotifications(
-  target: 'admin' | 'school',
-  schoolId: string | undefined,
-  onData: (notifications: AppNotification[]) => void,
-  onError: (error: Error) => void
-): () => void {
+export function subscribeFirebaseNotifications( target: 'admin' | 'school', schoolId: string | undefined, onData: (notifications: AppNotification[]) => void, onError: (error: Error) => void ): () => void {
   const notifsRef = collection(db, COLLECTIONS.notifications);
   const notifsQuery = target === 'admin'
     ? query(notifsRef, where('target', '==', 'admin'))
     : schoolId
-    ? query(notifsRef, where('schoolId', '==', schoolId))
-    : null;
+      ? query(notifsRef, where('schoolId', '==', schoolId))
+      : null;
 
   if (!notifsQuery) {
     onData([]);
-    return () => {};
+    return () => { };
   }
 
   return onSnapshot(

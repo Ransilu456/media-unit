@@ -19,6 +19,11 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
   const [fading, setFading] = useState(false);
 
   const isTestRoute = pathname.startsWith('/test') || forceShow;
+  const isAuthOrAdmin =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/dashboard');
 
   const dismissSplash = useCallback(() => {
     setFading(true);
@@ -40,14 +45,7 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
   }, [isTestRoute, onFinish]);
 
   useEffect(() => {
-    const isAuthOrAdmin =
-      pathname.startsWith('/login') ||
-      pathname.startsWith('/register') ||
-      pathname.startsWith('/admin') ||
-      pathname.startsWith('/dashboard');
-
     if (!forceShow && isAuthOrAdmin) {
-      setDismissed(true);
       document.documentElement.classList.add('no-splash');
       document.documentElement.classList.remove('splash-active');
       return;
@@ -57,7 +55,6 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
       if (!forceShow && !isAuthOrAdmin) {
         const alreadyShown = window.sessionStorage.getItem(SPLASH_SESSION_KEY);
         if (alreadyShown) {
-          setDismissed(true);
           document.documentElement.classList.add('no-splash');
           document.documentElement.classList.remove('splash-active');
           return;
@@ -66,7 +63,6 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
         const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
         if (mediaQuery.matches) {
           window.sessionStorage.setItem(SPLASH_SESSION_KEY, 'true');
-          setDismissed(true);
           document.documentElement.classList.add('no-splash');
           document.documentElement.classList.remove('splash-active');
           return;
@@ -77,7 +73,6 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
       document.documentElement.classList.remove('no-splash');
       document.documentElement.classList.add('splash-active');
 
-      // Pre-warm essential routes & images
       try {
         router.prefetch('/competitions');
         router.prefetch('/rules');
@@ -109,11 +104,12 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
         clearTimeout(dismissTimer);
       };
     } catch {
-      setDismissed(true);
+      document.documentElement.classList.add('no-splash');
+      document.documentElement.classList.remove('splash-active');
     }
-  }, [pathname, forceShow, router, isTestRoute, onFinish]);
+  }, [pathname, forceShow, router, isAuthOrAdmin, isTestRoute, onFinish]);
 
-  if (dismissed && !forceShow) return null;
+  if ((dismissed || isAuthOrAdmin) && !forceShow) return null;
 
   return (
     <div
@@ -122,15 +118,13 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
       aria-label="Welcome to Agradhi Media Unit"
       aria-live="polite"
       onClick={dismissSplash}
-      className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-slate-950 text-white transition-opacity duration-300 ease-out select-none cursor-pointer ${
+      className={`fixed inset-0 z-99999 flex flex-col items-center justify-center bg-slate-950 text-white transition-opacity duration-300 ease-out select-none cursor-pointer ${
         fading ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
-      {/* Subtle ambient amber backdrop glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-600/15 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-amber-600/15 via-transparent to-transparent pointer-events-none" />
 
       <div className="relative flex flex-col items-center text-center px-6">
-        {/* Crest */}
         <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white/5 p-3.5 backdrop-blur-md border border-white/10 shadow-2xl">
           <Image
             src="/Agradhi.png"
@@ -142,7 +136,6 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
           />
         </div>
 
-        {/* Clean typography */}
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-serif">
           Agradhi Media Unit
         </h1>
@@ -150,9 +143,8 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
           Saranath College
         </p>
 
-        {/* Sleek minimal loader bar */}
         <div className="mt-6 w-36 h-1 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-full bg-gradient-to-r from-amber-500 to-amber-300 animate-[progress_1s_ease-out_forwards]" />
+          <div className="h-full w-full bg-linear-to-r from-amber-500 to-amber-300 animate-[progress_1s_ease-out_forwards]" />
         </div>
       </div>
     </div>

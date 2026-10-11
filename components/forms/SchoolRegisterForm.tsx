@@ -3,23 +3,14 @@
 import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
-import { SRI_LANKA_PROVINCES } from '@/lib/constants';
+import { MEDIA_UNIT_INFO, SRI_LANKA_PROVINCES } from '@/lib/constants';
 import { validateSchoolRegistration } from '@/lib/validation';
-import {
-  Building2,
-  User,
-  KeyRound,
-  CheckCircle2,
-  AlertCircle,
-  ChevronRight,
-  ChevronLeft,
-  Info,
-  Eye,
-  EyeOff,
-  ShieldCheck,
-  Check,
-} from 'lucide-react';
+import { auth } from '@/lib/firebase';
+import { requestDeviceNotificationPermission } from '@/lib/browserNotifications';
+import { signOut } from 'firebase/auth';
+import { Building2, User, KeyRound, CheckCircle2, AlertCircle, ChevronRight, ChevronLeft, Info, Eye, EyeOff, ShieldCheck, Check, Mail } from 'lucide-react';
 
 const PROVINCE_DISTRICTS: Record<string, string[]> = {
   'Western Province': ['Colombo', 'Gampaha', 'Kalutara'],
@@ -44,21 +35,22 @@ const inputCls =
 const labelCls = 'block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5';
 
 export function SchoolRegisterForm() {
+  const router = useRouter();
   const { registerSchool } = useMediaStore();
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<'success' | 'error' | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pushPermission, setPushPermission] = useState<'granted' | 'denied' | 'default' | 'unsupported' | null>(null);
+  const [pushSetupLoading, setPushSetupLoading] = useState(false);
 
   const [form, setForm] = useState({
     schoolName: '',
     province: SRI_LANKA_PROVINCES[0],
     district: PROVINCE_DISTRICTS[SRI_LANKA_PROVINCES[0]]?.[0] || 'Colombo',
-    registrationNumber: '',
     teacherName: '',
     teacherPhone: '',
-    teacherAddress: '',
     presidentName: '',
     presidentPhone: '',
     email: '',
@@ -69,6 +61,26 @@ export function SchoolRegisterForm() {
   const availableDistricts = useMemo(() => {
     return PROVINCE_DISTRICTS[form.province] || [];
   }, [form.province]);
+  const passwordRequirements = [
+    { label: 'At least 6 characters', met: form.password.length >= 6 },
+    { label: 'An uppercase and a lowercase letter', met: /[A-Z]/.test(form.password) && /[a-z]/.test(form.password) },
+    { label: 'At least one number', met: /\d/.test(form.password) },
+    { label: 'At least one symbol', met: /[^A-Za-z0-9]/.test(form.password) },
+  ];
+  const passwordStrength = passwordRequirements.filter((requirement) => requirement.met).length;
+
+  const handleEnableApprovalAlerts = async () => {
+    setPushSetupLoading(true);
+    const permission = await requestDeviceNotificationPermission();
+    setPushPermission(permission);
+    setPushSetupLoading(false);
+    await signOut(auth).catch(() => undefined);
+  };
+
+  const handleContinueToSignIn = async () => {
+    await signOut(auth).catch(() => undefined);
+    router.push('/login');
+  };
 
   const handleProvinceChange = (newProvince: string) => {
     const districts = PROVINCE_DISTRICTS[newProvince] || [];
@@ -83,7 +95,6 @@ export function SchoolRegisterForm() {
 
   const registrationData = () => ({
     name: form.schoolName.trim(),
-    registrationNumber: form.registrationNumber.trim(),
     province: form.province,
     district: form.district.trim(),
     teacherInCharge: form.teacherName.trim(),
@@ -138,13 +149,121 @@ export function SchoolRegisterForm() {
     setLoading(true);
     try {
       await registerSchool(registrationData());
-      setSuccess(true);
+      setSubmissionResult('success');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed. Please check your data.');
+      setSubmissionResult('error');
     } finally {
       setLoading(false);
     }
   };
+
+  if (submissionResult) {
+    const registrationSucceeded = submissionResult === 'success';
+
+    return (
+      <div className="w-full max-w-xl mx-auto">
+        <section
+          aria-live="polite"
+          className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8"
+          role={registrationSucceeded ? 'status' : 'alert'}
+        >
+          <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl ${registrationSucceeded ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+            {registrationSucceeded ? <CheckCircle2 size={28} /> : <AlertCircle size={28} />}
+          </div>
+          <p className={`text-xs font-bold uppercase tracking-wider ${registrationSucceeded ? 'text-emerald-700' : 'text-rose-700'}`}>
+            {registrationSucceeded ? 'Registration submitted' : 'Registration not completed'}
+          </p>
+          <h1 className="mt-2 text-2xl font-extrabold text-slate-900">
+            {registrationSucceeded ? 'Your school is awaiting approval' : 'We could not complete registration'}
+          </h1>
+
+          {registrationSucceeded ? (
+            <>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
+                The Agradhi administrator will review your school details, usually within 24 hours.
+                You can sign in with your registered email and password after your school is approved.
+              </p>
+              <p className="mt-4 text-sm text-slate-600">
+                If you have not received an update after 24 hours, contact{' '}
+                <a className="font-semibold text-slate-900 underline" href={`mailto:${MEDIA_UNIT_INFO.email}`}>
+                  {MEDIA_UNIT_INFO.email}
+                </a>
+                .
+              </p>
+              <div className="mx-auto mt-6 max-w-md rounded-xl border border-sky-200 bg-sky-50/70 p-4 text-left">
+                <h2 className="text-sm font-bold text-slate-900">Get an approval alert</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Enable a notification on this device so we can let you know when your school is approved, even if this site is closed.
+                </p>
+                {pushPermission === null ? (
+                  <button
+                    type="button"
+                    onClick={handleEnableApprovalAlerts}
+                    disabled={pushSetupLoading}
+                    className="mt-3 rounded-lg bg-sky-700 px-4 py-2 text-xs font-bold text-white hover:bg-sky-800 disabled:opacity-60"
+                  >
+                    {pushSetupLoading ? 'Setting up alerts...' : 'Enable approval alert'}
+                  </button>
+                ) : (
+                  <p className="mt-3 text-xs font-semibold text-emerald-800">Approval alerts are enabled on this device.</p>
+                )}
+                {pushPermission === 'denied' && (
+                  <p className="mt-2 text-xs text-rose-800">Notifications are blocked in your browser settings.</p>
+                )}
+                {pushPermission === 'default' && (
+                  <p className="mt-2 text-xs text-amber-800">Push setup was not completed. You can try again from the school portal after signing in.</p>
+                )}
+                {pushPermission === 'unsupported' && (
+                  <p className="mt-2 text-xs text-slate-600">This browser does not support device notifications.</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleContinueToSignIn}
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800"
+              >
+                Continue to sign in
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
+                Your form details are still here. Review the message below, then retry or sign in if this email is already registered.
+              </p>
+              <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-left text-sm leading-6 text-rose-900">
+                {error}
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmissionResult(null);
+                    setError(null);
+                  }}
+                  className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800"
+                >
+                  Review and try again
+                </button>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  Go to sign in
+                </Link>
+              </div>
+              <p className="mt-5 flex items-center justify-center gap-2 text-xs text-slate-500">
+                <Mail size={14} />
+                <a className="underline" href={`mailto:${MEDIA_UNIT_INFO.email}`}>
+                  {MEDIA_UNIT_INFO.email}
+                </a>
+              </p>
+            </>
+          )}
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-xl mx-auto auth-register-form">
@@ -211,16 +330,6 @@ export function SchoolRegisterForm() {
           <div className="flex items-start gap-2.5 p-3.5 mb-5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs animate-in fade-in-50">
             <AlertCircle size={15} className="shrink-0 mt-0.5 text-red-600" />
             <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="flex items-center gap-2.5 p-4 mb-5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold animate-in fade-in-50">
-            <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
-            <span>
-              Registration received. Your account is pending while the Agradhi administrator reviews your school details.
-              You can sign in and submit entries after your account is approved.
-            </span>
           </div>
         )}
 
@@ -378,6 +487,24 @@ export function SchoolRegisterForm() {
                 placeholder="12 or more characters"
                 className={inputCls}
               />
+              <div className="mt-2" aria-live="polite">
+                <div className="flex gap-1" aria-label={`Password strength ${passwordStrength} of 4`}>
+                  {passwordRequirements.map((requirement, index) => (
+                    <span
+                      key={requirement.label}
+                      className={`h-1.5 flex-1 rounded-full ${index < passwordStrength ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                    />
+                  ))}
+                </div>
+                <ul className="mt-2 grid grid-cols-1 gap-1 text-[11px] text-slate-500 sm:grid-cols-2">
+                  {passwordRequirements.map((requirement) => (
+                    <li key={requirement.label} className={`flex items-center gap-1.5 ${requirement.met ? 'text-emerald-700' : ''}`}>
+                      <Check size={12} className={requirement.met ? '' : 'text-slate-300'} />
+                      {requirement.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
             <div>
@@ -428,7 +555,7 @@ export function SchoolRegisterForm() {
           ) : (
             <button
               type="button"
-              disabled={loading || success}
+              disabled={loading}
               onClick={submit}
               className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors shadow-xs disabled:opacity-50"
             >

@@ -22,7 +22,6 @@ export interface DbData {
 const DB_PATH = path.join(process.cwd(), 'data', 'db.json');
 const MAX_DATABASE_BYTES = 10 * 1024 * 1024;
 
-// In-memory cache ensures fast reads and serverless survivability
 let cachedDb: DbData | null = null;
 
 export function readDb(): DbData {
@@ -56,7 +55,6 @@ export function readDb(): DbData {
     console.warn('[database] Note: Could not read local db.json, using memory store:', error);
   }
 
-  // Start empty; production application data lives in Cloud Firestore.
   const fallbackDb: DbData = {
     competitions: [],
     schools: [],
@@ -64,11 +62,9 @@ export function readDb(): DbData {
   };
   cachedDb = fallbackDb;
 
-  // Try to write initial copy to disk if possible
   try {
     writeDb(fallbackDb);
   } catch {
-    // Read-only filesystem is tolerated
   }
 
   return cachedDb;
@@ -78,7 +74,6 @@ export function writeDb(data: DbData): void {
   validateDatabase(data);
   cachedDb = data;
 
-  // 1. Try persisting to local disk (succeeds in local dev & persistent servers)
   try {
     const directory = path.dirname(DB_PATH);
     fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -95,8 +90,6 @@ export function writeDb(data: DbData): void {
       fs.renameSync(temporaryPath, DB_PATH);
     }
   } catch (diskError: unknown) {
-    // In serverless environments like Vercel, the local filesystem outside /tmp is read-only.
-    // We catch EROFS gracefully so requests never crash.
     console.warn('[database] Local disk write skipped or read-only (tolerated in serverless):', (diskError as Error).message);
   }
 

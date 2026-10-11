@@ -1,10 +1,4 @@
-import {
-  createHash,
-  createHmac,
-  randomBytes,
-  scryptSync,
-  timingSafeEqual,
-} from 'node:crypto';
+import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual, } from 'node:crypto';
 import type { RegisteredSchool } from '@/lib/types';
 
 export const SESSION_COOKIE_NAME = 'agradhi_session';
@@ -32,9 +26,7 @@ function getSessionSecret(): string {
   throw new Error('SESSION_SECRET must be set to at least 32 characters.');
 }
 
-export function createSessionToken(
-  session: NewSessionClaims
-): string {
+export function createSessionToken( session: NewSessionClaims ): string {
   const payload = Buffer.from(
     JSON.stringify({ ...session, expiresAt: Date.now() + SESSION_MAX_AGE * 1000 })
   ).toString('base64url');
@@ -44,9 +36,7 @@ export function createSessionToken(
   return `${payload}.${signature}`;
 }
 
-export function stripSchoolPassword(
-  school: RegisteredSchool
-): Omit<RegisteredSchool, 'password'> {
+export function stripSchoolPassword( school: RegisteredSchool ): Omit<RegisteredSchool, 'password'> {
   const safeSchool = { ...school };
   delete safeSchool.password;
   return safeSchool;
@@ -117,10 +107,7 @@ export function hashPassword(password: string): string {
   return `scrypt$${salt}$${hash}`;
 }
 
-export function verifyPassword(
-  password: string,
-  storedPassword: string
-): { valid: boolean; needsRehash: boolean } {
+export function verifyPassword( password: string, storedPassword: string ): { valid: boolean; needsRehash: boolean } {
   const [algorithm, salt, storedHash] = storedPassword.split('$');
   if (algorithm === 'scrypt' && salt && storedHash) {
     try {

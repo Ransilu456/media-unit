@@ -1,22 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
 import { DashboardNotifications } from './DashboardNotifications';
-import {
-  LayoutDashboard,
-  Users,
-  Trophy,
-  FilePlus,
-  LogOut,
-  Menu,
-  X,
-  Globe,
-  Plus,
-} from 'lucide-react';
+import { LayoutDashboard, Users, Trophy, FilePlus, LogOut, Menu, X, Globe, Search, ChevronDown } from 'lucide-react';
 
 export type SchoolTab = 'overview' | 'students' | 'competitions' | 'apply';
 
@@ -24,27 +14,42 @@ interface SchoolPortalLayoutProps {
   children: React.ReactNode;
   activeTab: SchoolTab;
   onTabChange: (tab: SchoolTab) => void;
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
 }
 
-const NAV: {
-  id: SchoolTab;
-  label: string;
-  icon: React.ElementType;
-}[] = [
-  { id: 'overview',     label: 'Overview',         icon: LayoutDashboard },
-  { id: 'students',     label: 'Student Entries',  icon: Users },
-  { id: 'competitions', label: 'All Competitions', icon: Trophy },
-  { id: 'apply',        label: 'Submit New Entry', icon: FilePlus },
+const NAV: { id: SchoolTab; label: string; icon: React.ElementType; description: string; }[] = [
+  { id: 'overview',     label: 'Overview',         icon: LayoutDashboard, description: 'Dashboard summary' },
+  { id: 'students',     label: 'Student Entries',  icon: Users,           description: 'Your submissions' },
+  { id: 'competitions', label: 'All Competitions', icon: Trophy,          description: 'Browse open tracks' },
+  { id: 'apply',        label: 'Submit New Entry', icon: FilePlus,        description: 'Add a new entry' },
 ];
 
-export function SchoolPortalLayout({ children, activeTab, onTabChange }: SchoolPortalLayoutProps) {
+export function SchoolPortalLayout({
+  children,
+  activeTab,
+  onTabChange,
+  searchQuery,
+  onSearchQueryChange,
+}: SchoolPortalLayoutProps) {
   const router = useRouter();
   const { session, logout, submissions, competitions } = useMediaStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const school = session.school;
 
   const mySubmissionsCount = school ? submissions.filter((s) => s.schoolId === school.id).length : 0;
   const openCompsCount = competitions.filter((c) => c.status === 'open').length;
+  const activeNavigation = NAV.find((item) => item.id === activeTab) ?? NAV[0];
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [mobileOpen]);
 
   const handleLogout = async () => {
     try {
@@ -56,60 +61,32 @@ export function SchoolPortalLayout({ children, activeTab, onTabChange }: SchoolP
   };
 
   const renderSidebar = () => (
-    <aside className="w-68 shrink-0 flex flex-col h-full bg-white border-r border-slate-100 select-none">
+    <aside className="flex h-full w-[min(20rem,calc(100vw-1rem))] min-h-0 shrink-0 select-none flex-col bg-white lg:w-[260px] xl:w-[272px]">
       {/* Brand Header */}
-      <div className="shrink-0 flex items-center justify-between px-6 h-20 border-b border-slate-100">
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/80 p-1.5 flex items-center justify-center transition-transform group-hover:scale-105">
-            <Image src="/Agradhi.png" alt="Agradhi Media" width={26} height={26} className="object-contain" />
+      <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-slate-100 px-4 sm:px-5">
+        <Link href="/" className="flex items-center gap-3.5 group min-w-0">
+          <div className="w-10 h-10 rounded-2xl bg-sara-navy p-1.5 flex items-center justify-center transition-transform group-hover:scale-105 shadow-sm shrink-0">
+            <Image src="/Agradhi.png" alt="Agradhi Media" width={30} height={30} className="object-contain" />
           </div>
-          <div>
-            <span className="text-sm font-bold text-slate-900 tracking-tight block">Agradhi Media</span>
-            <span className="text-[11px] text-slate-400 block">School Portal 2026</span>
+          <div className="min-w-0">
+            <span className="text-base font-bold text-slate-900 tracking-tight block truncate">Agradhi</span>
+            <span className="text-[11px] text-slate-400 font-medium block">Media Unit · 2026</span>
           </div>
         </Link>
         <button
           onClick={() => setMobileOpen(false)}
           aria-label="Close navigation"
-          className="lg:hidden text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-50"
+          className="lg:hidden text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-50 shrink-0 ml-2"
         >
           <X size={18} />
         </button>
       </div>
 
-      {/* School Delegation Profile Badge Card */}
-      {school && (
-        <div className="p-4 mx-4 my-4 rounded-2xl bg-slate-50/70 border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-100/70 text-amber-800 font-bold text-xs flex items-center justify-center shrink-0">
-              {school.name.charAt(0)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-xs font-bold text-slate-900 truncate" title={school.name}>
-                {school.name}
-              </h3>
-              <p className="text-[11px] text-slate-500 truncate">
-                {school.district} · {school.province}
-              </p>
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 font-bold">
-                  {school.badgeCode}
-                </span>
-                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  Active
-                </span>
-              </div>
-            </div>
-          </div>
+      <nav aria-label="School dashboard" className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-4">
+        <div className="px-3 pb-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Workspace</p>
+          <p className="mt-1 text-xs text-slate-500">Manage your school activity</p>
         </div>
-      )}
-
-      {/* Nav List */}
-      <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
-        <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          Navigation
-        </p>
 
         {NAV.map((item) => {
           const Icon = item.icon;
@@ -123,123 +100,211 @@ export function SchoolPortalLayout({ children, activeTab, onTabChange }: SchoolP
                 onTabChange(item.id);
                 setMobileOpen(false);
               }}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-xs font-semibold transition-all ${
+              aria-current={active ? 'page' : undefined}
+              title={item.description}
+              className={`relative w-full flex min-h-12 items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-all group ${
                 active
-                  ? 'bg-slate-900 text-white shadow-sm font-bold'
+                  ? isApply
+                    ? 'border-sara-navy bg-sara-navy text-white font-semibold shadow-sm'
+                      : 'border-amber-200 bg-amber-50 text-slate-950 font-semibold shadow-sm'
                   : isApply
-                  ? 'text-amber-800 bg-amber-50/70 border border-amber-200/50 hover:bg-amber-100/70'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+                  ? 'border-transparent bg-sara-navy text-white shadow-[0_10px_22px_rgba(15,23,42,0.15)] hover:bg-slate-800'
+                  : 'border-transparent text-slate-600 hover:border-slate-100 hover:bg-slate-50 hover:text-slate-950'
               }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <Icon size={16} className={active ? 'text-white' : isApply ? 'text-amber-700' : 'text-slate-400'} />
-                <span className="truncate">{item.label}</span>
+              {active && (
+                <span className={`absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full ${isApply ? 'bg-amber-300' : 'bg-amber-500'}`} />
+              )}
+
+              <div className="flex min-w-0 items-center gap-3 pl-1">
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                  active ? 'bg-white text-amber-800 shadow-sm' : isApply ? 'bg-white/10 text-amber-300' : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-700'
+                }`}>
+                <Icon
+                  size={17}
+                  className={`shrink-0 transition-colors ${
+                    active
+                      ? 'text-amber-800'
+                      : isApply
+                      ? 'text-amber-300'
+                      : 'text-slate-400 group-hover:text-slate-600'
+                  }`}
+                />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold">{item.label}</span>
+                  <span className={`mt-0.5 hidden truncate text-[10px] 2xl:block ${active && isApply ? 'text-white/65' : 'text-slate-400'}`}>{item.description}</span>
+                </span>
               </div>
 
-              {item.id === 'students' && mySubmissionsCount > 0 && (
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    active ? 'bg-white text-slate-900' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {mySubmissionsCount}
-                </span>
-              )}
-
-              {item.id === 'competitions' && openCompsCount > 0 && (
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    active ? 'bg-white text-slate-900' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {openCompsCount}
-                </span>
-              )}
+              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                {item.id === 'students' && mySubmissionsCount > 0 && (
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                    active ? 'bg-white text-amber-900' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {mySubmissionsCount}
+                  </span>
+                )}
+                {item.id === 'competitions' && openCompsCount > 0 && (
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                    active ? 'bg-white text-emerald-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                  }`}>
+                    {openCompsCount}
+                  </span>
+                )}
+              </div>
             </button>
           );
         })}
       </nav>
 
-      {/* Bottom Footer Actions */}
-      <div className="shrink-0 border-t border-slate-100 p-4 space-y-1">
+      <div className="shrink-0 border-t border-slate-100 p-3 sm:p-4">
+        {school && (
+          <div className="mb-3 flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sara-navy text-xs font-bold text-amber-300">
+              {school.name.charAt(0).toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[11px] font-bold text-slate-800">{school.name}</span>
+              <span className="mt-0.5 block truncate text-[9px] text-slate-500">{school.district} · {school.status === 'active' ? 'Active' : 'Waiting for approval'}</span>
+            </span>
+            <span className={`h-2 w-2 shrink-0 rounded-full ${school.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          </div>
+        )}
         <Link
           href="/"
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
         >
           <Globe size={15} className="text-slate-400" />
           <span>Public Website</span>
         </Link>
-
         <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors font-medium"
+          type="button"
+          onClick={() => void handleLogout()}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-xs font-medium text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-700"
         >
           <LogOut size={15} className="text-slate-400" />
-          <span>Sign Out</span>
+          <span>Sign out</span>
         </button>
       </div>
     </aside>
   );
 
   return (
-    <div className="h-screen overflow-hidden flex bg-slate-50/60 text-slate-900 font-sans">
-      {/* Mobile Drawer Overlay */}
+    <div className="flex h-dvh min-h-0 overflow-hidden bg-[#f7f7f4] font-sans text-slate-900">
       {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-slate-900/20 z-30 lg:hidden backdrop-blur-xs"
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-30 bg-slate-950/35 backdrop-blur-[2px] lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
-
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex h-full shadow-[2px_0_15px_rgba(0,0,0,0.02)]">{renderSidebar()}</div>
+      <div className="hidden h-full border-r border-slate-200/80 lg:flex">{renderSidebar()}</div>
 
-      {/* Mobile Slide-In Sidebar */}
+      {/* Mobile Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 flex h-full transition-transform duration-300 ease-in-out lg:hidden shadow-xl ${
+        className={`fixed inset-y-0 left-0 z-40 flex h-full transition-transform duration-300 ease-in-out lg:hidden ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {renderSidebar()}
       </div>
 
-      {/* Main Content Viewport */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header Bar */}
-        <header className="shrink-0 bg-white border-b border-slate-100 px-6 sm:px-8 h-20 flex items-center justify-between gap-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Top Bar */}
+        <header className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-3 py-3 shadow-[0_1px_8px_rgba(15,23,42,0.03)] backdrop-blur sm:px-6 sm:py-0 sm:min-h-[72px] xl:px-8">
           <div className="flex items-center gap-3 min-w-0">
             <button
+              type="button"
               onClick={() => setMobileOpen(true)}
+              aria-expanded={mobileOpen}
               className="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-colors"
               aria-label="Open sidebar"
             >
               <Menu size={20} />
             </button>
 
-            <div className="flex items-center gap-2 text-xs sm:text-sm min-w-0">
-              <span className="text-slate-400 hidden sm:inline">School Portal</span>
-              <span className="text-slate-300 hidden sm:inline">/</span>
-              <span className="font-bold text-slate-900 truncate">
-                {NAV.find((n) => n.id === activeTab)?.label}
-              </span>
-            </div>
+            <h1 className="max-w-[42vw] truncate text-sm font-semibold text-slate-700">{activeNavigation.label}</h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <label className="relative hidden md:block w-52 lg:w-72 xl:w-96">
+              <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => onSearchQueryChange(event.target.value)}
+                onFocus={() => onTabChange('students')}
+                placeholder="Search entries..."
+                aria-label="Search student entries"
+                className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-100"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => onTabChange('apply')}
+              className="inline-flex min-h-10 items-center gap-2 rounded-full bg-sara-navy px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 sm:px-5"
+            >
+              <FilePlus size={15} />
+              <span className="hidden min-[420px]:inline">Submit entry</span>
+            </button>
             <DashboardNotifications />
             {school && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="font-mono text-[11px]">{school.badgeCode}</span>
-              </span>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen((open) => !open)}
+                  aria-expanded={profileOpen}
+                  aria-label="Open school profile menu"
+                  className="flex items-center gap-2 rounded-full p-1.5 pr-2 sm:pr-3 transition-colors hover:bg-slate-50"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-200 bg-amber-100 text-sm font-bold text-amber-900">
+                    {school.name.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="hidden max-w-32 text-left md:block">
+                    <span className="block truncate text-xs font-semibold text-slate-800">{school.name}</span>
+                    <span className="block text-[10px] text-slate-400">{school.status === 'active' ? 'Active school' : 'Pending approval'}</span>
+                  </span>
+                  <ChevronDown size={14} className="hidden text-slate-400 sm:block" />
+                </button>
+                {profileOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                    <p className="truncate text-sm font-semibold text-slate-900">{school.name}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500">{school.email}</p>
+                    <p className="mt-3 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+                      Badge <span className="font-mono font-bold text-slate-700">{school.badgeCode}</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleLogout()}
+                      className="mt-3 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-50"
+                    >
+                      <LogOut size={15} />
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
-
-            
           </div>
+          <label className="relative block w-full md:hidden">
+            <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => onSearchQueryChange(event.target.value)}
+              onFocus={() => onTabChange('students')}
+              placeholder="Search student entries"
+              aria-label="Search student entries"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-100"
+            />
+          </label>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 sm:p-10 min-h-0 bg-slate-50/50">
-          <div className="max-w-5xl mx-auto">{children}</div>
+        <main className="min-h-0 flex-1 overflow-y-auto bg-[#f7f7f4] p-3 sm:p-6 xl:p-8">
+          <div className="mx-auto w-full max-w-[1600px]">{children}</div>
         </main>
       </div>
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -30,17 +30,27 @@ const NAV: {
   id: AdminTab;
   label: string;
   icon: React.ElementType;
+  description: string;
 }[] = [
-  { id: 'overview',     label: 'Overview',          icon: LayoutDashboard },
-  { id: 'submissions',  label: 'Submissions Desk',  icon: FileText },
-  { id: 'competitions', label: 'Manage Tracks',     icon: Trophy },
-  { id: 'schools',      label: 'Registered Schools',icon: School },
+  { id: 'overview',     label: 'Overview',           icon: LayoutDashboard, description: 'Dashboard summary' },
+  { id: 'submissions',  label: 'Submissions Desk',   icon: FileText,        description: 'Review entries' },
+  { id: 'competitions', label: 'Manage Tracks',      icon: Trophy,          description: 'Competition settings' },
+  { id: 'schools',      label: 'Registered Schools', icon: School,          description: 'School accounts' },
 ];
 
 export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPortalLayoutProps) {
   const router = useRouter();
   const { logout, submissions, schools } = useMediaStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [mobileOpen]);
 
   const pendingSubmissions = submissions.filter(
     (s) => s.status === 'submitted' || s.status === 'under_review'
@@ -57,49 +67,60 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
   };
 
   const renderSidebar = () => (
-    <aside className="w-68 shrink-0 flex flex-col h-full bg-white border-r border-slate-100 select-none">
+    <aside className="flex h-full w-[min(20rem,calc(100vw-1rem))] min-h-0 shrink-0 select-none flex-col bg-white lg:w-[260px] xl:w-[272px]">
+
       {/* Brand Header */}
-      <div className="shrink-0 flex items-center justify-between px-6 h-20 border-b border-slate-100">
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/80 p-1.5 flex items-center justify-center transition-transform group-hover:scale-105">
+      <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-slate-100 px-4 sm:px-5">
+        <Link href="/" className="flex items-center gap-3 group min-w-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sara-navy p-2 shadow-sm transition-transform group-hover:scale-105">
             <Image src="/Agradhi.png" alt="Agradhi Media" width={26} height={26} className="object-contain" />
           </div>
-          <div>
-            <span className="text-sm font-bold text-slate-900 tracking-tight block">Agradhi Executive</span>
-            <span className="text-[11px] text-slate-400 block">Admin Console 2026</span>
+          <div className="min-w-0">
+            <span className="text-sm font-bold text-slate-900 tracking-tight block truncate">Agradhi Executive</span>
+            <span className="text-[11px] text-slate-400 font-medium block">Admin Console 2026</span>
           </div>
         </Link>
         <button
           onClick={() => setMobileOpen(false)}
           aria-label="Close navigation"
-          className="lg:hidden text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-50"
+          className="lg:hidden text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-50 shrink-0 ml-2"
         >
           <X size={18} />
         </button>
       </div>
 
-      {/* Admin Executive Tag */}
-      <div className="p-4 mx-4 my-4 rounded-2xl bg-slate-50/70 border border-slate-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-100/70 text-amber-800 flex items-center justify-center shrink-0">
-            <ShieldCheck size={18} />
+      {/* Admin Identity Pill Card */}
+      <div className="px-4 pb-1 pt-4">
+        <div className="rounded-2xl bg-sara-navy p-3.5 text-white shadow-sm sm:p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-300/10">
+              <ShieldCheck size={19} className="text-amber-300" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-white truncate">Executive Board</p>
+              <p className="text-[11px] text-white/50 truncate">Saranath College</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h3 className="text-xs font-bold text-slate-900">Executive Board</h3>
-            <p className="text-[11px] text-slate-500 font-mono">Saranath College</p>
+          <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center gap-2 text-[11px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span className="text-white/60 font-medium">Administrator session active</span>
           </div>
         </div>
       </div>
 
-      {/* Nav List */}
-      <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
-        <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          Control Panel
+      {/* Nav List - Matching Screenshot 2026-10-11 061042.png */}
+      <nav aria-label="Admin dashboard" className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-4">
+        <p className="px-3 pb-3 pt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+          Menu
         </p>
 
         {NAV.map((item) => {
           const Icon = item.icon;
           const active = activeTab === item.id;
+          const hasBadge =
+            (item.id === 'submissions' && pendingSubmissions > 0) ||
+            (item.id === 'schools' && pendingSchools > 0);
+          const badgeCount = item.id === 'submissions' ? pendingSubmissions : pendingSchools;
 
           return (
             <button
@@ -108,44 +129,53 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
                 onTabChange(item.id);
                 setMobileOpen(false);
               }}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-xs font-semibold transition-all ${
+              title={item.description}
+              aria-current={active ? 'page' : undefined}
+              className={`relative flex min-h-12 w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-all group ${
                 active
-                  ? 'bg-slate-900 text-white shadow-sm font-bold'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+                  ? 'border-amber-200 bg-amber-50 text-slate-950 font-semibold shadow-sm'
+                  : 'border-transparent text-slate-600 hover:border-slate-100 hover:bg-slate-50 hover:text-slate-950'
               }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <Icon size={16} className={active ? 'text-white' : 'text-slate-400'} />
-                <span className="truncate">{item.label}</span>
+              {active && (
+                <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-amber-500" />
+              )}
+
+              <div className="flex items-center gap-3.5 min-w-0 pl-1">
+                <Icon
+                  size={19}
+                  className={`shrink-0 transition-colors ${
+                    active
+                      ? 'text-amber-800'
+                      : 'text-slate-400 group-hover:text-slate-600'
+                  }`}
+                />
+                <span className="text-sm truncate">
+                  {item.label}
+                </span>
               </div>
 
-              {item.id === 'submissions' && pendingSubmissions > 0 && (
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    active ? 'bg-white text-slate-900' : 'bg-amber-100 text-amber-900'
-                  }`}
-                >
-                  {pendingSubmissions}
-                </span>
-              )}
-              {item.id === 'schools' && pendingSchools > 0 && (
-                <span
-                  aria-label={`${pendingSchools} pending school registrations`}
-                  className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold"
-                >
-                  {pendingSchools > 99 ? '99+' : pendingSchools}
-                </span>
-              )}
+              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                {hasBadge && (
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                    active
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-amber-50 text-amber-800 border border-amber-100'
+                  }`}>
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </span>
+                )}
+              </div>
             </button>
           );
         })}
       </nav>
 
       {/* Bottom Footer Actions */}
-      <div className="shrink-0 border-t border-slate-100 p-4 space-y-1">
+      <div className="shrink-0 space-y-1 border-t border-slate-100 p-3 sm:p-4">
         <Link
           href="/"
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
         >
           <Globe size={15} className="text-slate-400" />
           <span>Public Website</span>
@@ -153,7 +183,7 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors font-medium"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-medium text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-700"
         >
           <LogOut size={15} className="text-slate-400" />
           <span>Sign Out</span>
@@ -163,21 +193,23 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
   );
 
   return (
-    <div className="h-screen overflow-hidden flex bg-slate-50/60 text-slate-900 font-sans">
+    <div className="flex h-dvh min-h-0 overflow-hidden bg-[#f7f7f4] font-sans text-slate-900">
       {/* Mobile Drawer Overlay */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-slate-900/20 z-30 lg:hidden backdrop-blur-xs"
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-30 bg-slate-950/35 backdrop-blur-[2px] lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex h-full shadow-[2px_0_15px_rgba(0,0,0,0.02)]">{renderSidebar()}</div>
+      <div className="hidden h-full border-r border-slate-200/80 lg:flex">{renderSidebar()}</div>
 
       {/* Mobile Slide-In Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 flex h-full transition-transform duration-300 ease-in-out lg:hidden shadow-xl ${
+        className={`fixed inset-y-0 left-0 z-40 flex h-full transition-transform duration-300 ease-in-out lg:hidden ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -185,22 +217,24 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
       </div>
 
       {/* Main Content Viewport */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top Header Bar */}
-        <header className="shrink-0 bg-white border-b border-slate-100 px-6 sm:px-8 h-20 flex items-center justify-between gap-4">
+        <header className="flex min-h-[64px] shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white px-3 shadow-[0_1px_8px_rgba(15,23,42,0.03)] sm:min-h-[72px] sm:px-6 xl:px-8">
           <div className="flex items-center gap-3 min-w-0">
             <button
+              type="button"
               onClick={() => setMobileOpen(true)}
+              aria-expanded={mobileOpen}
               className="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-colors"
               aria-label="Open sidebar"
             >
               <Menu size={20} />
             </button>
 
-            <div className="flex items-center gap-2 text-xs sm:text-sm min-w-0">
-              <span className="text-slate-400 hidden sm:inline">Admin Board</span>
-              <span className="text-slate-300 hidden sm:inline">/</span>
-              <span className="font-bold text-slate-900 truncate">
+            <div className="flex items-center gap-2 text-sm min-w-0">
+              <span className="hidden text-xs text-slate-400 sm:inline">Admin Board</span>
+              <span className="text-slate-200 hidden sm:inline">/</span>
+              <span className="max-w-[55vw] truncate text-sm font-bold text-slate-900 sm:max-w-none">
                 {NAV.find((n) => n.id === activeTab)?.label}
               </span>
             </div>
@@ -208,16 +242,16 @@ export function AdminPortalLayout({ children, activeTab, onTabChange }: AdminPor
 
           <div className="flex items-center gap-3">
             <DashboardNotifications />
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold">
+            <span className="hidden items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 sm:inline-flex">
               <ShieldCheck size={14} className="text-amber-700" />
-              <span>Saranath College</span>
+              Admin
             </span>
           </div>
         </header>
 
         {/* Scrollable Content Workspace */}
-        <main className="flex-1 overflow-y-auto p-6 sm:p-10 min-h-0 bg-slate-50/50">
-          <div className="max-w-5xl mx-auto">{children}</div>
+        <main className="min-h-0 flex-1 overflow-y-auto bg-[#f7f7f4] p-3 sm:p-6 xl:p-8">
+          <div className="mx-auto w-full max-w-[1600px]">{children}</div>
         </main>
       </div>
     </div>

@@ -8,13 +8,15 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const urlToOpen = event.notification.data?.url || '/';
+  const requestedUrl = event.notification.data?.url || '/';
+  const parsedUrl = new URL(requestedUrl, self.location.origin);
+  const urlToOpen = parsedUrl.origin === self.location.origin ? parsedUrl.href : `${self.location.origin}/`;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.focus();
+          return client.navigate(urlToOpen).then((navigatedClient) => (navigatedClient || client).focus());
         }
       }
       if (self.clients.openWindow) {

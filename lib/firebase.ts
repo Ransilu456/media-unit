@@ -19,15 +19,9 @@ export const app: FirebaseApp =
 
 export const firebaseApp: FirebaseApp = app;
 
-// Firebase services
 export const auth: Auth = getAuth(app);
 
-/**
- * Use long-polling instead of gRPC WebSocket streams.
- * Fixes IPv6 / WSA timeout errors on restrictive networks (e.g. ISPs that
- * block Google's gRPC endpoint 2001:4860:4844::/48).
- * initializeFirestore must be called before any getFirestore() call.
- */
+// block gRPC endpoint 2001:4860:4844::/48)
 export const db: Firestore = (() => {
   try {
     return initializeFirestore(app, {
@@ -35,14 +29,12 @@ export const db: Firestore = (() => {
       experimentalAutoDetectLongPolling: false,
     });
   } catch {
-    // Already initialized (hot-reload), fall back to existing instance
     return getFirestore(app);
   }
 })();
 
 export const storage: FirebaseStorage = getStorage(app);
 
-// Lazy analytics — only loaded in the browser
 let _analytics: Analytics | null = null;
 
 export async function getFirebaseAnalytics(): Promise<Analytics | null> {

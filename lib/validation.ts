@@ -48,7 +48,7 @@ const CATEGORIES: readonly CategoryType[] = [
 ];
 const MEDIUMS: readonly MediumType[] = ['Sinhala', 'English', 'None'];
 const ALLOWED_SCHOOL_FIELDS = new Set([
-  'name', 'registrationNumber', 'province', 'district', 'teacherInCharge',
+  'name', 'province', 'district', 'teacherInCharge',
   'teacherPhone', 'mediaPresident', 'presidentPhone', 'email', 'password',
 ]);
 const ALLOWED_SUBMISSION_FIELDS = new Set([
@@ -239,12 +239,22 @@ export function validateSchoolRegistration(value: unknown): ValidationErrors {
     ['presidentPhone', 'President phone', 9, 20],
     ['mediaPresident', 'Media Unit President name', 2, 100],
     ['email', 'Email address', 3, 254],
-    ['password', 'Password', 12, 128],
+    ['password', 'Password', 6, 128],
   ];
 
   for (const [field, label, minimum, maximum] of required) {
     if (!isText(value[field], minimum, maximum)) {
       errors[field] = `${label} must be between ${minimum} and ${maximum} characters.`;
+    }
+  }
+
+  if (typeof value.password === 'string' && value.password.length >= 6) {
+    const passwordHasLowercase = /[a-z]/.test(value.password);
+    const passwordHasUppercase = /[A-Z]/.test(value.password);
+    const passwordHasNumber = /\d/.test(value.password);
+    const passwordHasSymbol = /[^A-Za-z0-9]/.test(value.password);
+    if (!passwordHasLowercase || !passwordHasUppercase || !passwordHasNumber || !passwordHasSymbol) {
+      errors.password = 'Use at least 6 characters with uppercase, lowercase, a number, and a symbol.';
     }
   }
 
@@ -283,7 +293,7 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
     ? competitions.find((item) => item.id === value.competitionId)
     : undefined;
 
-  if (!competition) errors.competitionId = 'Select a valid competition.';
+  if (!competition) errors.competitionId = 'Choose a competition.';
 
   if (value.competitionTitle !== undefined
     && (typeof value.competitionTitle !== 'string' || (competition && value.competitionTitle !== competition.title))) {
@@ -302,10 +312,10 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
     ['schoolId', 'School', 1, 100],
     ['studentName', 'Student name', 2, 100],
     ['studentGrade', 'Student grade', 1, 30],
-    ['studentContact', 'Student contact', 9, 20],
-    ['entryTitle', 'Entry title', 2, 160],
-    ['submissionLink', 'Submission link', 8, 2048],
-    ['synopsis', 'Synopsis', 20, 10000],
+    ['studentContact', 'Contact phone', 9, 20],
+    ['entryTitle', 'Entry name', 2, 160],
+    ['submissionLink', 'Work link', 8, 2048],
+    ['synopsis', 'Entry description', 20, 10000],
   ];
   for (const [field, label, minimum, maximum] of boundedText) {
     if (!isText(value[field], minimum, maximum)) {
@@ -315,7 +325,7 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
 
   if (typeof value.studentGrade === 'string'
     && !/^Grade (?:[6-9]|1[0-3])$/.test(value.studentGrade)) {
-    errors.studentGrade = 'Select a valid grade (Grade 6–13).';
+    errors.studentGrade = 'Choose a grade from 6 to 13.';
   } else if (typeof value.studentGrade === 'string'
     && competition?.ageCategory
     && !competition.ageCategory.grades.includes(value.studentGrade)) {
@@ -327,14 +337,14 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
     errors.studentContact = 'Enter a valid phone number.';
   }
   if (!validDate(value.studentBirthday)) {
-    errors.studentBirthday = 'Enter a valid birthday in YYYY-MM-DD format.';
+    errors.studentBirthday = 'Enter a valid date of birth.';
   } else {
     const age = calculateAge(value.studentBirthday);
     if (age === null || age < 5 || age > 25 || new Date(`${value.studentBirthday}T00:00:00.000Z`) > new Date()) {
-      errors.studentBirthday = 'Student birthday must result in an age between 5 and 25.';
+      errors.studentBirthday = 'The student must be between 5 and 25 years old.';
     } else if (competition?.ageCategory
       && (age < competition.ageCategory.minAge || age > competition.ageCategory.maxAge)) {
-      errors.studentBirthday = `Student is outside the competition age range (${competition.ageCategory.minAge}–${competition.ageCategory.maxAge}).`;
+      errors.studentBirthday = `This competition is for students aged ${competition.ageCategory.minAge} to ${competition.ageCategory.maxAge}.`;
     }
   }
 
@@ -342,17 +352,17 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
     try {
       const url = new URL(value.submissionLink);
       if (!['https:', 'http:'].includes(url.protocol) || !url.hostname) {
-        errors.submissionLink = 'Submission link must be a valid HTTP or HTTPS URL.';
+        errors.submissionLink = 'Enter a valid link that starts with http:// or https://.';
       }
     } catch {
-      errors.submissionLink = 'Submission link must be a valid HTTP or HTTPS URL.';
+      errors.submissionLink = 'Enter a valid link that starts with http:// or https://.';
     }
   }
 
   if (typeof value.synopsis === 'string' && isText(value.synopsis, 20, 10000)) {
     const words = value.synopsis.trim().split(/\s+/);
     if (words.length < 20 || words.length > 1000) {
-      errors.synopsis = 'Synopsis must contain between 20 and 1,000 words.';
+      errors.synopsis = 'Write a description between 20 and 1,000 words.';
     }
   }
 
@@ -454,7 +464,6 @@ function validateStoredSchool(value: unknown, index: number): asserts value is R
 
   assertText(value.id, `${path}.id`, 1, 100);
   assertText(value.name, `${path}.name`, 2, 120);
-  assertText(value.registrationNumber, `${path}.registrationNumber`, 1, 50);
   assertText(value.district, `${path}.district`, 2, 100);
   assertText(value.province, `${path}.province`, 1, 50);
   assertText(value.teacherInCharge, `${path}.teacherInCharge`, 2, 100);

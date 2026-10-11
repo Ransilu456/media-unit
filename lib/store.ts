@@ -30,7 +30,7 @@ import {
   firebaseResolveReplacementRequest,
   type AppNotification,
 } from './firebaseOperations';
-import { sendDeviceNotification, registerServiceWorker } from './browserNotifications';
+import { registerServiceWorker } from './browserNotifications';
 
 const FIRESTORE_CACHE_WAIT_MS = 7000;
 const SESSION_ERROR_WAIT_MS = 4000;
@@ -96,7 +96,6 @@ function useMediaStoreState() {
   const [submissionsRetry, setSubmissionsRetry] = useState(0);
   const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
   const competitionsServerFetchedAt = useRef(0);
-  const knownNotificationIds = useRef<Set<string> | null>(null);
 
   useEffect(() => {
     void registerServiceWorker();
@@ -442,18 +441,6 @@ function useMediaStoreState() {
     const currentUser = auth.currentUser;
     const handleIncomingNotifications = (items: AppNotification[]) => {
       if (!active) return;
-      if (knownNotificationIds.current !== null) {
-        items.forEach((item) => {
-          if (!knownNotificationIds.current!.has(item.id) && !item.read) {
-            void sendDeviceNotification(item.title, {
-              body: item.message,
-              tag: item.id,
-              url: session.type === 'admin' ? '/admin' : '/dashboard',
-            });
-          }
-        });
-      }
-      knownNotificationIds.current = new Set(items.map((i) => i.id));
       setNotifications(items);
     };
 
@@ -470,7 +457,6 @@ function useMediaStoreState() {
         )
       );
     } else {
-      knownNotificationIds.current = null;
       setNotifications([]);
     }
 

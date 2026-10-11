@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, CheckCircle2, ClipboardCheck, FileText, School, Trophy, Radio, Activity } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ClipboardCheck, FileText, School, Trophy, Radio } from 'lucide-react';
 import { useMemo } from 'react';
 import { useMediaStore } from '@/lib/store';
 import type { AdminTab } from '@/components/layout/AdminPortalLayout';
@@ -142,13 +142,13 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
           <button
             type="button"
             onClick={() => onTabChange('schools')}
-            className="group rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/40"
+            className="group rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-amber-300 hover:bg-amber-50/40"
           >
             <span className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <School size={16} className="text-blue-700" /> School accounts
+                <School size={16} className="text-amber-800" /> School accounts
               </span>
-              <ArrowRight size={15} className="text-slate-400 group-hover:text-blue-700" />
+              <ArrowRight size={15} className="text-slate-400 group-hover:text-amber-800" />
             </span>
             <span className="mt-2 block text-xs leading-5 text-slate-600">
               {pendingSchools

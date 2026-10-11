@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { MediaStoreProvider } from "@/lib/store";
 import { FirestoreQuotaGuard } from "@/components/layout/FirestoreQuotaGuard";
+import { FirestoreQuotaNotice } from "@/components/layout/FirestoreQuotaNotice";
 import { MediaSplashScreen } from "@/components/ui/MediaSplashScreen";
 
 export const metadata: Metadata = {
@@ -80,7 +81,9 @@ export default function RootLayout({
         <AuthProvider>
           <MediaStoreProvider>
             <MediaSplashScreen />
-            <FirestoreQuotaGuard>{children}</FirestoreQuotaGuard>
+            <FirestoreQuotaGuard quotaNotice={<FirestoreQuotaNotice />}>
+              {children}
+            </FirestoreQuotaGuard>
           </MediaStoreProvider>
         </AuthProvider>
       </body>

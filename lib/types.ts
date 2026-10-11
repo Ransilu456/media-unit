@@ -55,7 +55,6 @@ export interface Competition {
 export interface RegisteredSchool {
   id: string;
   name: string;
-  registrationNumber: string;
   district: string;
   province: string;
   teacherInCharge: string;
@@ -83,8 +82,8 @@ export interface Submission {
   category: CategoryType;
   studentName: string;
   studentGrade: string;
-  studentBirthday: string; // ISO date string YYYY-MM-DD
-  studentAge: number;     // auto-calculated from birthday
+  studentBirthday: string; //  YYYY-MM-DD
+  studentAge: number;    
   studentContact: string;
   entryTitle: string;
   submissionLink: string;

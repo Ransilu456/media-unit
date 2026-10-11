@@ -31,12 +31,12 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.status == 'pending'
         && request.resource.data.keys().hasAll([
-          'id', 'name', 'registrationNumber', 'province', 'district',
+          'id', 'name', 'province', 'district',
           'teacherInCharge', 'teacherPhone', 'mediaPresident', 'presidentPhone',
           'email', 'status', 'registeredAt', 'badgeCode'
         ])
         && request.resource.data.keys().hasOnly([
-          'id', 'name', 'registrationNumber', 'province', 'district',
+          'id', 'name', 'province', 'district',
           'teacherInCharge', 'teacherPhone', 'mediaPresident', 'presidentPhone',
           'email', 'status', 'registeredAt', 'badgeCode'
         ])

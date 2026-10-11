@@ -1,23 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  AlertTriangle,
-  Bell,
-  CheckCheck,
-  CheckCircle2,
-  Clock3,
-  FileText,
-  School,
-  Smartphone,
-  Trash2,
-  Trophy,
-  X,
-} from 'lucide-react';
+import { AlertTriangle, Bell, CheckCheck, CheckCircle2, Clock3, FileText, School, Smartphone, Trash2, Trophy, X } from 'lucide-react';
 import { useMediaStore, type DashboardNotification } from '@/lib/store';
 import {
-  getDeviceNotificationStatus,
   requestDeviceNotificationPermission,
+  syncExistingDeviceNotifications,
   type DeviceNotificationPermission,
 } from '@/lib/browserNotifications';
 
@@ -144,7 +132,13 @@ export function DashboardNotifications() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setDevicePerm(getDeviceNotificationStatus());
+    let isCurrent = true;
+    void syncExistingDeviceNotifications().then((permission) => {
+      if (isCurrent) setDevicePerm(permission);
+    });
+    return () => {
+      isCurrent = false;
+    };
   }, []);
 
   // Close notification panel when clicking outside or pressing Escape
@@ -203,32 +197,50 @@ export function DashboardNotifications() {
     setIsOpen((open) => !open);
   };
 
+  const enableDeviceNotifications = async () => {
+    setDevicePerm(await requestDeviceNotificationPermission());
+  };
+
   return (
     <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={toggleNotifications}
-        aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
-        aria-expanded={isOpen}
-        className={`relative inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
-          unreadCount > 0
-            ? hasDisqualifiedUnread
-              ? 'border-rose-300 bg-rose-50/50 text-rose-700 hover:bg-rose-100/70'
-              : 'border-amber-300 bg-amber-50/50 text-amber-700 hover:bg-amber-100/70'
-            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-        }`}
-      >
-        <Bell size={18} />
-        {unreadCount > 0 && (
-          <span
-            className={`absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow-xs ${
-              hasDisqualifiedUnread ? 'bg-rose-600 animate-pulse' : 'bg-amber-600'
-            }`}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={toggleNotifications}
+          aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+          aria-expanded={isOpen}
+          className={`relative inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
+            unreadCount > 0
+              ? hasDisqualifiedUnread
+                ? 'border-rose-300 bg-rose-50/50 text-rose-700 hover:bg-rose-100/70'
+                : 'border-amber-300 bg-amber-50/50 text-amber-700 hover:bg-amber-100/70'
+              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+          }`}
+        >
+          <Bell size={18} />
+          {unreadCount > 0 && (
+            <span
+              className={`absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow-xs ${
+                hasDisqualifiedUnread ? 'bg-rose-600 animate-pulse' : 'bg-amber-600'
+              }`}
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </button>
+        {devicePerm === 'default' && (
+          <button
+            type="button"
+            onClick={enableDeviceNotifications}
+            aria-label="Enable device notifications"
+            title="Enable device notifications"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 text-[11px] font-bold text-amber-900 hover:bg-amber-100 sm:px-3"
           >
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
+            <Smartphone size={14} />
+            <span>Enable alerts</span>
+          </button>
         )}
-      </button>
+      </div>
 
       {isOpen && (
         <>
@@ -301,35 +313,12 @@ export function DashboardNotifications() {
                 </button>
               </div>
 
-              {/* Device Push Notification Prompt / Status */}
-              {devicePerm === 'default' && (
-                <div className="mt-2.5 flex items-center justify-between rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2">
-                  <div className="flex items-center gap-2 min-w-0 pr-2">
-                    <Smartphone size={14} className="text-amber-700 shrink-0" />
-                    <span className="text-[11px] font-semibold text-amber-900 truncate">
-                      Enable Desktop &amp; Mobile push alerts
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const next = await requestDeviceNotificationPermission();
-                      setDevicePerm(next);
-                    }}
-                    className="shrink-0 text-[10px] font-bold bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-lg transition-colors shadow-2xs"
-                  >
-                    Enable
-                  </button>
-                </div>
-              )}
-
-              
             </div>
 
           {/* List */}
           {displayedNotifications.length > 0 ? (
             <>
-              <ul className="max-h-[26rem] divide-y divide-slate-100 overflow-y-auto">
+              <ul className="max-h-104 divide-y divide-slate-100 overflow-y-auto">
                 {displayedNotifications.map((notification) => {
                   const config = getNotificationConfig(notification);
                   const Icon = config.Icon;
@@ -366,7 +355,7 @@ export function DashboardNotifications() {
                         </div>
 
                         <p className="text-xs font-bold text-slate-900">{notification.title}</p>
-                        <p className="mt-0.5 break-words text-xs leading-relaxed text-slate-600">
+                        <p className="mt-0.5 wrap-break-word text-xs leading-relaxed text-slate-600">
                           {notification.message}
                         </p>
                       </div>

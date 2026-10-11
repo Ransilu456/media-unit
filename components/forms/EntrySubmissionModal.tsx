@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useMediaStore } from '@/lib/store';
 import type { Competition, NewSubmissionInput, RegisteredSchool } from '@/lib/types';
 import { calculateAge, validateSubmissionInput } from '@/lib/validation';
 import {
   X,
+  ArrowRight,
   AlertCircle,
   CheckCircle2,
   Trophy,
@@ -35,8 +36,8 @@ const ALL_GRADES = [
 ];
 
 const inputCls =
-  'w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all shadow-xs';
-const labelCls = 'mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600';
+  'min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-xs transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20';
+const labelCls = 'mb-1.5 block text-[11px] font-semibold tracking-wide text-slate-700';
 
 export function EntrySubmissionModal({
   isOpen,
@@ -46,8 +47,10 @@ export function EntrySubmissionModal({
   onSubmitted,
 }: Props) {
   const { competitions, submissions, submitEntry } = useMediaStore();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [selectedCompId, setSelectedCompId] = useState(initialCompetition.id);
+  const [currentStep, setCurrentStep] = useState(0);
 
   const activeCompetition = useMemo(() => {
     return competitions.find((c) => c.id === selectedCompId) || initialCompetition;
@@ -75,7 +78,21 @@ export function EntrySubmissionModal({
 
   useEffect(() => {
     setSelectedCompId(initialCompetition.id);
+    setCurrentStep(0);
   }, [initialCompetition.id]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !submitting) onClose();
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [isOpen, onClose, submitting]);
+
+  useEffect(() => {
+    if (formRef.current) formRef.current.scrollTop = 0;
+  }, [currentStep]);
 
   useEffect(() => {
     setCustomValues((current) =>
@@ -93,11 +110,8 @@ export function EntrySubmissionModal({
   const ageEligibilityError = useMemo(() => {
     if (calculatedAge === null || !activeCompetition.ageCategory) return null;
     const { minAge, maxAge } = activeCompetition.ageCategory;
-    if (calculatedAge < minAge) {
-      return `Student is ${calculatedAge} years old, but this track requires minimum age ${minAge}. (Eligibility: ${activeCompetition.eligibility}).`;
-    }
-    if (calculatedAge > maxAge) {
-      return `Student is ${calculatedAge} years old, but this track allows maximum age ${maxAge}. (Eligibility: ${activeCompetition.eligibility}).`;
+    if (calculatedAge < minAge || calculatedAge > maxAge) {
+      return `This competition is for students aged ${minAge} to ${maxAge}. The student is ${calculatedAge}.`;
     }
     return null;
   }, [calculatedAge, activeCompetition]);
@@ -144,12 +158,48 @@ export function EntrySubmissionModal({
     customValues,
   };
 
+  const continueForm = () => {
+    setError(null);
+    if (!formRef.current?.reportValidity()) return;
+
+    if (currentStep === 0) {
+      if (activeCompetition.status !== 'open') {
+        setError('This competition is closed. Choose an open competition to continue.');
+        return;
+      }
+      if (school.status !== 'active') {
+        setError('Your school account is waiting for approval. You can send entries after it is approved.');
+        return;
+      }
+      const activeSchoolSubmissions = submissions.filter(
+        (entry) => entry.competitionId === activeCompetition.id
+          && entry.schoolId === school.id
+          && entry.status !== 'disqualified'
+      );
+      if (activeSchoolSubmissions.length >= activeCompetition.maxEntriesPerSchool) {
+        setError(`Your school has used all ${activeCompetition.maxEntriesPerSchool} entries for this competition.`);
+        return;
+      }
+      if (ageEligibilityError) {
+        setError(ageEligibilityError);
+        return;
+      }
+    }
+
+    if (currentStep === 1 && (synopsisWords < 20 || synopsisWords > 1000)) {
+      setError('Please describe the work in 20 to 1,000 words.');
+      return;
+    }
+
+    setCurrentStep((step) => Math.min(2, step + 1));
+  };
+
   const validate = (): string | null => {
     if (activeCompetition.status !== 'open') {
-      return 'This competition track is currently closed for submissions.';
+      return 'This competition is closed.';
     }
     if (school.status !== 'active') {
-      return 'Your school profile is not active. Please contact Agradhi Administration.';
+      return 'Your school account is not active yet. Please contact the Agradhi team.';
     }
 
     const activeSchoolSubmissions = submissions.filter(
@@ -159,7 +209,7 @@ export function EntrySubmissionModal({
         e.status !== 'disqualified'
     );
     if (activeSchoolSubmissions.length >= activeCompetition.maxEntriesPerSchool) {
-      return `Your school has reached the maximum quota of ${activeCompetition.maxEntriesPerSchool} active entries for this track.`;
+      return `Your school has reached the limit of ${activeCompetition.maxEntriesPerSchool} entries for this competition.`;
     }
 
     if (ageEligibilityError) {
@@ -172,7 +222,7 @@ export function EntrySubmissionModal({
     }
 
     if (!certified) {
-      return 'Please confirm the school certification declaration before submitting.';
+      return 'Please confirm that the details are correct before you send this entry.';
     }
 
     return null;
@@ -214,93 +264,128 @@ export function EntrySubmissionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 sm:p-6">
-      <div className="relative my-6 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">
-        
-        {/* Header*/}
-        <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center">
-              <Trophy size={18} className="text-white" />
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-0 backdrop-blur-sm sm:p-5">
+      <div role="dialog" aria-modal="true" aria-labelledby="entry-dialog-title" className="relative my-0 flex min-h-dvh w-full max-w-3xl flex-col overflow-hidden bg-white shadow-2xl sm:my-4 sm:min-h-0 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[28px] sm:border sm:border-white/70">
+        <div className="sticky top-0 z-20 border-b border-slate-100 bg-white/95 px-4 py-4 backdrop-blur sm:px-7">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-900">
+                <Trophy size={18} />
+              </div>
+              <div className="min-w-0">
+                <h2 id="entry-dialog-title" className="truncate text-base font-bold leading-tight text-slate-950 sm:text-lg">Submit a student entry</h2>
+                <p className="mt-1 truncate text-[11px] text-slate-500">{school.name}</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold leading-tight">Official Student Entry Submission</h2>
-              <p className="text-[11px] text-slate-400">Agradhi Media Assembly 2026 · {school.name}</p>
-            </div>
+            <button type="button" onClick={onClose} aria-label="Close dialog" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+              <X size={19} />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="rounded-lg p-1.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors"
-          >
-            <X size={20} />
-          </button>
+
+          <div className="mt-4 grid grid-cols-3 gap-2" aria-label="Entry form progress">
+            {['Student', 'Work', 'Review'].map((label, index) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  if (index < currentStep) {
+                    setError(null);
+                    setCurrentStep(index);
+                  }
+                }}
+                aria-current={currentStep === index ? 'step' : undefined}
+                className="group min-w-0 text-left"
+              >
+                <span className={`mb-2 block h-1 rounded-full transition-colors ${index <= currentStep ? 'bg-amber-500' : 'bg-slate-100'}`} />
+                <span className={`flex items-center gap-1.5 text-[10px] font-bold sm:text-xs ${index === currentStep ? 'text-slate-900' : index < currentStep ? 'text-amber-800' : 'text-slate-400'}`}>
+                  <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] ${index < currentStep ? 'bg-emerald-100 text-emerald-800' : index === currentStep ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                    {index < currentStep ? <CheckCircle2 size={12} /> : index + 1}
+                  </span>
+                  {label}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Status Alerts */}
-        <div className="px-6 pt-4">
+        <div className="px-4 pt-4 sm:px-7">
           {error && (
-            <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 animate-in fade-in-50">
+            <div role="alert" className="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 animate-in fade-in-50">
               <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-600" />
               <span>{error}</span>
             </div>
           )}
           {success && (
-            <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 animate-in fade-in-50">
+            <div role="status" className="mb-4 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 animate-in fade-in-50">
               <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
-              <span className="font-semibold">Student entry successfully registered and submitted for review!</span>
+              <span className="font-semibold">Entry sent. The review team will check it.</span>
             </div>
           )}
         </div>
 
         {/* Submission Form */}
-        <form noValidate onSubmit={handleSubmit} className="space-y-6 px-6 pb-6">
+        <form ref={formRef} noValidate onSubmit={handleSubmit} className="flex-1 space-y-5 overflow-y-auto px-4 pb-5 sm:px-7 sm:pb-7">
           
-          {/* SECTION 1: Competition & Automatic Medium */}
+          {currentStep === 0 && (
+          <>
+          {/* Competition and language */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <Trophy size={14} className="text-amber-600" />
-                <span>1. Select Competition Track</span>
+                <span>1. Choose a competition</span>
               </span>
               <span className="text-[11px] text-slate-500 font-medium">
-                Quota: {activeCompetition.maxEntriesPerSchool} entries per school
+                Up to {activeCompetition.maxEntriesPerSchool} entries from your school
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2">
-                <label className={labelCls}>Competition Track *</label>
+                <label className={labelCls}>Competition *</label>
                 <select
+                  required
                   value={selectedCompId}
-                  onChange={(e) => setSelectedCompId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedCompId(e.target.value);
+                    setError(null);
+                  }}
                   className={inputCls}
                 >
-                  {competitions.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title} ({c.category})
-                    </option>
-                  ))}
+                  <option value="" disabled>Choose a competition</option>
+                  {competitions.map((c) => {
+                    const entriesUsed = submissions.filter((entry) =>
+                      entry.competitionId === c.id
+                      && entry.schoolId === school.id
+                      && entry.status !== 'disqualified'
+                    ).length;
+                    const full = entriesUsed >= c.maxEntriesPerSchool;
+                    return (
+                      <option key={c.id} value={c.id} disabled={c.status !== 'open' || full}>
+                        {c.title} · {c.status !== 'open' ? 'Closed' : full ? 'Entry limit reached' : c.category}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
-              {/* Automatically Filled & Locked Medium */}
               <div>
-                <label className={labelCls}>Medium (Auto-Filled)</label>
+                <label className={labelCls}>Language</label>
                 <div className="flex items-center h-10.5 px-3.5 rounded-xl border border-slate-200 bg-white font-semibold text-xs text-slate-800">
                   {competitionMedium === 'Sinhala' && (
                     <span className="inline-flex items-center gap-1 text-blue-700">
-                      <span className="w-2 h-2 rounded-full bg-blue-600" /> Sinhala Medium
+                      <span className="w-2 h-2 rounded-full bg-blue-600" /> Sinhala
                     </span>
                   )}
                   {competitionMedium === 'English' && (
                     <span className="inline-flex items-center gap-1 text-purple-700">
-                      <span className="w-2 h-2 rounded-full bg-purple-600" /> English Medium
+                      <span className="w-2 h-2 rounded-full bg-purple-600" /> English
                     </span>
                   )}
                   {(competitionMedium === 'None' || !competitionMedium) && (
                     <span className="inline-flex items-center gap-1 text-emerald-700">
-                      <span className="w-2 h-2 rounded-full bg-emerald-600" /> Open / Non-verbal
+                      <span className="w-2 h-2 rounded-full bg-emerald-600" /> Any language
                     </span>
                   )}
                 </div>
@@ -313,7 +398,7 @@ export function EntrySubmissionModal({
                 Category: <strong>{activeCompetition.category}</strong>
               </span>
               <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200">
-                Eligibility: <strong>{activeCompetition.eligibility}</strong>
+                Who can enter: <strong>{activeCompetition.eligibility}</strong>
               </span>
               <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200">
                 Deadline: <strong>{activeCompetition.deadline}</strong>
@@ -321,18 +406,18 @@ export function EntrySubmissionModal({
             </div>
           </div>
 
-          {/* SECTION 2: Student Details & Real-Time Age Verification */}
+          {/* Student details */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
             <div className="border-b border-slate-200/80 pb-2.5">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <User size={14} className="text-amber-600" />
-                <span>2. Student Information & Age Verification</span>
+                <span>2. About the student</span>
               </span>
             </div>
 
             {/* Student Full Name */}
             <div>
-              <label className={labelCls}>Student Full Name *</label>
+              <label className={labelCls}>Student name *</label>
               <input
                 type="text"
                 required
@@ -340,7 +425,7 @@ export function EntrySubmissionModal({
                 maxLength={100}
                 value={form.studentName}
                 onChange={(e) => set('studentName', e.target.value)}
-                placeholder="Full student name (e.g. Kasun Kavinda Perera)"
+                placeholder="Enter the student’s full name"
                 className={inputCls}
               />
             </div>
@@ -348,7 +433,7 @@ export function EntrySubmissionModal({
             {/* Birthday and Grade row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Student Date of Birth *</label>
+                <label className={labelCls}>Date of birth *</label>
                 <input
                   type="date"
                   required
@@ -360,7 +445,7 @@ export function EntrySubmissionModal({
               </div>
 
               <div>
-                <label className={labelCls}>Current Grade / Class *</label>
+                <label className={labelCls}>Grade *</label>
                 <select
                   required
                   value={form.studentGrade}
@@ -393,7 +478,7 @@ export function EntrySubmissionModal({
                   )}
 
                   <span>
-                    Calculated Student Age: <strong>{calculatedAge} years old</strong>
+                    Student age: <strong>{calculatedAge} years old</strong>
                   </span>
                   
                   <span
@@ -403,20 +488,20 @@ export function EntrySubmissionModal({
                         : 'bg-emerald-200 text-emerald-800'
                     }`}
                   >
-                    {ageEligibilityError ? 'Ineligible Age' : 'Eligible'}
+                    {ageEligibilityError ? 'Age not accepted' : 'Age accepted'}
                   </span>
                 </div>
 
                 <p className="mt-1 text-xs leading-relaxed text-slate-700">
                   {ageEligibilityError ||
-                    `Student meets the age criteria for ${activeCompetition.ageCategory?.label ?? 'this competition'} (${activeCompetition.eligibility}).`}
+                    `                    This competition accepts students in the {activeCompetition.ageCategory?.label ?? 'selected age group'}.`}
                 </p>
               </div>
             )}
 
             {/* Student Contact Phone */}
             <div>
-              <label className={labelCls}>Student / Parent Contact Phone *</label>
+              <label className={labelCls}>Student or parent phone number *</label>
               <input
                 type="tel"
                 required
@@ -428,19 +513,23 @@ export function EntrySubmissionModal({
               />
             </div>
           </div>
+          </>
+          )}
 
-          {/* SECTION 3: Entry Details, Cloud Link & Synopsis */}
+          {/* Entry details */}
+          {currentStep === 1 && (
+          <>
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
             <div className="border-b border-slate-200/80 pb-2.5">
               <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <FileText size={14} className="text-amber-600" />
-                <span>3. Entry Title & Cloud Submission Link</span>
+                <span>3. About the student’s work</span>
               </span>
             </div>
 
             {/* Entry Title */}
             <div>
-              <label className={labelCls}>Entry / Project Title *</label>
+              <label className={labelCls}>Name of the work *</label>
               <input
                 type="text"
                 required
@@ -448,14 +537,14 @@ export function EntrySubmissionModal({
                 maxLength={160}
                 value={form.entryTitle}
                 onChange={(e) => set('entryTitle', e.target.value)}
-                placeholder="e.g. Whispers of the Galle Fort / Sound of Morning Rain"
+                placeholder="Give the work a short name"
                 className={inputCls}
               />
             </div>
 
-            {/* Submission Cloud Link */}
+            {/* Link to work */}
             <div>
-              <label className={labelCls}>Cloud Submission Link (Google Drive / YouTube / OneDrive) *</label>
+              <label className={labelCls}>Link to the work (Google Drive, YouTube, or OneDrive) *</label>
               <div className="relative">
                 <LinkIcon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -469,20 +558,20 @@ export function EntrySubmissionModal({
                 />
               </div>
               <p className="mt-1.5 text-[11px] text-slate-500">
-                Google Drive links: Please set sharing permissions to &quot;Anyone with the link can view&quot;.
+                Make sure anyone with the link can open and watch the work.
               </p>
             </div>
 
-            {/* Synopsis / Description with Live Word Count Progress */}
+            {/* Short description */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className={labelCls.replace('mb-1.5', '')}>Synopsis / Concept Description *</label>
+                <label className={labelCls.replace('mb-1.5', '')}>Tell us about the work *</label>
                 <span
                   className={`text-[11px] font-bold ${
-                    synopsisWords < 20 ? 'text-amber-700' : 'text-emerald-700'
+                    synopsisWords < 20 || synopsisWords > 1000 ? 'text-amber-700' : 'text-emerald-700'
                   }`}
                 >
-                  {synopsisWords} words {synopsisWords < 20 ? '(min. 20 words needed)' : '✓'}
+                  {synopsisWords} words (20 to 1,000 required) {synopsisWords < 20 || synopsisWords > 1000 ? '' : '✓'}
                 </span>
               </div>
               <textarea
@@ -491,7 +580,7 @@ export function EntrySubmissionModal({
                 maxLength={5000}
                 value={form.synopsis}
                 onChange={(e) => set('synopsis', e.target.value)}
-                placeholder="Describe the central idea, creative concept, or story behind this student entry..."
+                placeholder="What is the work about? What does the student want to show?"
                 className={`${inputCls} resize-y`}
               />
             </div>
@@ -503,7 +592,7 @@ export function EntrySubmissionModal({
             <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
               <div className="border-b border-slate-200/80 pb-2.5">
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Additional competition questions
+                  A few more questions
                 </span>
               </div>
               {(activeCompetition.customFields ?? []).map((field) => (
@@ -554,8 +643,58 @@ export function EntrySubmissionModal({
               ))}
             </div>
           )}
+          </>
+          )}
 
-          <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+          {currentStep === 2 && (
+          <>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-800">Final check</p>
+                <h3 className="mt-1 text-base font-bold text-slate-950">Review the entry</h3>
+                <p className="mt-1 text-xs text-slate-500">Check these details before sending.</p>
+              </div>
+              <Trophy size={19} className="text-amber-700" />
+            </div>
+            <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {[
+                ['Competition', activeCompetition.title],
+                ['Category', activeCompetition.category],
+                ['Student', form.studentName || 'Not added'],
+                ['Grade', form.studentGrade || 'Not selected'],
+                ['Work title', form.entryTitle || 'Not added'],
+                ['Language', competitionMedium === 'None' ? 'Any language' : competitionMedium],
+                ['School', school.name],
+              ].map(([label, value]) => (
+                <div key={label} className="min-w-0 rounded-xl bg-slate-50 px-3.5 py-3">
+                  <dt className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</dt>
+                  <dd className="mt-1 truncate text-xs font-semibold text-slate-800">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="mt-3 rounded-xl bg-slate-50 px-3.5 py-3">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Work description</p>
+              <p className="mt-1 line-clamp-3 text-xs leading-5 text-slate-700">{form.synopsis || 'Not added'}</p>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 px-3.5 py-3">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Work link</span>
+              {form.submissionLink ? (
+                <a href={form.submissionLink} target="_blank" rel="noreferrer" className="max-w-full truncate text-xs font-semibold text-sky-800 underline underline-offset-2">
+                  Check the link
+                </a>
+              ) : (
+                <span className="text-xs text-slate-500">Not added</span>
+              )}
+            </div>
+            <button type="button" onClick={() => setCurrentStep(0)} className="mt-4 text-xs font-semibold text-amber-800 underline-offset-4 hover:underline">
+              Change student or competition details
+            </button>
+            <button type="button" onClick={() => setCurrentStep(1)} className="ml-4 text-xs font-semibold text-amber-800 underline-offset-4 hover:underline">
+              Change work details
+            </button>
+          </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
             <label className="flex items-start gap-3 cursor-pointer text-xs text-slate-700 leading-relaxed">
               <input
                 type="checkbox"
@@ -565,43 +704,58 @@ export function EntrySubmissionModal({
                 className="mt-0.5 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 shrink-0"
               />
               <span>
-                I, as the registered representative for <strong>{school.name}</strong>, certify that this entry represents the original student work, verified birthdate, and complies with all Agradhi Media Assembly 2026 bylaws.
+                I confirm this is the student’s own work. I checked the student’s details and date of birth, and this entry follows the competition rules.
               </span>
             </label>
           </div>
+          </>
+          )}
 
           {/* Submit Action */}
-          <div className="flex items-center gap-3 pt-2">
+          <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-slate-100 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-7 sm:px-7">
             <button
               type="button"
-              onClick={onClose}
-              className="flex-1 py-3 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors"
+              onClick={() => {
+                if (currentStep === 0) {
+                  onClose();
+                } else {
+                  setError(null);
+                  setCurrentStep((step) => step - 1);
+                }
+              }}
+              className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-white py-3 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50"
             >
-              Cancel
+              {currentStep === 0 ? 'Cancel' : 'Back'}
             </button>
 
-            <button
-              type="submit"
-              disabled={submitting || success || !!ageEligibilityError}
-              className="flex-2 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {submitting ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Validating & Submitting...</span>
-                </>
-              ) : success ? (
-                <>
-                  <CheckCircle2 size={16} />
-                  <span>Submitted Successfully!</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck size={16} />
-                  <span>Submit Official Entry</span>
-                </>
-              )}
-            </button>
+            {currentStep < 2 ? (
+              <button type="button" onClick={continueForm} className="inline-flex min-h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-sara-navy px-4 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-slate-800">
+                Continue <ArrowRight size={14} />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={submitting || success}
+                className="inline-flex min-h-11 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submitting ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Sending entry...
+                  </>
+                ) : success ? (
+                  <>
+                    <CheckCircle2 size={16} />
+                    Entry sent
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={16} />
+                    Send entry
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
         </form>

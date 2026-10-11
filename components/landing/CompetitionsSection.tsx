@@ -35,6 +35,15 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Live Media Reporting': <Film size={18} className="text-amber-700" />,
 };
 
+const CATEGORY_ART: Record<string, { background: string; iconBackground: string; iconColor: string }> = {
+  'Short Film & Cinematography': { background: 'from-amber-100 via-orange-50 to-rose-50', iconBackground: 'bg-white', iconColor: 'text-amber-900' },
+  'Photography': { background: 'from-sky-100 via-cyan-50 to-indigo-50', iconBackground: 'bg-white', iconColor: 'text-sky-900' },
+  'News Reading & Announcing': { background: 'from-emerald-100 via-teal-50 to-sky-50', iconBackground: 'bg-white', iconColor: 'text-emerald-900' },
+  'Graphic Design & Digital Art': { background: 'from-fuchsia-100 via-violet-50 to-indigo-50', iconBackground: 'bg-white', iconColor: 'text-violet-900' },
+  'Radio Play & Audio Production': { background: 'from-violet-100 via-fuchsia-50 to-rose-50', iconBackground: 'bg-white', iconColor: 'text-violet-900' },
+  'Live Media Reporting': { background: 'from-orange-100 via-amber-50 to-yellow-50', iconBackground: 'bg-white', iconColor: 'text-orange-900' },
+};
+
 interface CompetitionsSectionProps {
   title?: string;
   subtitle?: string;
@@ -87,19 +96,19 @@ export function CompetitionsSection({
   const isSchool = session.type === 'school' && session.school;
 
   return (
-    <section id="competitions" className="py-16 md:py-24 bg-white">
-      <div className="max-w-5xl mx-auto px-6">
+    <section id="competitions" className="bg-[#fbfaf7] py-12 sm:py-16 md:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="mb-12 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <div className="mb-9 flex flex-col gap-5 md:mb-10 md:flex-row md:items-end md:justify-between">
           <div className="max-w-xl">
-            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">
               Agradhi 2026 Assembly
             </p>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
               {title}
             </h1>
-            <p className="mt-2 text-slate-500 text-sm sm:text-base leading-relaxed">
+            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 sm:text-base">
               {subtitle}
             </p>
           </div>
@@ -108,7 +117,7 @@ export function CompetitionsSection({
             {isSchool ? (
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-sm"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-sara-navy px-5 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
               >
                 <span>School Dashboard</span>
                 <ArrowRight size={14} />
@@ -116,7 +125,7 @@ export function CompetitionsSection({
             ) : (
               <Link
                 href="/register"
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-sm"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-sara-navy px-5 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
               >
                 <span>Register Your School</span>
                 <ArrowRight size={14} />
@@ -126,22 +135,25 @@ export function CompetitionsSection({
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="mb-10 space-y-4">
+        <div className="mb-8 space-y-4 rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-5">
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Search Input */}
             <div className="relative flex-1">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
-                type="text"
-                placeholder="Search tracks by keyword, category, or medium..."
+                type="search"
+                aria-label="Search competitions"
+                placeholder="Search competitions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 shadow-xs"
+                className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-xs text-slate-800 shadow-xs placeholder:text-slate-400 focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-amber-100"
               />
               {searchQuery && (
                 <button
+                  type="button"
+                  aria-label="Clear search"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                 >
                   Clear
                 </button>
@@ -149,10 +161,12 @@ export function CompetitionsSection({
             </div>
 
             {/* Medium Selector */}
-            <div className="flex rounded-xl border border-slate-200 bg-slate-50/50 p-1 text-xs font-medium text-slate-600">
+            <div className="flex min-h-11 shrink-0 items-center rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-medium text-slate-600">
               {['All', 'Sinhala', 'English'].map((m) => (
                 <button
                   key={m}
+                  type="button"
+                  aria-pressed={selectedMedium === m}
                   onClick={() => setSelectedMedium(m)}
                   className={`px-3 py-1.5 rounded-lg transition-colors ${
                     selectedMedium === m
@@ -171,6 +185,8 @@ export function CompetitionsSection({
             {categories.map((cat) => (
               <button
                 key={cat}
+                type="button"
+                aria-pressed={selectedCategory === cat}
                 onClick={() => setSelectedCategory(cat)}
                 className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs transition-colors ${
                   selectedCategory === cat
@@ -185,7 +201,7 @@ export function CompetitionsSection({
         </div>
 
         {/* Competitions Cards Grid with Clean White Shadows */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {competitionsError ? (
             <div className="col-span-full">
               <FirestoreNetworkError
@@ -235,64 +251,50 @@ export function CompetitionsSection({
           ) : (
             filteredCompetitions.map((comp) => {
               const icon = CATEGORY_ICONS[comp.category] ?? <Trophy size={18} className="text-amber-700" />;
+              const art = CATEGORY_ART[comp.category] ?? CATEGORY_ART['Short Film & Cinematography'];
               const isExpanded = expandedCompId === comp.id;
+              const isOpen = comp.status === 'open';
 
               return (
-                <div
+                <article
                   key={comp.id}
-                  className="rounded-3xl border border-slate-100 bg-white p-7 shadow-[0_4px_25px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_35px_rgba(0,0,0,0.06)] hover:border-slate-200 transition-all flex flex-col justify-between"
+                  className="group flex flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white p-2.5 shadow-[0_8px_28px_rgba(15,23,42,0.04)] transition duration-300 hover:-translate-y-1 hover:border-amber-200 hover:shadow-[0_18px_40px_rgba(15,23,42,0.10)] sm:p-3"
                 >
                   <div>
-                    {/* Top Row */}
-                    <div className="flex items-center justify-between gap-2 mb-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
-                          {icon}
-                        </div>
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                          {comp.category}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {comp.medium && comp.medium !== 'None' && (
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
-                              comp.medium === 'Sinhala'
-                                ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                : 'bg-purple-50 text-purple-700 border-purple-100'
-                            }`}
-                          >
-                            {comp.medium}
-                          </span>
-                        )}
-                        <StatusBadge status={comp.status} />
-                      </div>
+                    <div className={`relative flex h-36 items-center justify-center overflow-hidden rounded-[22px] bg-gradient-to-br ${art.background}`}>
+                      <span className="absolute -right-8 -top-12 h-40 w-40 rounded-full border-[22px] border-white/45 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110" />
+                      <span className="absolute -bottom-8 -left-6 h-28 w-28 rounded-full bg-white/45 blur-xl" />
+                      <span className={`relative flex h-[68px] w-[68px] items-center justify-center rounded-[24px] ${art.iconBackground} shadow-[0_12px_28px_rgba(15,23,42,0.10)] transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110 [&>svg]:text-current [&>svg]:h-8 [&>svg]:w-8 ${art.iconColor}`}>
+                        {icon}
+                      </span>
+                      <span className="absolute left-3 top-3 rounded-full border border-white/80 bg-white/85 px-2.5 py-1 text-[9px] font-bold text-slate-600">
+                        {comp.medium === 'None' ? 'Any language' : comp.medium}
+                      </span>
+                      <span className="absolute bottom-3 right-3"><StatusBadge status={comp.status} /></span>
                     </div>
 
-                    {/* Title */}
-                    <h3 className="text-lg font-bold text-slate-900 leading-snug mb-2.5">
+                    <div className="px-3 pb-2 pt-4 sm:px-4">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-500">{comp.category}</p>
+                    <h3 className="mt-1.5 min-h-12 text-base font-bold leading-6 text-slate-900">
                       {comp.title}
                     </h3>
 
-                    {/* Description */}
-                    <p className="text-xs text-slate-500 leading-relaxed mb-5 line-clamp-3">
+                    <p className="mt-2 min-h-10 text-xs leading-5 text-slate-500 line-clamp-2">
                       {comp.description}
                     </p>
 
-                    {/* Metadata Box */}
-                    <div className="grid grid-cols-2 gap-2 p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 text-xs mb-5">
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-semibold block uppercase">Deadline</span>
-                        <span className="font-semibold text-slate-800">{comp.deadline}</span>
+                    <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-3 text-xs">
+                      <div className="min-w-0">
+                        <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Deadline</span>
+                        <span className="mt-1 block truncate text-[11px] font-semibold text-slate-800">{comp.deadline}</span>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-semibold block uppercase">Quota</span>
-                        <span className="font-semibold text-slate-800">Max {comp.maxEntriesPerSchool} entries</span>
+                      <div className="min-w-0">
+                        <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">School entry limit</span>
+                        <span className="mt-1 block truncate text-[11px] font-semibold text-slate-800">Up to {comp.maxEntriesPerSchool}</span>
                       </div>
-                      <div className="col-span-2">
-                        <span className="text-[10px] text-slate-400 font-semibold block uppercase">Eligibility</span>
-                        <span className="font-semibold text-slate-800">{comp.eligibility}</span>
+                      <div className="col-span-2 border-t border-slate-200/80 pt-2">
+                        <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Who can enter</span>
+                        <span className="mt-1 block text-[11px] font-medium leading-5 text-slate-700">{comp.eligibility}</span>
                       </div>
                     </div>
 
@@ -300,6 +302,8 @@ export function CompetitionsSection({
                     {comp.guidelines && comp.guidelines.length > 0 && (
                       <div className="mb-5">
                         <button
+                          type="button"
+                          aria-expanded={isExpanded}
                           onClick={() => toggleExpand(comp.id)}
                           className="flex items-center justify-between w-full text-xs font-semibold text-slate-600 hover:text-slate-900 py-1 transition-colors"
                         >
@@ -319,29 +323,35 @@ export function CompetitionsSection({
                         )}
                       </div>
                     )}
+                    </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-4 border-t border-slate-50">
+                  <div className="mt-auto px-3 pb-3 pt-2 sm:px-4">
                     {isSchool ? (
                       <button
+                        type="button"
+                        disabled={!isOpen}
                         onClick={() => setActiveModalComp(comp)}
-                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-xs"
+                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-sara-navy py-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                       >
-                        <span>Submit Student Entry</span>
-                        <ArrowRight size={14} />
+                        <span>{isOpen ? 'Add a student' : 'Entries are closed'}</span>
+                        {isOpen && <ArrowRight size={14} />}
                       </button>
                     ) : (
                       <Link
-                        href={`/register?track=${comp.id}`}
-                        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-xs"
+                        href={isOpen ? `/register?track=${comp.id}` : '/competitions'}
+                        aria-disabled={!isOpen}
+                        className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-semibold shadow-xs transition-colors ${
+                          isOpen ? 'bg-sara-navy text-white hover:bg-slate-800' : 'cursor-default bg-slate-100 text-slate-400'
+                        }`}
                       >
-                        <span>Register School to Enter</span>
-                        <ArrowRight size={14} />
+                        <span>{isOpen ? 'Register school to enter' : 'Entries are closed'}</span>
+                        {isOpen && <ArrowRight size={14} />}
                       </Link>
                     )}
                   </div>
-                </div>
+                </article>
               );
             })
           )}
