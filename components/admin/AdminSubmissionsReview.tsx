@@ -32,11 +32,11 @@ const statusLabels: Record<SubmissionStatus, string> = {
 };
 
 const statusTone: Record<SubmissionStatus, string> = {
-  submitted: 'border-blue-200 bg-blue-50 text-blue-800',
-  under_review: 'border-amber-200 bg-amber-50 text-amber-800',
+  submitted: 'border-orange-200 bg-orange-50 text-orange-900',
+  under_review: 'border-sky-200 bg-sky-50 text-sky-800',
   verified: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  shortlisted: 'border-violet-200 bg-violet-50 text-violet-800',
-  winner: 'border-sky-200 bg-sky-50 text-sky-800',
+  shortlisted: 'border-indigo-200 bg-indigo-50 text-indigo-800',
+  winner: 'border-orange-200 bg-orange-50 text-orange-900',
   disqualified: 'border-rose-200 bg-rose-50 text-rose-800',
 };
 
@@ -111,20 +111,45 @@ export function AdminSubmissionsReview() {
     return matchesSearch && matchesCategory && matchesQueue;
   });
   const schoolGroups = useMemo(() => {
-    const groups = new Map<string, { schoolId: string; schoolName: string; submissions: typeof filtered }>();
+    const groups = new Map<string, {
+      schoolId: string;
+      schoolName: string;
+      competitions: Map<string, { competitionId: string; competitionTitle: string; submissions: typeof filtered }>;
+    }>();
+    const schoolNames = new Map(schools.map((school) => [school.id, school.name]));
+
     filtered.forEach((submission) => {
       const schoolId = submission.schoolId || submission.schoolName;
-      const schoolName = schools.find((school) => school.id === submission.schoolId)?.name
-        ?? submission.schoolName
-        ?? 'Unregistered school';
-      const group = groups.get(schoolId);
-      if (group) {
-        group.submissions.push(submission);
-      } else {
-        groups.set(schoolId, { schoolId, schoolName, submissions: [submission] });
+      let schoolGroup = groups.get(schoolId);
+      if (!schoolGroup) {
+        schoolGroup = {
+          schoolId,
+          schoolName: schoolNames.get(submission.schoolId) ?? submission.schoolName ?? 'Unregistered school',
+          competitions: new Map(),
+        };
+        groups.set(schoolId, schoolGroup);
       }
+
+      let competitionGroup = schoolGroup.competitions.get(submission.competitionId);
+      if (!competitionGroup) {
+        competitionGroup = {
+          competitionId: submission.competitionId,
+          competitionTitle: submission.competitionTitle,
+          submissions: [],
+        };
+        schoolGroup.competitions.set(submission.competitionId, competitionGroup);
+      }
+      competitionGroup.submissions.push(submission);
     });
-    return [...groups.values()].sort((left, right) => left.schoolName.localeCompare(right.schoolName));
+
+    return [...groups.values()]
+      .map((group) => ({
+        ...group,
+        competitions: [...group.competitions.values()].sort((left, right) =>
+          left.competitionTitle.localeCompare(right.competitionTitle)
+        ),
+      }))
+      .sort((left, right) => left.schoolName.localeCompare(right.schoolName));
   }, [filtered, schools]);
 
   const handleSaveReview = async (id: string, originalStatus: SubmissionStatus) => {
@@ -207,34 +232,34 @@ export function AdminSubmissionsReview() {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs">
+    <div className="mx-auto max-w-7xl space-y-5">
+      <section className="rounded-2xl border border-sky-100/80 bg-white p-4 shadow-[0_8px_28px_rgba(59,130,246,0.07)] sm:p-5">
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              Adjudication workspace
+            <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+              By school
             </p>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
               Submission review
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
-              Review the work and eligibility, choose an outcome, then share a clear note with the school.
+            <p className="mt-1 text-sm text-slate-600">
+              Review entries and share decisions.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:min-w-[360px]">
-            <div className="rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-3">
-              <p className="text-xl font-semibold tabular-nums text-blue-950">{awaitingReviewCount}</p>
-              <p className="mt-0.5 text-[10px] font-medium leading-4 text-blue-800">Awaiting</p>
+          <div className="grid grid-cols-3 gap-2 sm:min-w-[330px]">
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-3">
+              <p className="text-xl font-semibold tabular-nums text-slate-900">{awaitingReviewCount}</p>
+              <p className="mt-0.5 text-[10px] font-medium leading-4 text-slate-500">Awaiting</p>
             </div>
-            <div className="rounded-xl border border-amber-100 bg-amber-50/70 px-3 py-3">
-              <p className="text-xl font-semibold tabular-nums text-amber-950">{inProgressCount}</p>
-              <p className="mt-0.5 text-[10px] font-medium leading-4 text-amber-800">In progress</p>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-3">
+              <p className="text-xl font-semibold tabular-nums text-slate-900">{inProgressCount}</p>
+              <p className="mt-0.5 text-[10px] font-medium leading-4 text-slate-500">In progress</p>
             </div>
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-3">
-              <p className="text-xl font-semibold tabular-nums text-emerald-950">{decidedCount}</p>
-              <p className="mt-0.5 text-[10px] font-medium leading-4 text-emerald-800">Decided</p>
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-3">
+              <p className="text-xl font-semibold tabular-nums text-slate-900">{decidedCount}</p>
+              <p className="mt-0.5 text-[10px] font-medium leading-4 text-slate-500">Decided</p>
             </div>
           </div>
         </div>
@@ -254,8 +279,8 @@ export function AdminSubmissionsReview() {
                 onClick={() => setQueueFilter(option.id)}
                 className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                   active
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    ? 'border-sky-700 bg-sky-700 text-white'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:bg-sky-50'
                 }`}
               >
                 {option.label}
@@ -269,7 +294,7 @@ export function AdminSubmissionsReview() {
           })}
         </div>
 
-        <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row">
+        <div className="flex flex-col gap-2 rounded-2xl border border-sky-100/80 bg-white p-3 shadow-[0_8px_28px_rgba(59,130,246,0.06)] sm:flex-row">
           <label className="relative min-w-0 flex-1">
             <Search size={15} className="absolute left-3.5 top-3 text-slate-400" />
             <span className="sr-only">Search entries</span>
@@ -278,7 +303,7 @@ export function AdminSubmissionsReview() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search entry, student, school, or competition"
-              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
             />
           </label>
           <label>
@@ -289,7 +314,7 @@ export function AdminSubmissionsReview() {
                 setSchoolFilter(event.target.value);
                 setCategoryFilter('All');
               }}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-slate-400 sm:w-56"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-56"
             >
               <option value="all">All schools</option>
               {[...schools].sort((left, right) => left.name.localeCompare(right.name)).map((school) => (
@@ -302,7 +327,7 @@ export function AdminSubmissionsReview() {
             <select
               value={categoryFilter}
               onChange={(event) => setCategoryFilter(event.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-slate-400 sm:w-56"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-56"
             >
               <option value="All">All categories</option>
               {categories.map((category) => (
@@ -326,7 +351,7 @@ export function AdminSubmissionsReview() {
                 setCategoryFilter('All');
                 setSchoolFilter('all');
               }}
-              className="text-xs font-medium text-amber-800 underline underline-offset-2"
+              className="text-xs font-medium text-orange-800 underline underline-offset-2"
             >
               Clear filters
             </button>
@@ -334,21 +359,49 @@ export function AdminSubmissionsReview() {
         </div>
 
         <div className="space-y-6">
-          {schoolGroups.map((group) => (
-            <section key={group.schoolId} aria-labelledby={`school-${group.schoolId}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70">
-              <header className="flex flex-col gap-1 border-b border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">School submissions</p>
-                  <h2 id={`school-${group.schoolId}`} className="mt-1 truncate text-base font-semibold text-slate-950 sm:text-lg">
-                    {group.schoolName}
-                  </h2>
-                </div>
-                <span className="inline-flex w-fit items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
-                  {group.submissions.length} {group.submissions.length === 1 ? 'entry' : 'entries'}
+          {schoolGroups.map((group, groupIndex) => (
+            <details key={group.schoolId} open={schoolFilter !== 'all' || groupIndex === 0} className="group/school overflow-hidden rounded-2xl border border-sky-100/80 bg-white shadow-[0_8px_28px_rgba(59,130,246,0.06)]">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-white px-4 py-4 transition hover:bg-slate-50/70 [&::-webkit-details-marker]:hidden sm:px-5">
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">School</span>
+                  <span className="mt-1 block truncate text-base font-semibold text-slate-950">{group.schoolName}</span>
                 </span>
-              </header>
-              <div className="space-y-3 p-3 sm:p-4">
-                {group.submissions.map((submission) => {
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    {group.competitions.reduce((count, competition) => count + competition.submissions.length, 0)}{' '}
+                    {group.competitions.reduce((count, competition) => count + competition.submissions.length, 0) === 1 ? 'entry' : 'entries'}
+                  </span>
+                  <span aria-hidden="true" className="text-lg text-orange-700 transition-transform group-open/school:rotate-180">⌄</span>
+                </span>
+              </summary>
+              <div className="space-y-3 border-t border-slate-100 bg-slate-50/60 p-3 sm:p-4">
+                {group.competitions.map((competitionGroup) => (
+                  <details
+                    key={competitionGroup.competitionId}
+                    open={group.competitions.length === 1}
+                    className="group/competition overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_5px_18px_rgba(59,130,246,0.05)]"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-slate-900">{competitionGroup.competitionTitle}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                          <span>{competitionGroup.submissions.length} {competitionGroup.submissions.length === 1 ? 'entry' : 'entries'}</span>
+                          {competitionGroup.submissions.some((submission) => submission.status === 'submitted') && (
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                              {competitionGroup.submissions.filter((submission) => submission.status === 'submitted').length} awaiting
+                            </span>
+                          )}
+                          {competitionGroup.submissions.some((submission) => submission.status === 'under_review') && (
+                            <span className="rounded-full bg-sky-50 px-2 py-0.5 font-medium text-sky-800">
+                              {competitionGroup.submissions.filter((submission) => submission.status === 'under_review').length} in review
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                      <span aria-hidden="true" className="shrink-0 text-slate-400 transition-transform group-open/competition:rotate-180">⌄</span>
+                    </summary>
+                    <div className="space-y-2 border-t border-slate-100 bg-slate-50/60 p-3">
+                {competitionGroup.submissions.map((submission) => {
             const currentStatus = editingStatuses[submission.id] ?? submission.status;
             const currentScore = clearedScoreIds.includes(submission.id)
               ? ''
@@ -368,15 +421,28 @@ export function AdminSubmissionsReview() {
             const isUnlocked = unlockedIds.includes(submission.id) || !isAlreadyDecided;
 
             return (
-              <article
-                key={submission.id}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
-              >
-                <div className="h-1 bg-gradient-to-r from-amber-500 via-amber-400 to-slate-200" />
+              <details key={submission.id} className="group/entry overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3 hover:bg-slate-50/80 [&::-webkit-details-marker]:hidden">
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-700">
+                      <FileText size={16} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-slate-900">{submission.entryTitle}</span>
+                      <span className="mt-0.5 block truncate text-xs text-slate-500">{submission.studentName} · {submission.studentGrade}</span>
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${statusTone[submission.status]}`}>{statusLabels[submission.status]}</span>
+                    <span aria-hidden="true" className="text-slate-400 transition-transform group-open/entry:rotate-180">⌄</span>
+                  </span>
+                </summary>
+                <article className="border-t border-slate-100 bg-white">
+                <div className="h-1 bg-gradient-to-r from-slate-400 via-orange-400 to-orange-200" />
 
                 <header className="flex flex-col gap-4 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5 sm:py-5">
                   <div className="flex min-w-0 gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-800">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
                       <FileText size={18} />
                     </div>
                     <div className="min-w-0">
@@ -472,7 +538,7 @@ export function AdminSubmissionsReview() {
                         onClick={() => handleUnlock(submission)}
                         className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 shadow-2xs hover:bg-slate-50 hover:border-slate-400 transition-colors"
                       >
-                        <Unlock size={14} className="text-amber-600" />
+                        <Unlock size={14} className="text-orange-700" />
                         Unlock to Edit Decision
                       </button>
                     </div>
@@ -498,9 +564,9 @@ export function AdminSubmissionsReview() {
                           {submission.score !== undefined && (
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               Number(submission.score) >= 90
-                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                ? 'bg-orange-100 text-orange-900 border border-orange-200'
                                 : Number(submission.score) >= 75
-                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                ? 'bg-blue-50 text-blue-800 border border-blue-200'
                                 : Number(submission.score) >= 60
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                                 : 'bg-slate-100 text-slate-700'
@@ -543,10 +609,10 @@ export function AdminSubmissionsReview() {
                   </section>
                 ) : (
                   /* Editable Adjudication Mode */
-                  <section aria-label={`Review ${submission.entryTitle}`} className="border-t border-amber-100 bg-amber-50/45 px-4 py-4 sm:px-5 sm:py-5">
+                  <section aria-label={`Review ${submission.entryTitle}`} className="border-t border-slate-200 bg-slate-50/70 px-4 py-4 sm:px-5 sm:py-5">
                     <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-amber-800 shadow-2xs">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-orange-700 shadow-2xs">
                           <Trophy size={14} />
                         </span>
                         <div>
@@ -597,7 +663,7 @@ export function AdminSubmissionsReview() {
                                 clearSaveMessage(submission.id);
                               }}
                               aria-describedby={`decision-help-${submission.id}`}
-                              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none transition-colors focus:border-amber-500 focus:bg-white"
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
                             >
                               {(Object.keys(statusLabels) as SubmissionStatus[]).map((status) => (
                                 <option key={status} value={status}>{statusLabels[status]}</option>
@@ -606,7 +672,7 @@ export function AdminSubmissionsReview() {
                           </div>
                           <p id={`decision-help-${submission.id}`} className="mt-3 flex items-start gap-1.5 text-[11px] leading-4 text-slate-500 pt-2 border-t border-slate-100">
                             {currentStatus === 'submitted' || currentStatus === 'under_review'
-                              ? <Clock3 size={13} className="mt-0.5 shrink-0 text-amber-600" />
+                              ? <Clock3 size={13} className="mt-0.5 shrink-0 text-orange-700" />
                               : <BadgeCheck size={13} className="mt-0.5 shrink-0 text-emerald-600" />}
                             <span>{getDecisionHelp(currentStatus)}</span>
                           </p>
@@ -622,9 +688,9 @@ export function AdminSubmissionsReview() {
                               {currentScore !== '' && Number(currentScore) >= 0 && (
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                   Number(currentScore) >= 90
-                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    ? 'bg-orange-100 text-orange-900 border border-orange-200'
                                     : Number(currentScore) >= 75
-                                    ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                    ? 'bg-blue-50 text-blue-800 border border-blue-200'
                                     : Number(currentScore) >= 60
                                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                                     : 'bg-slate-100 text-slate-700'
@@ -665,7 +731,7 @@ export function AdminSubmissionsReview() {
                                   clearSaveMessage(submission.id);
                                 }}
                                 placeholder="e.g. 85"
-                                className="w-28 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-amber-500 focus:bg-white text-center"
+                                className="w-28 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2 text-center text-sm font-bold text-slate-900 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
                               />
 
                               {/* Quick score presets */}
@@ -735,7 +801,7 @@ export function AdminSubmissionsReview() {
                           placeholder={currentStatus === 'disqualified'
                             ? 'Explain the technical or eligibility grounds for disqualification so the school can review feedback…'
                             : 'Provide constructive feedback, strengths, and areas of refinement for the student…'}
-                          className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 text-xs leading-relaxed text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-amber-500 focus:bg-white"
+                          className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 text-xs leading-relaxed text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
                         />
                       </div>
 
@@ -756,7 +822,7 @@ export function AdminSubmissionsReview() {
                             type="button"
                             disabled={isSaving}
                             onClick={() => void handleSaveReview(submission.id, submission.status)}
-                            className="inline-flex min-w-[130px] items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60 shadow-xs"
+                            className="inline-flex min-w-[130px] items-center justify-center gap-2 rounded-xl bg-orange-700 px-4 py-2.5 text-xs font-semibold text-white shadow-[0_1px_3px_rgba(15,23,42,0.08)] transition-colors hover:bg-orange-800 disabled:cursor-wait disabled:opacity-60"
                           >
                             {isSaving ? (
                               <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Saving Decision…</>
@@ -777,11 +843,15 @@ export function AdminSubmissionsReview() {
                     )}
                   </section>
                 )}
-              </article>
+                </article>
+              </details>
             );
                 })}
+                    </div>
+                  </details>
+                ))}
               </div>
-            </section>
+            </details>
           ))}
 
           {filtered.length === 0 && (

@@ -73,10 +73,10 @@ function getNotificationConfig(notification: DashboardNotification) {
     return {
       Icon: Clock3,
       badgeLabel: 'Under Review',
-      badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
-      iconBoxClass: 'bg-blue-100 text-blue-700 ring-1 ring-blue-200',
-      unreadBg: 'bg-blue-50/70',
-      dotColor: 'bg-blue-600',
+      badgeClass: 'bg-orange-100 text-orange-800 border-orange-200',
+      iconBoxClass: 'bg-orange-100 text-orange-700 ring-1 ring-orange-200',
+      unreadBg: 'bg-orange-50/70',
+      dotColor: 'bg-orange-600',
     };
   }
 
@@ -84,10 +84,10 @@ function getNotificationConfig(notification: DashboardNotification) {
     return {
       Icon: FileText,
       badgeLabel: 'Submission',
-      badgeClass: 'bg-sky-100 text-sky-800 border-sky-200',
-      iconBoxClass: 'bg-sky-100 text-sky-700 ring-1 ring-sky-200',
-      unreadBg: 'bg-sky-50/70',
-      dotColor: 'bg-sky-600',
+      badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+      iconBoxClass: 'bg-amber-100 text-amber-700 ring-1 ring-amber-200',
+      unreadBg: 'bg-amber-50/70',
+      dotColor: 'bg-amber-600',
     };
   }
 
@@ -95,10 +95,10 @@ function getNotificationConfig(notification: DashboardNotification) {
     return {
       Icon: School,
       badgeLabel: 'Delegation',
-      badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
-      iconBoxClass: 'bg-purple-100 text-purple-700 ring-1 ring-purple-200',
-      unreadBg: 'bg-purple-50/70',
-      dotColor: 'bg-purple-600',
+      badgeClass: 'bg-orange-100 text-orange-800 border-orange-200',
+      iconBoxClass: 'bg-orange-100 text-orange-700 ring-1 ring-orange-200',
+      unreadBg: 'bg-orange-50/70',
+      dotColor: 'bg-orange-600',
     };
   }
 

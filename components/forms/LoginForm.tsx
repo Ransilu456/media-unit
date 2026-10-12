@@ -27,7 +27,7 @@ interface LoginFormProps {
 export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
   const router = useRouter();
   const { loginSchool, loginAdmin } = useMediaStore();
-  const { rateLimited, cooldownRemaining, recordFailedAttempt, recordSuccess } =
+  const { rateLimited, cooldownRemaining, rateLimitInitialized, recordFailedAttempt, recordSuccess } =
     useAuth();
 
   const [activeTab, setActiveTab] = useState<'school' | 'admin'>(initialTab);
@@ -46,7 +46,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (rateLimited) return;
+    if (!rateLimitInitialized || rateLimited) return;
     setError(null);
     setLoading(true);
 
@@ -78,7 +78,11 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
       const message = err instanceof Error ? err.message : 'Login failed. Please check credentials.';
       const isAccountStatusMessage = /awaiting approval|account is suspended|account is banned/i.test(message);
       const isConnectionFailure = isFirebaseConnectionError(err);
-      const isNowLimited = isAccountStatusMessage || isConnectionFailure ? false : recordFailedAttempt();
+      const isCredentialFailure =
+        /invalid (?:school email or password|firebase email or password|admin credentials)|too many (?:failed login attempts|login attempts)/i.test(message);
+      const isNowLimited = isCredentialFailure && !isAccountStatusMessage && !isConnectionFailure
+        ? recordFailedAttempt()
+        : false;
       if (!isNowLimited) {
         setError(isConnectionFailure
           ? 'Unable to connect right now. Check your internet connection and retry.'
@@ -180,7 +184,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
                 id="login-email"
                 type="email"
                 required
-                disabled={rateLimited}
+                disabled={!rateLimitInitialized || rateLimited}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={activeTab === 'school' ? 'teacher@school.sch.lk' : 'admin@agradhi.lk'}
@@ -210,7 +214,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
                 id="login-password"
                 type={showPassword ? 'text' : 'password'}
                 required
-                disabled={rateLimited}
+                disabled={!rateLimitInitialized || rateLimited}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
@@ -222,7 +226,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
           <button
             type="submit"
             id="login-submit"
-            disabled={loading || rateLimited}
+            disabled={loading || !rateLimitInitialized || rateLimited}
             className="auth-submit w-full py-3 rounded-xl text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
@@ -230,6 +234,8 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
                 <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Signing in...
               </>
+            ) : !rateLimitInitialized ? (
+              <>Checking sign-in status...</>
             ) : rateLimited ? (
               <>
                 <Clock size={14} />

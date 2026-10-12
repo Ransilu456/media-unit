@@ -15,16 +15,12 @@ interface DotMatrixChartProps {
 }
 
 const DOT_PALETTE = [
-  '#0f766e',
-  '#0d9488',
-  '#0284c7',
-  '#2563eb',
-  '#4f46e5',
-  '#6366f1',
-  '#7c3aed',
-  '#9333ea',
-  '#c026d3',
-  '#db2777',
+  '#fed7aa',
+  '#fdba74',
+  '#fb923c',
+  '#f97316',
+  '#ea580c',
+  '#c2410c',
 ];
 
 export function DotMatrixChart({
@@ -68,7 +64,7 @@ export function DotMatrixChart({
   }, [maxVal]);
 
   return (
-    <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs relative overflow-hidden h-full flex flex-col justify-between">
+    <div className="relative flex min-h-[340px] flex-col overflow-hidden rounded-2xl border border-sky-100/80 bg-white p-5 shadow-[0_8px_28px_rgba(59,130,246,0.07)]">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
@@ -85,16 +81,16 @@ export function DotMatrixChart({
       </div>
 
       {/* Grid with Y-axis and Dot Columns */}
-      <div className="flex items-end gap-3 pt-3 flex-1 min-h-[190px]">
+      <div className="grid grid-cols-[24px_minmax(0,1fr)] items-end gap-3 pt-3">
         {/* Y-axis Labels */}
-        <div className="flex flex-col justify-between h-40 text-[10px] font-mono text-slate-400 pb-5 shrink-0 text-right w-6 select-none">
+        <div className="flex h-44 flex-col justify-between pb-6 text-right font-mono text-[10px] text-slate-400 select-none">
           {yTicks.map((tick, i) => (
             <span key={i}>{tick}</span>
           ))}
         </div>
 
         {/* Columns Grid */}
-        <div className="flex-1 flex items-end justify-between gap-2 h-40 border-b border-slate-200 pb-2">
+        <div className="flex h-44 min-w-0 items-end justify-between gap-1 border-b border-slate-200 pb-2 sm:gap-2">
           {columns.map((col, cIdx) => {
             // Number of dots to display (up to 10 dots max)
             const dotCount =
@@ -105,18 +101,18 @@ export function DotMatrixChart({
             return (
               <div
                 key={cIdx}
-                className="flex-1 flex flex-col items-center justify-end group cursor-default"
+                className="group flex min-w-0 flex-1 cursor-default flex-col items-center justify-end"
                 title={`${col.month}: ${col.count} ${col.count === 1 ? 'submission' : 'submissions'}`}
               >
                 {/* Dots stack */}
-                <div className="flex flex-col-reverse gap-1.5 mb-2 min-h-[14px]">
+                <div className="mb-2 flex min-h-[14px] flex-col-reverse gap-1.5">
                   {col.count > 0 ? (
                     Array.from({ length: Math.max(dotCount, 1) }).map((_, dIdx) => {
                       const color = DOT_PALETTE[Math.min(dIdx, DOT_PALETTE.length - 1)];
                       return (
                         <span
                           key={dIdx}
-                          className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full transition-transform duration-150 group-hover:scale-125 shadow-2xs"
+                          className="h-3.5 w-3.5 rounded-full shadow-[0_1px_2px_rgba(15,23,42,0.08)] transition-transform duration-150 group-hover:scale-125 sm:h-4 sm:w-4"
                           style={{ backgroundColor: color }}
                         />
                       );
@@ -144,13 +140,11 @@ export function DotMatrixChart({
       </div>
 
       {/* Footer Info */}
-      <div className="pt-3 border-t border-slate-100 mt-3 flex items-center justify-between text-[11px] text-slate-500">
+      <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-[11px] text-slate-500">
         <span>
           {maxVal > 0 ? `Peak month volume: ${maxVal} entries` : 'Awaiting entry volume'}
         </span>
-        <span className="font-medium text-slate-700">
-          {total > 0 ? 'Telemetry Active' : 'No Activity Yet'}
-        </span>
+        <span className="font-medium text-slate-700">{total > 0 ? 'Active' : 'No activity'}</span>
       </div>
     </div>
   );

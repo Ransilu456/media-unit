@@ -21,7 +21,7 @@ interface FormEditorModalProps {
 }
 
 const controlClassName =
-  'w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600';
+  'w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500';
 const labelClassName = 'mb-1.5 block text-sm font-medium text-slate-700';
 const grades = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12', 'Grade 13'];
 
@@ -162,31 +162,36 @@ export function CompetitionFormEditorModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/50 p-3 sm:p-6">
-      <div className="relative my-4 w-full max-w-4xl rounded-xl border border-slate-200 bg-white p-5 shadow-xl sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/35 p-2 backdrop-blur-[2px] sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="competition-editor-title"
+        className="relative flex max-h-[calc(100dvh-1rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-sky-100 bg-white p-4 shadow-[0_20px_60px_rgba(59,130,246,0.18)] sm:max-h-[calc(100dvh-2rem)] sm:p-6"
+      >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close competition editor"
-          className="absolute right-4 top-4 rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          className="absolute right-3 top-3 z-10 rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:right-4 sm:top-4"
         >
           <X size={18} />
         </button>
 
-        <h2 className="pr-10 text-xl font-semibold text-slate-900">
+        <h2 id="competition-editor-title" className="pr-10 text-lg font-semibold text-slate-900 sm:text-xl">
           {isEditing ? 'Edit Competition' : 'Create Competition'}
         </h2>
-        <p className="mb-4 mt-1 text-sm text-slate-600">
-          Manage the competition details and the questions students see when submitting an entry.
+        <p className="mb-3 mt-1 text-xs text-slate-500">
+          Competition details and entry form
         </p>
 
-        <div className="mb-5 flex gap-2 border-b border-slate-200">
+        <div className="mb-4 flex shrink-0 gap-2 border-b border-slate-200">
           <button
             type="button"
             aria-pressed={view === 'edit'}
             onClick={() => setView('edit')}
             className={`border-b-2 px-3 py-2 text-sm font-medium ${
-              view === 'edit' ? 'border-amber-600 text-amber-800' : 'border-transparent text-slate-500'
+              view === 'edit' ? 'border-orange-600 text-orange-800' : 'border-transparent text-slate-500'
             }`}
           >
             Edit details
@@ -196,7 +201,7 @@ export function CompetitionFormEditorModal({
             aria-pressed={view === 'preview'}
             onClick={() => setView('preview')}
             className={`border-b-2 px-3 py-2 text-sm font-medium ${
-              view === 'preview' ? 'border-amber-600 text-amber-800' : 'border-transparent text-slate-500'
+              view === 'preview' ? 'border-orange-600 text-orange-800' : 'border-transparent text-slate-500'
             }`}
           >
             Preview
@@ -211,11 +216,11 @@ export function CompetitionFormEditorModal({
         )}
 
         {view === 'preview' ? (
-          <div className="max-h-[70vh] overflow-y-auto pr-1">
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
             <CompetitionPreviewPanel competition={previewCompetition} />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-5 overflow-y-auto pr-2">
+          <form onSubmit={handleSubmit} className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2">
             <section className="space-y-4">
               <h3 className="text-sm font-semibold text-slate-900">Competition details</h3>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -470,7 +475,7 @@ export function CompetitionFormEditorModal({
               <button
                 type="submit"
                 disabled={isSaving}
-                className="w-full rounded-lg bg-amber-600 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:cursor-wait disabled:opacity-60"
+                className="w-full rounded-lg bg-orange-700 py-3 text-sm font-semibold text-white transition-colors hover:bg-orange-800 disabled:cursor-wait disabled:opacity-60"
               >
                 {isSaving ? 'Saving...' : isEditing ? 'Save competition changes' : 'Publish competition'}
               </button>

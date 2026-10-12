@@ -1,4 +1,4 @@
-import { SRI_LANKA_PROVINCES } from './constants';
+import { PROVINCE_DISTRICTS, SRI_LANKA_PROVINCES } from './constants';
 import type { DbData, JsonValue } from './db';
 import type { CategoryType, Competition, MediumType, NewSubmissionInput, RegisteredSchool, Submission, SubmissionStatus, } from './types';
 
@@ -219,9 +219,7 @@ export function calculateAge(birthday: string, now = new Date()): number | null 
 }
 
 function validPhone(value: string): boolean {
-  if (!/^[\d\s()+-]+$/.test(value)) return false;
-  const digits = value.replace(/[\s()+-]/g, '');
-  return /^\d{9,12}$/.test(digits);
+  return /^\d{10}$/.test(value);
 }
 
 export function validateSchoolRegistration(value: unknown): ValidationErrors {
@@ -235,8 +233,8 @@ export function validateSchoolRegistration(value: unknown): ValidationErrors {
     ['name', 'School name', 2, 120],
     ['district', 'District', 2, 100],
     ['teacherInCharge', 'Teacher-in-charge name', 2, 100],
-    ['teacherPhone', 'Teacher phone', 9, 20],
-    ['presidentPhone', 'President phone', 9, 20],
+    ['teacherPhone', 'Teacher phone', 10, 10],
+    ['presidentPhone', 'President phone', 10, 10],
     ['mediaPresident', 'Media Unit President name', 2, 100],
     ['email', 'Email address', 3, 254],
     ['password', 'Password', 6, 128],
@@ -244,11 +242,15 @@ export function validateSchoolRegistration(value: unknown): ValidationErrors {
 
   for (const [field, label, minimum, maximum] of required) {
     if (!isText(value[field], minimum, maximum)) {
-      errors[field] = `${label} must be between ${minimum} and ${maximum} characters.`;
+      errors[field] = field === 'password'
+        ? typeof value[field] === 'string' && value[field].length > maximum
+          ? 'Password is too long.'
+          : 'Password must be at least 6 characters.'
+        : `${label} must be between ${minimum} and ${maximum} characters.`;
     }
   }
 
-  if (typeof value.password === 'string' && value.password.length >= 6) {
+  if (typeof value.password === 'string' && value.password.length >= 6 && value.password.length <= 128) {
     const passwordHasLowercase = /[a-z]/.test(value.password);
     const passwordHasUppercase = /[A-Z]/.test(value.password);
     const passwordHasNumber = /\d/.test(value.password);
@@ -263,19 +265,20 @@ export function validateSchoolRegistration(value: unknown): ValidationErrors {
     && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email.trim())) {
     errors.email = 'Enter a valid email address.';
   }
-  if (typeof value.teacherPhone === 'string'
-    && isText(value.teacherPhone, 9, 20)
-    && !validPhone(value.teacherPhone)) {
-    errors.teacherPhone = 'Enter a valid phone number.';
+  if (typeof value.teacherPhone === 'string' && !validPhone(value.teacherPhone)) {
+    errors.teacherPhone = 'Enter exactly 10 digits with no spaces or symbols.';
   }
   if (typeof value.province !== 'string' || !SRI_LANKA_PROVINCES.includes(value.province)) {
     errors.province = 'Select a valid province.';
+  } else if (
+    typeof value.district === 'string'
+    && !PROVINCE_DISTRICTS[value.province]?.includes(value.district)
+  ) {
+    errors.district = 'Choose a district in the selected province.';
   }
 
-  if (typeof value.presidentPhone === 'string'
-    && value.presidentPhone.trim()
-    && !validPhone(value.presidentPhone)) {
-    errors.presidentPhone = 'Enter a valid phone number.';
+  if (typeof value.presidentPhone === 'string' && !validPhone(value.presidentPhone)) {
+    errors.presidentPhone = 'Enter exactly 10 digits with no spaces or symbols.';
   }
   return errors;
 }
@@ -312,7 +315,7 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
     ['schoolId', 'School', 1, 100],
     ['studentName', 'Student name', 2, 100],
     ['studentGrade', 'Student grade', 1, 30],
-    ['studentContact', 'Contact phone', 9, 20],
+    ['studentContact', 'Contact phone', 10, 10],
     ['entryTitle', 'Entry name', 2, 160],
     ['submissionLink', 'Work link', 8, 2048],
     ['synopsis', 'Entry description', 20, 10000],
@@ -331,10 +334,8 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
     && !competition.ageCategory.grades.includes(value.studentGrade)) {
     errors.studentGrade = 'This grade is not eligible for the selected competition.';
   }
-  if (typeof value.studentContact === 'string'
-    && isText(value.studentContact, 9, 20)
-    && !validPhone(value.studentContact)) {
-    errors.studentContact = 'Enter a valid phone number.';
+  if (typeof value.studentContact === 'string' && !validPhone(value.studentContact)) {
+    errors.studentContact = 'Enter exactly 10 digits with no spaces or symbols.';
   }
   if (!validDate(value.studentBirthday)) {
     errors.studentBirthday = 'Enter a valid date of birth.';
@@ -389,27 +390,28 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
 
       for (const field of customFields) {
         const answer = customValues[field.id];
+        const errorKey = `customValues.${field.id}`;
         if (answer === undefined || (typeof answer === 'string' && answer.trim() === '')) {
-          if (field.required) errors.customValues = `Please complete "${field.label}".`;
+          if (field.required) errors[errorKey] = `Please complete "${field.label}".`;
           continue;
         }
         if (typeof answer !== 'string' || answer.length > 2000) {
-          errors.customValues = `Answer for "${field.label}" must be at most 2,000 characters.`;
+          errors[errorKey] = `Answer for "${field.label}" must be at most 2,000 characters.`;
           continue;
         }
         if (field.type === 'select' && !field.options?.includes(answer)) {
-          errors.customValues = `Select a valid option for "${field.label}".`;
+          errors[errorKey] = `Select a valid option for "${field.label}".`;
         } else if (field.type === 'url') {
           try {
             const answerUrl = new URL(answer);
             if (!['https:', 'http:'].includes(answerUrl.protocol) || !answerUrl.hostname) {
-              errors.customValues = `Enter a valid link for "${field.label}".`;
+              errors[errorKey] = `Enter a valid link for "${field.label}".`;
             }
           } catch {
-            errors.customValues = `Enter a valid link for "${field.label}".`;
+            errors[errorKey] = `Enter a valid link for "${field.label}".`;
           }
         } else if (field.type === 'number' && !Number.isFinite(Number(answer))) {
-          errors.customValues = `Enter a valid number for "${field.label}".`;
+          errors[errorKey] = `Enter a valid number for "${field.label}".`;
         }
       }
     }

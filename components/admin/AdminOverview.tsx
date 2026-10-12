@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, CheckCircle2, ClipboardCheck, FileText, School, Trophy, Radio } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ClipboardCheck, FileText, School, Trophy } from 'lucide-react';
 import { useMemo } from 'react';
 import { useMediaStore } from '@/lib/store';
 import type { AdminTab } from '@/components/layout/AdminPortalLayout';
@@ -11,7 +11,7 @@ import { ConcentricOrbitalChart } from '@/components/dashboard/ConcentricOrbital
 import { DotMatrixChart } from '@/components/dashboard/DotMatrixChart';
 import { StackedBarChart } from '@/components/dashboard/StackedBarChart';
 
-const categoryColors = ['#0f766e', '#2563eb', '#d97706', '#7c3aed', '#0891b2', '#64748b'];
+const categoryColors = ['#3b82f6', '#f97316', '#14b8a6', '#8b5cf6', '#22c55e', '#fb923c'];
 
 export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) => void }) {
   const { schools, competitions, submissions, isSchoolsLoaded, isSubmissionsLoaded } = useMediaStore();
@@ -86,168 +86,139 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
   }, [submissions]);
 
   const recentSubmissionGroups = useMemo(() => {
-    const groups = new Map<string, { schoolName: string; submissions: typeof submissions }>();
-    submissions.slice(0, 6).forEach((submission) => {
+    const groups = new Map<string, {
+      schoolName: string;
+      competitions: Map<string, { title: string; submissions: typeof submissions }>;
+    }>();
+    submissions.slice(0, 8).forEach((submission) => {
       const schoolId = submission.schoolId || submission.schoolName;
       const schoolName = schools.find((school) => school.id === submission.schoolId)?.name
         ?? submission.schoolName
         ?? 'Unregistered school';
-      const group = groups.get(schoolId);
-      if (group) {
-        group.submissions.push(submission);
-      } else {
-        groups.set(schoolId, { schoolName, submissions: [submission] });
+      let group = groups.get(schoolId);
+      if (!group) {
+        group = { schoolName, competitions: new Map() };
+        groups.set(schoolId, group);
       }
+      const competition = group.competitions.get(submission.competitionId);
+      if (competition) competition.submissions.push(submission);
+      else group.competitions.set(submission.competitionId, {
+        title: submission.competitionTitle,
+        submissions: [submission],
+      });
     });
-    return [...groups.entries()];
+    return [...groups.entries()].map(([schoolId, group]) => [
+      schoolId,
+      {
+        schoolName: group.schoolName,
+        competitions: [...group.competitions.entries()],
+      },
+    ] as const);
   }, [schools, submissions]);
 
   const pendingSchools = schools.filter((school) => school.status === 'pending').length;
   const openCompetitions = competitions.filter((competition) => competition.status === 'open').length;
 
   return (
-    <div className="max-w-7xl space-y-6">
-      {/* Header with live system indicator */}
-      <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-              Agradhi Media Unit · Central Adjudication Console
-            </p>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-950">
-            Administrator Command Center
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Real-time delegation metrics, adjudication radar, and national competition telemetry.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-2xs">
-            <Radio size={13} className="text-amber-600 animate-pulse" />
-            <span>2026 Academic Season Active</span>
-          </span>
-        </div>
-      </section>
-
-      {/* Action Prompt / What needs attention */}
-      <section aria-labelledby="admin-next-steps" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-        <div className="mb-4">
-          <h2 id="admin-next-steps" className="text-sm font-semibold text-slate-900">What needs attention</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Review pending school approvals and judge grading queues.</p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+    <div className="max-w-7xl space-y-5">
+      <section aria-label="Admin shortcuts" className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <button
             type="button"
             onClick={() => onTabChange('submissions')}
-            className="group rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-amber-300 hover:bg-amber-50/40"
+            className="group flex items-center justify-between gap-3 rounded-2xl border border-sky-100 bg-white p-4 text-left shadow-[0_8px_28px_rgba(59,130,246,0.07)] transition-colors hover:bg-sky-50/70"
           >
-            <span className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <ClipboardCheck size={16} className="text-amber-700" /> Review entries
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
+                <ClipboardCheck size={18} />
               </span>
-              <ArrowRight size={15} className="text-slate-400 group-hover:text-amber-700" />
+              <span>
+                <span className="block text-sm font-semibold text-slate-900">Review entries</span>
+                <span className="mt-0.5 block text-xs text-slate-500">{pending} awaiting review</span>
+              </span>
             </span>
-            <span className="mt-2 block text-xs leading-5 text-slate-600">
-              {pending
-                ? `${pending} ${pending === 1 ? 'entry needs' : 'entries need'} review. Open the submission to set a decision, score, and school feedback.`
-                : 'No entries are awaiting review. You can browse all past adjudications.'}
-            </span>
+            <ArrowRight size={16} className="shrink-0 text-sky-500 transition-transform group-hover:translate-x-0.5" />
           </button>
           <button
             type="button"
             onClick={() => onTabChange('schools')}
-            className="group rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-amber-300 hover:bg-amber-50/40"
+            className="group flex items-center justify-between gap-3 rounded-2xl border border-teal-100 bg-white p-4 text-left shadow-[0_8px_28px_rgba(20,184,166,0.07)] transition-colors hover:bg-teal-50/70"
           >
-            <span className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <School size={16} className="text-amber-800" /> School accounts
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                <School size={18} />
               </span>
-              <ArrowRight size={15} className="text-slate-400 group-hover:text-amber-800" />
+              <span>
+                <span className="block text-sm font-semibold text-slate-900">Schools</span>
+                <span className="mt-0.5 block text-xs text-slate-500">{pendingSchools} pending approval</span>
+              </span>
             </span>
-            <span className="mt-2 block text-xs leading-5 text-slate-600">
-              {pendingSchools
-                ? `${pendingSchools} ${pendingSchools === 1 ? 'school is' : 'schools are'} pending approval. Activate a school to let it submit student entries.`
-                : 'Review registered schools and check that approved delegations are active.'}
-            </span>
+            <ArrowRight size={16} className="shrink-0 text-teal-500 transition-transform group-hover:translate-x-0.5" />
           </button>
           <button
             type="button"
             onClick={() => onTabChange('competitions')}
-            className="group rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-teal-300 hover:bg-teal-50/40"
+            className="group flex items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-white p-4 text-left shadow-[0_8px_28px_rgba(249,115,22,0.07)] transition-colors hover:bg-orange-50/70"
           >
-            <span className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Trophy size={16} className="text-teal-700" /> Competition tracks
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-700">
+                <Trophy size={18} />
               </span>
-              <ArrowRight size={15} className="text-slate-400 group-hover:text-teal-700" />
+              <span>
+                <span className="block text-sm font-semibold text-slate-900">Competitions</span>
+                <span className="mt-0.5 block text-xs text-slate-500">{openCompetitions} open</span>
+              </span>
             </span>
-            <span className="mt-2 block text-xs leading-5 text-slate-600">
-              {openCompetitions
-                ? `${openCompetitions} tracks currently accepting entries. Check deadlines and entry quotas.`
-                : 'All competition gates locked. Open a track to receive submissions.'}
-            </span>
+            <ArrowRight size={16} className="shrink-0 text-orange-500 transition-transform group-hover:translate-x-0.5" />
           </button>
-        </div>
       </section>
 
       {/* Primary KPI Metrics */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <RadialMetricCard
           label="Registered schools"
           value={String(schools.length)}
-          description="All school delegations"
-          strokeColor="#2563eb"
+          strokeColor="#3b82f6"
           isLoading={!isSchoolsLoaded}
         />
         <RadialMetricCard
           label="Entries received"
           value={String(submissions.length)}
-          description="Total student submissions"
-          strokeColor="#0f766e"
+          strokeColor="#f97316"
           isLoading={!isSubmissionsLoaded}
         />
         <RadialMetricCard
           label="Entries in review"
           value={String(pending)}
           percentage={submissions.length ? Math.round((pending / submissions.length) * 100) : 0}
-          description="Awaiting jury grading"
-          strokeColor="#d97706"
+          strokeColor="#14b8a6"
           isLoading={!isSubmissionsLoaded}
         />
         <RadialMetricCard
           label="Verified / finalist"
           value={String(verifiedCount)}
           percentage={submissions.length ? Math.round((verifiedCount / submissions.length) * 100) : 0}
-          description="Cleared &amp; adjudicated"
-          strokeColor="#7c3aed"
+          strokeColor="#22c55e"
           isLoading={!isSubmissionsLoaded}
         />
       </section>
 
       {/* Visual Analytics Showcase: Concentric Orbital Radar + Segmented Gauge */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-6">
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="min-w-0">
           <ConcentricOrbitalChart
             percentage={clearancePct}
             label="Adjudication Clearance Radar"
-            sublabel={
-              submissions.length > 0
-                ? `${verifiedCount} of ${submissions.length} student entries evaluated by jury board`
-                : 'Awaiting student entries for live radar telemetry'
-            }
+            sublabel={submissions.length > 0 ? `${verifiedCount} of ${submissions.length} reviewed` : 'No entries yet'}
             entries={radarEntries}
             categories={categoryBreakdown}
             totalSubmissions={submissions.length}
           />
         </div>
 
-        <div className="lg:col-span-6">
+        <div className="min-w-0">
           <SegmentedGauge
             title="Category distribution"
-            subtitle={`${openCompetitions} competition tracks active`}
+            subtitle={`${openCompetitions} open`}
             totalCount={submissions.length}
             countLabel="Entries"
             categories={shares}
@@ -258,9 +229,9 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
       {/* Stacked Bar Chart for Competition Velocity */}
       <section>
         <StackedBarChart
-          title="All-Island Competition Velocity & Intake"
+          title="Entries over time"
           totalSubmissions={submissions.length}
-          period="Active 2026 Academic Season"
+          period="Current season"
           schoolCount={schools.length}
           monthlyData={monthlyData}
           categoryBreakdown={categoryBreakdown}
@@ -268,13 +239,12 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
       </section>
 
       {/* Activity Heatmap & Recent Submissions Grid */}
-      <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <section className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
         {/* Left: Recent Submissions Feed */}
-        <div className="xl:col-span-7 rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
-          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
+        <div className="overflow-hidden rounded-2xl border border-sky-100/80 bg-white shadow-[0_8px_28px_rgba(59,130,246,0.07)] xl:col-span-7">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
             <div>
               <h2 className="text-sm font-semibold text-slate-900">Recent entries by school</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Submissions are grouped under each school</p>
             </div>
             <button
               type="button"
@@ -302,20 +272,27 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
             <div className="divide-y divide-slate-100">
               {recentSubmissionGroups.map(([schoolId, group]) => (
                 <section key={schoolId}>
-                  <h3 className="flex items-center justify-between gap-3 bg-slate-50 px-5 py-2.5 text-xs font-semibold text-slate-700">
+                  <h3 className="flex items-center justify-between gap-3 bg-slate-50/80 px-5 py-2.5 text-xs font-semibold text-slate-700">
                     <span className="truncate">{group.schoolName}</span>
-                    <span className="shrink-0 font-medium text-slate-500">{group.submissions.length} entries</span>
+                    <span className="shrink-0 font-medium text-slate-500">
+                      {group.competitions.reduce((total, [, competition]) => total + competition.submissions.length, 0)} entries
+                    </span>
                   </h3>
-                  {group.submissions.map((submission) => (
-                    <div key={submission.id} className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50/50">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                        <FileText size={16} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">{submission.entryTitle}</p>
-                        <p className="truncate text-xs text-slate-500">{submission.studentName}</p>
-                      </div>
-                      <StatusBadge status={submission.status} />
+                  {group.competitions.map(([competitionId, competition]) => (
+                    <div key={competitionId} className="border-t border-slate-100">
+                      <p className="bg-white px-5 py-2 text-[11px] font-medium text-slate-500">{competition.title}</p>
+                      {competition.submissions.map((submission) => (
+                        <div key={submission.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50/50">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
+                            <FileText size={15} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-slate-900">{submission.entryTitle}</p>
+                            <p className="truncate text-xs text-slate-500">{submission.studentName}</p>
+                          </div>
+                          <StatusBadge status={submission.status} />
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </section>
@@ -325,7 +302,6 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
             <div className="px-5 py-12 text-center">
               <CheckCircle2 size={24} className="mx-auto text-slate-300 mb-2" />
               <p className="text-sm font-medium text-slate-700">No submissions yet</p>
-              <p className="text-xs text-slate-500 mt-1">Entries will appear here as registered school delegations submit their files.</p>
             </div>
           )}
         </div>
@@ -333,32 +309,14 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
         {/* Right: Dot Matrix Chart */}
         <div className="xl:col-span-5">
           <DotMatrixChart
-            title="Monthly Submission Pulse"
-            subtitle="Delegation entry intake across active academic calendar"
+            title="Monthly entries"
+            subtitle="Entries by month"
             monthlyData={monthlyData}
             totalSubmissions={submissions.length}
           />
         </div>
       </section>
 
-      {/* Footer Metrics */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {[
-          { label: 'Open competitions', value: openCompetitions, icon: Trophy },
-          { label: 'Total competitions', value: competitions.length, icon: FileText },
-          { label: 'Registered schools', value: schools.length, icon: School },
-        ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-2xs">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-              <Icon size={16} />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-lg font-bold leading-tight text-slate-900">{value}</span>
-              <span className="block text-xs text-slate-500">{label}</span>
-            </span>
-          </div>
-        ))}
-      </section>
     </div>
   );
 }

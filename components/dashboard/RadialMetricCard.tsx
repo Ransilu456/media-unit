@@ -18,7 +18,7 @@ export function RadialMetricCard({
   value,
   trendText,
   description,
-  strokeColor = '#8b5cf6',
+  strokeColor = '#f97316',
   isLoading = false,
 }: RadialMetricCardProps) {
   const radius = 28;
@@ -28,9 +28,9 @@ export function RadialMetricCard({
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-200">
+    <div className="flex min-h-[104px] items-center gap-4 rounded-2xl border border-sky-100/80 bg-white p-4 shadow-[0_8px_28px_rgba(59,130,246,0.07)]">
       {/* Circular Progress Ring */}
-      <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
+      <div className="relative flex h-14 w-14 shrink-0 items-center justify-center">
         {isLoading ? (
           <div className="w-14 h-14 rounded-full bg-slate-100 animate-pulse border border-slate-200/60" />
         ) : (
@@ -42,7 +42,7 @@ export function RadialMetricCard({
                 cy="35"
                 r={radius}
                 fill="transparent"
-                stroke="#e2e8f0"
+                stroke="#dbeafe"
                 strokeWidth="6"
               />
               {/* Progress Arc */}
@@ -51,7 +51,7 @@ export function RadialMetricCard({
                 cy="35"
                 r={radius}
                 fill="transparent"
-                stroke={hasPercentage ? strokeColor : '#cbd5e1'}
+                stroke={hasPercentage ? strokeColor : '#bfdbfe'}
                 strokeWidth="6"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
@@ -62,9 +62,11 @@ export function RadialMetricCard({
               />
             </svg>
 
-            <span className="absolute text-xs font-semibold text-slate-800" aria-hidden="true">
-              {hasPercentage ? `${progress}%` : value}
-            </span>
+            {hasPercentage && (
+              <span className="absolute text-xs font-semibold text-slate-800" aria-hidden="true">
+                {progress}%
+              </span>
+            )}
           </>
         )}
       </div>
@@ -76,11 +78,11 @@ export function RadialMetricCard({
         </span>
         {isLoading ? (
           <div className="h-6 w-16 rounded bg-slate-100 animate-pulse my-1" />
-        ) : hasPercentage ? (
-          <div className="text-xl font-semibold text-slate-900 tracking-tight truncate">
+        ) : (
+          <div className="truncate text-xl font-semibold tracking-tight text-slate-900">
             {value}
           </div>
-        ) : null}
+        )}
         {description && (
           <p className="mt-0.5 text-[11px] leading-4 text-slate-500">{description}</p>
         )}

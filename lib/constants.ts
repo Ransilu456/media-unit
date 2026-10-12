@@ -19,3 +19,15 @@ export const SRI_LANKA_PROVINCES = [
   'Northern Province',
   'Eastern Province',
 ];
+
+export const PROVINCE_DISTRICTS: Record<string, string[]> = {
+  'Western Province': ['Colombo', 'Gampaha', 'Kalutara'],
+  'Central Province': ['Kandy', 'Matale', 'Nuwara Eliya'],
+  'Southern Province': ['Galle', 'Matara', 'Hambantota'],
+  'Northern Province': ['Jaffna', 'Kilinochchi', 'Mannar', 'Vavuniya', 'Mullaitivu'],
+  'Eastern Province': ['Batticaloa', 'Ampara', 'Trincomalee'],
+  'North Western Province': ['Kurunegala', 'Puttalam'],
+  'North Central Province': ['Anuradhapura', 'Polonnaruwa'],
+  'Uva Province': ['Badulla', 'Monaragala'],
+  'Sabaragamuwa Province': ['Ratnapura', 'Kegalle'],
+};

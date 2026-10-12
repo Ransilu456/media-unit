@@ -50,7 +50,11 @@ html.splash-active {
   }
 
   body {
-    background-color: #f8fafc;
+    background-color: var(--hero-page-background, #fffaf1);
+    background-image: var(--hero-page-glow, radial-gradient(ellipse at 16% 0%, rgba(255, 235, 190, 0.38), transparent 35%));
+    background-position: top center;
+    background-repeat: no-repeat;
+    background-size: 100% 760px;
     color: #334155;
     font-family: var(--font-body);
     margin: 0;

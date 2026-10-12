@@ -12,16 +12,86 @@ import {
   Film,
   Newspaper,
   Play,
+  Sparkles,
+  Clapperboard,
+  Mic2
 } from 'lucide-react';
+
+
+
+const creativeTracks = [
+  {
+    title: 'Make a film',
+    description: 'Tell a story on screen.',
+    icon: Clapperboard,
+    className: 'bg-[#f8e9d2] text-[#8b4b13]',
+    decoration: 'bg-[#eab15f]',
+  },
+  {
+    title: 'Take a photo',
+    description: 'Show the world your way.',
+    icon: Camera,
+    className: 'bg-[#e5edf8] text-[#315b8e]',
+    decoration: 'bg-[#9dbce5]',
+  },
+  {
+    title: 'Share your voice',
+    description: 'Try news, radio, or audio.',
+    icon: Mic2,
+    className: 'bg-[#eee7f8] text-[#68439b]',
+    decoration: 'bg-[#b49adc]',
+  },
+];
+
+
+export function Cards() {
+  return (
+    <>
+      <div className="mx-auto mt-12 max-w-5xl mb-8">
+        <div className="mb-4 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="mt-1 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">What will you create?</h2>
+          </div>
+
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          {creativeTracks.map(({ title, description, icon: Icon, className, decoration }, index) => (
+            <div
+              key={title}
+              className={`group relative flex min-h-32 flex-1 items-center gap-4 overflow-hidden rounded-2xl border border-white/80 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(15,23,42,0.11)] sm:min-h-40 sm:flex-col sm:items-start sm:justify-between sm:p-5 ${className}`}
+            >
+              <span aria-hidden="true" className={`absolute -right-6 -top-9 h-28 w-28 rounded-full opacity-25 transition-transform group-hover:scale-125 ${decoration}`} />
+              <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/80 shadow-sm sm:h-14 sm:w-14">
+                <Icon size={25} strokeWidth={1.8} />
+              </span>
+              <span className="relative min-w-0">
+                <span className="block text-sm font-bold text-slate-900 sm:text-base">{title}</span>
+                <span className="mt-1 block text-xs text-slate-600">{description}</span>
+              </span>
+              <span className="relative ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/70 transition group-hover:bg-white sm:absolute sm:right-4 sm:top-4">
+                {index === 0 ? <Sparkles size={14} /> : <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 
 const showcases = [
   {
+    big_title: 'Create a film.',
+    big_second_title: 'Tell a story',
+    big_third_underline_title: 'that moves.',
+    description: 'Plan, film, and share an original story. Explore film competitions and give your school’s ideas a screen of their own.',
     label: 'Film',
     icon: Film,
     title: 'Stories brought to life',
     caption: 'PLAN · FILM · SHARE',
-    heroClass: 'bg-[#fffaf1]',
-    glowClass: 'bg-[radial-gradient(ellipse_at_78%_42%,rgba(222,210,255,0.68),transparent_38%),radial-gradient(ellipse_at_14%_4%,rgba(255,230,170,0.55),transparent_32%)]',
+    pageColor: '#fffaf1',
+    pageGlow: 'radial-gradient(ellipse at 78% 42%, rgba(222, 210, 255, 0.68), transparent 38%), radial-gradient(ellipse at 14% 4%, rgba(255, 230, 170, 0.55), transparent 32%)',
     backdropRingClass: 'border-violet-200/60',
     badgeClass: 'border-violet-200 text-violet-900',
     headlineClass: 'text-violet-800',
@@ -33,19 +103,23 @@ const showcases = [
     iconClass: 'bg-violet-100 text-violet-800',
     frameClass: 'from-[#ded1fb] via-[#b99cf0] to-[#7950c7]',
     panelClass: 'from-violet-300 via-[#b9a1f3] to-[#7950c7]',
-    orbClass: 'bg-amber-300',
+    orbClass: 'bg-yellow-300',
     ringClass: 'border-white/20',
     eyebrowClass: 'text-violet-700',
     actionClass: 'text-violet-800',
     floatClass: 'bg-amber-100 text-amber-800',
   },
   {
+    big_title: 'See the story.',
+    big_second_title: 'Capture moments',
+    big_third_underline_title: 'that last.',
+    description: 'Look closer and tell a story through photography. Turn a moment, a place, or an idea into an image worth sharing.',
     label: 'Photography',
     icon: Camera,
     title: 'Moments worth remembering',
     caption: 'NOTICE · FRAME · CAPTURE',
-    heroClass: 'bg-[#fff9f2]',
-    glowClass: 'bg-[radial-gradient(ellipse_at_78%_42%,rgba(255,205,160,0.62),transparent_38%),radial-gradient(ellipse_at_14%_4%,rgba(255,230,170,0.55),transparent_32%)]',
+    pageColor: '#fff9f2',
+    pageGlow: 'radial-gradient(ellipse at 78% 42%, rgba(255, 205, 160, 0.62), transparent 38%), radial-gradient(ellipse at 14% 4%, rgba(255, 230, 170, 0.55), transparent 32%)',
     backdropRingClass: 'border-orange-200/70',
     badgeClass: 'border-orange-200 text-orange-900',
     headlineClass: 'text-orange-700',
@@ -57,19 +131,23 @@ const showcases = [
     iconClass: 'bg-amber-100 text-amber-900',
     frameClass: 'from-[#ffe5a7] via-[#f5bb74] to-[#e77950]',
     panelClass: 'from-amber-200 via-orange-200 to-rose-300',
-    orbClass: 'bg-sky-300',
+    orbClass: 'bg-orange-300',
     ringClass: 'border-white/35',
     eyebrowClass: 'text-orange-800',
     actionClass: 'text-orange-800',
-    floatClass: 'bg-sky-100 text-sky-800',
+    floatClass: 'bg-orange-100 text-orange-900',
   },
   {
+    big_title: 'Find the facts.',
+    big_second_title: 'Ask better',
+    big_third_underline_title: 'questions.',
+    description: 'Explore journalism through thoughtful reporting and clear writing. Bring important stories from your school community to light.',
     label: 'Journalism',
     icon: Newspaper,
     title: 'Stories that matter',
     caption: 'ASK · WRITE · REPORT',
-    heroClass: 'bg-[#f4faff]',
-    glowClass: 'bg-[radial-gradient(ellipse_at_78%_42%,rgba(145,211,245,0.58),transparent_38%),radial-gradient(ellipse_at_14%_4%,rgba(255,231,178,0.5),transparent_32%)]',
+    pageColor: '#f4faff',
+    pageGlow: 'radial-gradient(ellipse at 78% 42%, rgba(145, 211, 245, 0.58), transparent 38%), radial-gradient(ellipse at 14% 4%, rgba(255, 231, 178, 0.5), transparent 32%)',
     backdropRingClass: 'border-sky-200/70',
     badgeClass: 'border-sky-200 text-sky-900',
     headlineClass: 'text-sky-800',
@@ -88,12 +166,16 @@ const showcases = [
     floatClass: 'bg-indigo-100 text-indigo-800',
   },
   {
+    big_title: 'Make some noise.',
+    big_second_title: 'Let your voice',
+    big_third_underline_title: 'be heard.',
+    description: 'Use audio to inform, entertain, and connect. Create a student-led programme or recording that people will want to hear.',
     label: 'Audio',
     icon: AudioLines,
     title: 'A voice of your own',
     caption: 'LISTEN · RECORD · CREATE',
-    heroClass: 'bg-[#f2fbf6]',
-    glowClass: 'bg-[radial-gradient(ellipse_at_78%_42%,rgba(137,224,184,0.54),transparent_38%),radial-gradient(ellipse_at_14%_4%,rgba(255,230,170,0.5),transparent_32%)]',
+    pageColor: '#f2fbf6',
+    pageGlow: 'radial-gradient(ellipse at 78% 42%, rgba(137, 224, 184, 0.54), transparent 38%), radial-gradient(ellipse at 14% 4%, rgba(255, 230, 170, 0.5), transparent 32%)',
     backdropRingClass: 'border-emerald-200/70',
     badgeClass: 'border-emerald-200 text-emerald-900',
     headlineClass: 'text-emerald-800',
@@ -122,6 +204,15 @@ export function HeroSection() {
   const ShowcaseIcon = showcase.icon;
 
   useEffect(() => {
+    document.documentElement.style.setProperty('--hero-page-background', showcase.pageColor);
+    document.documentElement.style.setProperty('--hero-page-glow', showcase.pageGlow);
+    return () => {
+      document.documentElement.style.removeProperty('--hero-page-background');
+      document.documentElement.style.removeProperty('--hero-page-glow');
+    };
+  }, [showcase.pageColor, showcase.pageGlow]);
+
+  useEffect(() => {
     if (isShowcasePaused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const interval = window.setInterval(() => {
@@ -132,32 +223,28 @@ export function HeroSection() {
   }, [isShowcasePaused]);
 
   return (
-    <section className={`relative isolate overflow-hidden transition-colors duration-700 ${showcase.heroClass} z-40 min-h-full`}>
+    <section className="relative isolate z-40 min-h-full overflow-hidden bg-transparent transition-colors duration-700">
       <div
         aria-hidden="true"
-        className={`pointer-events-none absolute inset-0 -z-10 transition-colors duration-700 ${showcase.glowClass}`}
+        className={`pointer-events-none absolute -right-40 top-12 -z-10 h-136 w-136 rounded-full border transition-colors duration-700 sm:-right-28 lg:right-[3%] ${showcase.backdropRingClass}`}
       />
       <div
         aria-hidden="true"
-        className={`pointer-events-none absolute -right-40 top-12 -z-10 h-[34rem] w-[34rem] rounded-full border transition-colors duration-700 sm:right-[-7rem] lg:right-[3%] ${showcase.backdropRingClass}`}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-24 top-28 -z-10 h-[25rem] w-[25rem] rounded-full border-[28px] border-white/35 sm:right-[-1rem] lg:right-[9%]"
+        className="pointer-events-none absolute -right-24 top-28 -z-10 h-100 w-100 rounded-full border-28 border-white/35 sm:-right-4 lg:right-[9%]"
       />
 
-      <div className="mx-auto flex min-h-[620px] max-w-7xl flex-col items-center gap-12 px-5 pb-16 pt-12 sm:px-8 sm:pb-20 sm:pt-16 lg:min-h-[680px] lg:flex-row lg:gap-10 lg:px-10 lg:py-16">
+      <div className="mx-auto flex min-h-155 max-w-7xl flex-col items-center gap-12 px-5 pb-16 pt-12 sm:px-8 sm:pb-20 sm:pt-16 lg:min-h-170 lg:flex-row lg:gap-10 lg:px-10 lg:py-16">
         <div className="relative z-10 w-full max-w-2xl text-center lg:w-[52%] lg:shrink-0 lg:text-left">
           <p className={`inline-flex items-center gap-2 rounded-full border bg-white/80 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] shadow-sm transition-colors duration-500 sm:text-[11px] ${showcase.badgeClass}`}>
-            <span className="h-2 w-2 rounded-full bg-amber-500" />
+            <span className="h-2 w-2 rounded-full bg-orange-500" />
             Saranath College <span className="text-slate-300">/</span> Media Unit 2026
           </p>
 
-          <h1 className="mt-7 text-[2.75rem] font-bold leading-[1.04] tracking-[-0.055em] text-slate-950 sm:text-6xl lg:text-[4.5rem]">
-            Every school has
-            <span className={`block transition-colors duration-500 ${showcase.headlineClass}`}>a story worth</span>
+          <h1 aria-live="polite" className="mt-7 text-[2.75rem] font-bold leading-[1.04] tracking-[-0.055em] text-slate-950 sm:text-6xl lg:text-[4.5rem]">
+            {showcase.big_title}
+            <span className={`block transition-colors duration-500 ${showcase.headlineClass}`}>{showcase.big_second_title}</span>
             <span className="relative inline-block text-slate-950">
-              sharing.
+              {showcase.big_third_underline_title}
               <svg
                 aria-hidden="true"
                 viewBox="0 0 230 18"
@@ -171,7 +258,7 @@ export function HeroSection() {
           </h1>
 
           <p className="mx-auto mt-7 max-w-xl text-sm leading-7 text-slate-600 sm:text-base sm:leading-8 lg:mx-0">
-            Agradhi Media Unit brings schools together through student-made films, photography, journalism, and audio. Create meaningful work, enter competitions, and share your school&apos;s voice.
+            {showcase.description}
           </p>
 
           <div className="mt-8 flex flex-col items-stretch justify-center gap-3 min-[460px]:flex-row lg:justify-start">
@@ -200,13 +287,13 @@ export function HeroSection() {
           </ul>
         </div>
 
-        <div className="relative mx-auto flex min-h-[360px] w-full max-w-[510px] items-center justify-center sm:min-h-[420px] lg:min-h-[480px] lg:flex-1">
+        <div className="relative mx-auto flex min-h-90 w-full max-w-127.5 items-center justify-center sm:min-h-105 lg:min-h-120 lg:flex-1">
           <div
             aria-hidden="true"
-            className={`absolute inset-x-4 inset-y-5 rounded-[2.5rem] bg-gradient-to-br shadow-[0_30px_80px_rgba(99,66,166,0.2)] transition-colors duration-700 sm:inset-x-8 sm:inset-y-8 sm:rounded-[3rem] ${showcase.panelClass}`}
+            className={`absolute inset-x-4 inset-y-5 rounded-[2.5rem] bg-linear-to-br shadow-[0_30px_80px_rgba(99,66,166,0.2)] transition-colors duration-700 sm:inset-x-8 sm:inset-y-8 sm:rounded-[3rem] ${showcase.panelClass}`}
           />
           <div aria-hidden="true" className={`absolute right-3 top-5 h-24 w-24 rounded-full shadow-lg shadow-slate-900/10 transition-colors duration-700 sm:right-7 sm:top-7 sm:h-32 sm:w-32 ${showcase.orbClass}`} />
-          <div aria-hidden="true" className="absolute bottom-4 left-2 h-28 w-28 rounded-full border-[18px] border-white/20 sm:bottom-8 sm:left-5 sm:h-36 sm:w-36" />
+          <div aria-hidden="true" className="absolute bottom-4 left-2 h-28 w-28 rounded-full border-18 border-white/20 sm:bottom-8 sm:left-5 sm:h-36 sm:w-36" />
 
           <div
             role="group"
@@ -218,7 +305,7 @@ export function HeroSection() {
               if (!event.currentTarget.contains(event.relatedTarget)) setIsShowcasePaused(false);
             }}
             aria-roledescription="carousel"
-            className="relative z-10 w-[78%] max-w-[360px] -rotate-2 rounded-[1.8rem] border border-white/80 bg-white p-4 shadow-[0_24px_65px_rgba(45,30,84,0.25)] transition-transform duration-500 hover:rotate-0 sm:w-[76%] sm:rounded-[2rem] sm:p-5"
+            className="relative z-10 w-[78%] max-w-90 -rotate-2 rounded-[1.8rem] border border-white/80 bg-white p-4 shadow-[0_24px_65px_rgba(45,30,84,0.25)] transition-transform duration-500 hover:rotate-0 sm:w-[76%] sm:rounded-4xl sm:p-5"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
@@ -233,8 +320,8 @@ export function HeroSection() {
               <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-900">2026</span>
             </div>
 
-            <div className={`relative mt-4 flex h-40 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br transition-colors duration-700 sm:h-48 ${showcase.frameClass}`}>
-              <span aria-hidden="true" className={`absolute -right-7 -top-10 h-36 w-36 rounded-full border-[18px] transition-colors duration-700 ${showcase.ringClass}`} />
+            <div className={`relative mt-4 flex h-40 items-center justify-center overflow-hidden rounded-2xl bg-linear-to-br transition-colors duration-700 sm:h-48 ${showcase.frameClass}`}>
+              <span aria-hidden="true" className={`absolute -right-7 -top-10 h-36 w-36 rounded-full border-18 transition-colors duration-700 ${showcase.ringClass}`} />
               <span aria-hidden="true" className={`absolute -bottom-10 -left-4 h-32 w-32 rounded-full opacity-85 blur-[1px] transition-colors duration-700 ${showcase.orbClass}`} />
               <span className="relative flex h-16 w-16 items-center justify-center rounded-full border border-white/60 bg-white/25 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-110">
                 <Play size={24} fill="currentColor" className="ml-1" />
@@ -265,16 +352,15 @@ export function HeroSection() {
                     aria-label={`Show ${item.label.toLowerCase()} theme`}
                     aria-pressed={activeShowcase === index}
                     onClick={() => setActiveShowcase(index)}
-                    className={`h-2 rounded-full transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700 ${
-                      activeShowcase === index ? 'w-5 bg-slate-800' : 'w-2 bg-slate-300 hover:bg-slate-500'
-                    }`}
+                    className={`h-2 rounded-full transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-700 ${activeShowcase === index ? 'w-5 bg-slate-800' : 'w-2 bg-slate-300 hover:bg-slate-500'
+                      }`}
                   />
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="absolute left-0 top-10 z-20 flex items-center gap-2 rounded-2xl border border-white/80 bg-white px-3 py-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.12)] sm:left-1 sm:top-12 sm:px-4 sm:py-3">
+          <div className="absolute left-48 top-0 z-20 flex items-center gap-2 rounded-2xl border border-white/80 bg-white px-3 py-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.12)] sm:left-1 sm:top-12 sm:px-4 sm:py-3">
             <span className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors duration-500 ${showcase.floatClass}`}>
               <ShowcaseIcon size={16} />
             </span>
@@ -289,6 +375,8 @@ export function HeroSection() {
           </div>
         </div>
       </div>
+
+      <Cards/>
     </section>
   );
 }

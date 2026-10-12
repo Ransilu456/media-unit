@@ -5,24 +5,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
-import { MEDIA_UNIT_INFO, SRI_LANKA_PROVINCES } from '@/lib/constants';
+import { MEDIA_UNIT_INFO, PROVINCE_DISTRICTS, SRI_LANKA_PROVINCES } from '@/lib/constants';
 import { validateSchoolRegistration } from '@/lib/validation';
 import { auth } from '@/lib/firebase';
 import { requestDeviceNotificationPermission } from '@/lib/browserNotifications';
 import { signOut } from 'firebase/auth';
 import { Building2, User, KeyRound, CheckCircle2, AlertCircle, ChevronRight, ChevronLeft, Info, Eye, EyeOff, ShieldCheck, Check, Mail } from 'lucide-react';
-
-const PROVINCE_DISTRICTS: Record<string, string[]> = {
-  'Western Province': ['Colombo', 'Gampaha', 'Kalutara'],
-  'Central Province': ['Kandy', 'Matale', 'Nuwara Eliya'],
-  'Southern Province': ['Galle', 'Matara', 'Hambantota'],
-  'Northern Province': ['Jaffna', 'Kilinochchi', 'Mannar', 'Vavuniya', 'Mullaitivu'],
-  'Eastern Province': ['Batticaloa', 'Ampara', 'Trincomalee'],
-  'North Western Province': ['Kurunegala', 'Puttalam'],
-  'North Central Province': ['Anuradhapura', 'Polonnaruwa'],
-  'Uva Province': ['Badulla', 'Monaragala'],
-  'Sabaragamuwa Province': ['Ratnapura', 'Kegalle'],
-};
 
 const STEPS = [
   { num: 1, label: 'School', icon: Building2 },
@@ -57,6 +45,7 @@ export function SchoolRegisterForm() {
     password: '',
     confirmPassword: '',
   });
+  const [touched, setTouched] = useState<Partial<Record<keyof typeof form, boolean>>>({});
 
   const availableDistricts = useMemo(() => {
     return PROVINCE_DISTRICTS[form.province] || [];
@@ -91,7 +80,11 @@ export function SchoolRegisterForm() {
     }));
   };
 
-  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof typeof form, v: string) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setTouched((current) => ({ ...current, [k]: true }));
+    setError(null);
+  };
 
   const registrationData = () => ({
     name: form.schoolName.trim(),
@@ -105,8 +98,36 @@ export function SchoolRegisterForm() {
     password: form.password,
   });
 
+  const registrationFieldNames: Partial<Record<keyof typeof form, string>> = {
+    schoolName: 'name',
+    teacherName: 'teacherInCharge',
+    presidentName: 'mediaPresident',
+  };
+  const fieldError = (field: keyof typeof form): string | undefined => {
+    if (!touched[field]) return undefined;
+    if (field === 'confirmPassword') {
+      return form.password !== form.confirmPassword
+        ? 'Passwords do not match.'
+        : undefined;
+    }
+    const validationField = registrationFieldNames[field] ?? field;
+    return validateSchoolRegistration(registrationData())[validationField];
+  };
+  const markStepTouched = () => {
+    const fieldsByStep: Record<number, (keyof typeof form)[]> = {
+      1: ['schoolName', 'province', 'district'],
+      2: ['teacherName', 'teacherPhone', 'presidentName', 'presidentPhone'],
+      3: ['email', 'password', 'confirmPassword'],
+    };
+    setTouched((current) => ({
+      ...current,
+      ...Object.fromEntries((fieldsByStep[step] ?? []).map((field) => [field, true])),
+    }));
+  };
+
   const validate = (): boolean => {
     setError(null);
+    markStepTouched();
     const registrationErrors = validateSchoolRegistration(registrationData());
     if (step === 1) {
       const err = registrationErrors.name || registrationErrors.district || registrationErrors.province;
@@ -191,7 +212,7 @@ export function SchoolRegisterForm() {
                 </a>
                 .
               </p>
-              <div className="mx-auto mt-6 max-w-md rounded-xl border border-sky-200 bg-sky-50/70 p-4 text-left">
+              <div className="mx-auto mt-6 max-w-md rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-left">
                 <h2 className="text-sm font-bold text-slate-900">Get an approval alert</h2>
                 <p className="mt-1 text-xs leading-5 text-slate-600">
                   Enable a notification on this device so we can let you know when your school is approved, even if this site is closed.
@@ -201,7 +222,7 @@ export function SchoolRegisterForm() {
                     type="button"
                     onClick={handleEnableApprovalAlerts}
                     disabled={pushSetupLoading}
-                    className="mt-3 rounded-lg bg-sky-700 px-4 py-2 text-xs font-bold text-white hover:bg-sky-800 disabled:opacity-60"
+                    className="mt-3 rounded-lg bg-amber-700 px-4 py-2 text-xs font-bold text-white hover:bg-amber-800 disabled:opacity-60"
                   >
                     {pushSetupLoading ? 'Setting up alerts...' : 'Enable approval alert'}
                   </button>
@@ -346,11 +367,15 @@ export function SchoolRegisterForm() {
               <input
                 type="text"
                 required
+                maxLength={120}
                 value={form.schoolName}
                 onChange={(e) => set('schoolName', e.target.value)}
+                onBlur={() => setTouched((current) => ({ ...current, schoolName: true }))}
+                aria-invalid={Boolean(fieldError('schoolName'))}
                 placeholder="e.g. Saranath College"
                 className={inputCls}
               />
+              {fieldError('schoolName') && <p className="mt-1 text-xs text-red-700">{fieldError('schoolName')}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -358,7 +383,11 @@ export function SchoolRegisterForm() {
                 <label className={labelCls}>Province *</label>
                 <select
                   value={form.province}
-                  onChange={(e) => handleProvinceChange(e.target.value)}
+                  onChange={(e) => {
+                    handleProvinceChange(e.target.value);
+                    setTouched((current) => ({ ...current, province: true, district: true }));
+                  }}
+                  aria-invalid={Boolean(fieldError('province'))}
                   className={inputCls}
                 >
                   {SRI_LANKA_PROVINCES.map((p) => (
@@ -367,6 +396,7 @@ export function SchoolRegisterForm() {
                     </option>
                   ))}
                 </select>
+                {fieldError('province') && <p className="mt-1 text-xs text-red-700">{fieldError('province')}</p>}
               </div>
 
               <div>
@@ -374,6 +404,7 @@ export function SchoolRegisterForm() {
                 <select
                   value={form.district}
                   onChange={(e) => set('district', e.target.value)}
+                  aria-invalid={Boolean(fieldError('district'))}
                   className={inputCls}
                 >
                   {availableDistricts.map((d) => (
@@ -382,6 +413,7 @@ export function SchoolRegisterForm() {
                     </option>
                   ))}
                 </select>
+                {fieldError('district') && <p className="mt-1 text-xs text-red-700">{fieldError('district')}</p>}
               </div>
             </div>
           </div>
@@ -400,11 +432,15 @@ export function SchoolRegisterForm() {
               <input
                 type="text"
                 required
+                maxLength={100}
                 value={form.teacherName}
                 onChange={(e) => set('teacherName', e.target.value)}
+                onBlur={() => setTouched((current) => ({ ...current, teacherName: true }))}
+                aria-invalid={Boolean(fieldError('teacherName'))}
                 placeholder="e.g. Mrs. Chandrika Jayawardena"
                 className={inputCls}
               />
+              {fieldError('teacherName') && <p className="mt-1 text-xs text-red-700">{fieldError('teacherName')}</p>}
             </div>
 
             <div>
@@ -412,11 +448,17 @@ export function SchoolRegisterForm() {
               <input
                 type="tel"
                 required
+                inputMode="numeric"
+                maxLength={20}
+                pattern="[0-9]{10}"
                 value={form.teacherPhone}
                 onChange={(e) => set('teacherPhone', e.target.value)}
-                placeholder="e.g. 077 123 4567"
+                onBlur={() => setTouched((current) => ({ ...current, teacherPhone: true }))}
+                aria-invalid={Boolean(fieldError('teacherPhone'))}
+                placeholder="0771234567"
                 className={inputCls}
               />
+              {fieldError('teacherPhone') && <p className="mt-1 text-xs text-red-700">{fieldError('teacherPhone')}</p>}
             </div>
 
             <div className="pt-2 border-t border-slate-100">
@@ -424,11 +466,15 @@ export function SchoolRegisterForm() {
               <input
                 type="text"
                 required
+                maxLength={100}
                 value={form.presidentName}
                 onChange={(e) => set('presidentName', e.target.value)}
+                onBlur={() => setTouched((current) => ({ ...current, presidentName: true }))}
+                aria-invalid={Boolean(fieldError('presidentName'))}
                 placeholder="e.g. Senura Perera"
                 className={inputCls}
               />
+              {fieldError('presidentName') && <p className="mt-1 text-xs text-red-700">{fieldError('presidentName')}</p>}
             </div>
 
             <div>
@@ -436,11 +482,17 @@ export function SchoolRegisterForm() {
               <input
                 type="tel"
                 required
+                inputMode="numeric"
+                maxLength={20}
+                pattern="[0-9]{10}"
                 value={form.presidentPhone}
                 onChange={(e) => set('presidentPhone', e.target.value)}
-                placeholder="e.g. 071 987 6543"
+                onBlur={() => setTouched((current) => ({ ...current, presidentPhone: true }))}
+                aria-invalid={Boolean(fieldError('presidentPhone'))}
+                placeholder="0719876543"
                 className={inputCls}
               />
+              {fieldError('presidentPhone') && <p className="mt-1 text-xs text-red-700">{fieldError('presidentPhone')}</p>}
             </div>
           </div>
         )}
@@ -458,11 +510,15 @@ export function SchoolRegisterForm() {
               <input
                 type="email"
                 required
+                maxLength={254}
                 value={form.email}
                 onChange={(e) => set('email', e.target.value)}
+                onBlur={() => setTouched((current) => ({ ...current, email: true }))}
+                aria-invalid={Boolean(fieldError('email'))}
                 placeholder="e.g. media@yourschool.sch.lk"
                 className={inputCls}
               />
+              {fieldError('email') && <p className="mt-1 text-xs text-red-700">{fieldError('email')}</p>}
               <p className="mt-1 text-[11px] text-slate-400">Use an email address the school can be contacted at. The Agradhi administrator will review your registration before activation.</p>
             </div>
 
@@ -481,12 +537,16 @@ export function SchoolRegisterForm() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
-                minLength={12}
+                minLength={6}
+                maxLength={128}
                 value={form.password}
                 onChange={(e) => set('password', e.target.value)}
-                placeholder="12 or more characters"
+                onBlur={() => setTouched((current) => ({ ...current, password: true }))}
+                aria-invalid={Boolean(fieldError('password'))}
+                placeholder="At least 6 characters"
                 className={inputCls}
               />
+              {fieldError('password') && <p className="mt-1 text-xs text-red-700">{fieldError('password')}</p>}
               <div className="mt-2" aria-live="polite">
                 <div className="flex gap-1" aria-label={`Password strength ${passwordStrength} of 4`}>
                   {passwordRequirements.map((requirement, index) => (
@@ -512,12 +572,16 @@ export function SchoolRegisterForm() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
-                minLength={12}
+                minLength={6}
+                maxLength={128}
                 value={form.confirmPassword}
                 onChange={(e) => set('confirmPassword', e.target.value)}
+                onBlur={() => setTouched((current) => ({ ...current, confirmPassword: true }))}
+                aria-invalid={Boolean(fieldError('confirmPassword'))}
                 placeholder="Re-enter your password"
                 className={inputCls}
               />
+              {fieldError('confirmPassword') && <p className="mt-1 text-xs text-red-700">{fieldError('confirmPassword')}</p>}
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">

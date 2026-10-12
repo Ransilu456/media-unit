@@ -17,6 +17,7 @@ import {
   Users,
 } from 'lucide-react';
 
+
 const cardStyles = [
   { icon: Film, color: 'bg-sky-100', ink: 'text-sky-800', background: 'bg-sky-50', art: 'from-sky-100 via-cyan-50 to-white' },
   { icon: Camera, color: 'bg-emerald-100', ink: 'text-emerald-800', background: 'bg-emerald-50', art: 'from-emerald-100 via-teal-50 to-white' },
@@ -29,13 +30,13 @@ const steps = [
     title: 'Register your school',
     description: 'A teacher signs up with the school contact details.',
     icon: FileCheck2,
-    color: 'bg-amber-100 text-amber-900',
+    color: 'bg-sky-100 text-sky-900',
   },
   {
     title: 'Send student work',
     description: 'Choose a competition and add the student and work details.',
     icon: UploadCloud,
-    color: 'bg-sky-100 text-sky-900',
+    color: 'bg-amber-100 text-amber-900',
   },
   {
     title: 'Follow the result',

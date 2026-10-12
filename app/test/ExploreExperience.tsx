@@ -22,8 +22,8 @@ const workAreas = [
     title: 'Broadcast & presenting',
     detail: 'Clear voices, live coverage, and confident student presenters.',
     icon: Mic2,
-    tone: 'text-sky-300',
-    accent: 'from-sky-400/20',
+    tone: 'text-amber-300',
+    accent: 'from-amber-400/20',
   },
   {
     number: '03',
@@ -311,7 +311,7 @@ export function ExploreExperience() {
           <SignalGraphic />
         </motion.div>
         <div className="relative flex h-full items-center justify-center gap-5 text-[9px] font-semibold uppercase tracking-[0.24em] text-white/45 sm:gap-10 sm:text-[10px]">
-          <span>Observe</span><span className="text-amber-300">✳</span><span>Frame</span><span className="hidden text-sky-200 sm:inline">✳</span><span className="hidden sm:inline">Record</span><span className="text-amber-300">✳</span><span>Share</span>
+          <span>Observe</span><span className="text-amber-300">✳</span><span>Frame</span><span className="hidden text-amber-200 sm:inline">✳</span><span className="hidden sm:inline">Record</span><span className="text-amber-300">✳</span><span>Share</span>
         </div>
       </div>
 
@@ -372,7 +372,7 @@ export function ExploreExperience() {
             </div>
           </Reveal>
           <Reveal delay={0.12}>
-            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-sky-200/80">About the unit</p>
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-amber-200/80">About the unit</p>
             <h2 className="font-serif text-3xl leading-tight text-white sm:text-5xl">Curiosity becomes craft. Craft becomes community.</h2>
             <p className="mt-6 max-w-2xl text-sm leading-7 text-white/55">
               Agradhi Media Unit brings the Saranath College community together through film, photography, broadcasting, design, and sound. We learn by making, share what we discover, and give student voices room to travel.

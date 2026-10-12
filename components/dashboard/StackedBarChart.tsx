@@ -32,11 +32,11 @@ const FALLBACK_MONTHS: MonthlyPoint[] = [
 ];
 
 const FALLBACK_CATEGORIES: CategoryBreakdown[] = [
-  { name: 'Short Film & Cinematography', value: 0, color: '#4f46e5' },
-  { name: 'Photography', value: 0, color: '#06b6d4' },
-  { name: 'News Reading & Announcing', value: 0, color: '#f59e0b' },
+  { name: 'Short Film & Cinematography', value: 0, color: '#3b82f6' },
+  { name: 'Photography', value: 0, color: '#f97316' },
+  { name: 'News Reading & Announcing', value: 0, color: '#14b8a6' },
   { name: 'Radio Play & Audio', value: 0, color: '#8b5cf6' },
-  { name: 'Graphic Design & Digital Art', value: 0, color: '#3b82f6' },
+  { name: 'Graphic Design & Digital Art', value: 0, color: '#22c55e' },
 ];
 
 export function StackedBarChart({
@@ -54,7 +54,7 @@ export function StackedBarChart({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 p-5 rounded-xl bg-white border border-slate-200">
+      <div className="lg:col-span-2 rounded-2xl border border-sky-100/80 bg-white p-5 shadow-[0_8px_28px_rgba(59,130,246,0.07)]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h4 className="text-sm font-semibold text-slate-900 mb-2">{title}</h4>
@@ -91,7 +91,7 @@ export function StackedBarChart({
                 <div className="w-full max-w-[44px] flex flex-col-reverse rounded-md overflow-hidden bg-slate-100">
                   <div
                     style={{ height: `${Math.max(pct * 1.7, bar.count > 0 ? 4 : 0)}px` }}
-                    className="w-full bg-[#0284c7] group-hover:bg-[#38bdf8] transition-colors rounded-md"
+                    className="w-full rounded-md bg-orange-500 transition-colors group-hover:bg-orange-600"
                   />
                 </div>
                 <span className="text-[11px] text-slate-500 mt-2">{bar.month}</span>
@@ -105,7 +105,7 @@ export function StackedBarChart({
         )}
       </div>
 
-      <div className="p-5 rounded-xl bg-white border border-slate-200 flex flex-col justify-between">
+      <div className="flex flex-col justify-between rounded-2xl border border-sky-100/80 bg-white p-5 shadow-[0_8px_28px_rgba(59,130,246,0.07)]">
         <div>
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-semibold text-slate-900">Entries by Category</h4>

@@ -52,14 +52,14 @@ export default function AdminPage() {
 
   if (!isLoaded) {
     return (
-      <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="min-h-screen bg-[#f5f8fc] px-4 py-8 sm:px-6 lg:px-8">
         <PortalSkeleton sections={2} />
       </main>
     );
   }
   if (sessionError) {
     return (
-      <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="min-h-screen bg-[#f5f8fc] px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-xl">
           <FirestoreNetworkError
             title="Unable to verify your session"

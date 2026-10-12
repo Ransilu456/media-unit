@@ -51,18 +51,18 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 const CATEGORY_ART: Record<string, string> = {
-  'Photography': 'from-sky-100 via-cyan-50 to-white',
+  'Photography': 'from-amber-100 via-amber-50 to-white',
   'News Reading & Announcing': 'from-rose-100 via-orange-50 to-white',
-  'Radio Play & Audio Production': 'from-violet-100 via-fuchsia-50 to-white',
+  'Radio Play & Audio Production': 'from-orange-100 via-rose-50 to-white',
   'Short Film & Cinematography': 'from-amber-100 via-yellow-50 to-white',
-  'Graphic Design & Digital Art': 'from-emerald-100 via-teal-50 to-white',
+  'Graphic Design & Digital Art': 'from-emerald-100 via-amber-50 to-white',
   'Live Media Reporting': 'from-orange-100 via-amber-50 to-white',
 };
 
 function MediumChip({ medium }: { medium: string }) {
   if (medium === 'Sinhala') {
     return (
-      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-100">
         Sinhala
       </span>
     );
@@ -70,7 +70,7 @@ function MediumChip({ medium }: { medium: string }) {
 
   if (medium === 'English') {
     return (
-      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100">
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-100">
         English
       </span>
     );
@@ -306,8 +306,8 @@ function LegacySchoolDashboardView({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             
-            <div className="p-6 rounded-2xl bg-sky-50/70 border border-sky-200/80 shadow-[0_4px_20px_rgba(14,116,144,0.05)]">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800 block mb-2">Total Entries</span>
+            <div className="p-6 rounded-2xl bg-amber-50/70 border border-amber-200/80 shadow-[0_4px_20px_rgba(14,116,144,0.05)]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block mb-2">Total Entries</span>
               <div className="flex items-baseline justify-between">
                 {!isSubmissionsLoaded ? (
                   <div className="h-8 w-14 rounded-lg bg-slate-100 animate-pulse my-0.5" />
@@ -330,15 +330,15 @@ function LegacySchoolDashboardView({
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-blue-50/75 border border-blue-200 shadow-[0_4px_20px_rgba(37,99,235,0.05)]">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 block mb-2">Under Evaluation</span>
+            <div className="p-6 rounded-2xl bg-orange-50/75 border border-orange-200 shadow-[0_4px_20px_rgba(37,99,235,0.05)]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-orange-800 block mb-2">Under Evaluation</span>
               <div className="flex items-baseline justify-between">
                 {!isSubmissionsLoaded ? (
-                  <div className="h-8 w-14 rounded-lg bg-blue-100/70 animate-pulse my-0.5" />
+                  <div className="h-8 w-14 rounded-lg bg-orange-100/70 animate-pulse my-0.5" />
                 ) : (
                   <span className="text-3xl font-extrabold text-slate-900">{stats.underReview}</span>
                 )}
-                <span className="text-xs text-blue-700 font-medium">Jury Review</span>
+                <span className="text-xs text-orange-700 font-medium">Jury Review</span>
               </div>
             </div>
 

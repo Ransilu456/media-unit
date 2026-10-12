@@ -70,6 +70,7 @@ export function EntrySubmissionModal({
   const [customValues, setCustomValues] = useState<Record<string, string>>(() =>
     Object.fromEntries((initialCompetition.customFields ?? []).map((field) => [field.id, '']))
   );
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const [certified, setCertified] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,10 +136,12 @@ export function EntrySubmissionModal({
 
   const set = <K extends keyof typeof form>(k: K, v: string) => {
     setForm((f) => ({ ...f, [k]: v }));
+    setTouched((current) => ({ ...current, [k]: true }));
   };
 
   const setCustomValue = (id: string, value: string) => {
     setCustomValues((current) => ({ ...current, [id]: value }));
+    setTouched((current) => ({ ...current, [`customValues.${id}`]: true }));
   };
 
   const submissionInput: NewSubmissionInput = {
@@ -158,8 +161,25 @@ export function EntrySubmissionModal({
     customValues,
   };
 
+  const fieldError = (field: string): string | undefined => {
+    if (!touched[field]) return undefined;
+    return validateSubmissionInput(submissionInput, competitions)[field];
+  };
+  const markStepTouched = () => {
+    const fields = currentStep === 0
+      ? ['competitionId', 'studentName', 'studentBirthday', 'studentGrade', 'studentContact']
+      : currentStep === 1
+        ? ['entryTitle', 'submissionLink', 'synopsis', ...(activeCompetition.customFields ?? []).map((item) => `customValues.${item.id}`)]
+        : [];
+    setTouched((current) => ({
+      ...current,
+      ...Object.fromEntries(fields.map((field) => [field, true])),
+    }));
+  };
+
   const continueForm = () => {
     setError(null);
+    markStepTouched();
     if (!formRef.current?.reportValidity()) return;
 
     if (currentStep === 0) {
@@ -349,8 +369,10 @@ export function EntrySubmissionModal({
                   value={selectedCompId}
                   onChange={(e) => {
                     setSelectedCompId(e.target.value);
+                    setTouched((current) => ({ ...current, competitionId: true }));
                     setError(null);
                   }}
+                  aria-invalid={Boolean(fieldError('competitionId'))}
                   className={inputCls}
                 >
                   <option value="" disabled>Choose a competition</option>
@@ -368,19 +390,20 @@ export function EntrySubmissionModal({
                     );
                   })}
                 </select>
+                {fieldError('competitionId') && <p className="mt-1 text-xs text-red-700">{fieldError('competitionId')}</p>}
               </div>
 
               <div>
                 <label className={labelCls}>Language</label>
                 <div className="flex items-center h-10.5 px-3.5 rounded-xl border border-slate-200 bg-white font-semibold text-xs text-slate-800">
                   {competitionMedium === 'Sinhala' && (
-                    <span className="inline-flex items-center gap-1 text-blue-700">
-                      <span className="w-2 h-2 rounded-full bg-blue-600" /> Sinhala
+                    <span className="inline-flex items-center gap-1 text-orange-700">
+                      <span className="w-2 h-2 rounded-full bg-orange-600" /> Sinhala
                     </span>
                   )}
                   {competitionMedium === 'English' && (
-                    <span className="inline-flex items-center gap-1 text-purple-700">
-                      <span className="w-2 h-2 rounded-full bg-purple-600" /> English
+                    <span className="inline-flex items-center gap-1 text-orange-700">
+                      <span className="w-2 h-2 rounded-full bg-orange-600" /> English
                     </span>
                   )}
                   {(competitionMedium === 'None' || !competitionMedium) && (
@@ -425,13 +448,15 @@ export function EntrySubmissionModal({
                 maxLength={100}
                 value={form.studentName}
                 onChange={(e) => set('studentName', e.target.value)}
+                aria-invalid={Boolean(fieldError('studentName'))}
                 placeholder="Enter the student’s full name"
                 className={inputCls}
               />
+              {fieldError('studentName') && <p className="mt-1 text-xs text-red-700">{fieldError('studentName')}</p>}
             </div>
 
             {/* Birthday and Grade row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className={labelCls}>Date of birth *</label>
                 <input
@@ -439,8 +464,23 @@ export function EntrySubmissionModal({
                   required
                   value={form.studentBirthday}
                   onChange={(e) => set('studentBirthday', e.target.value)}
+                  aria-invalid={Boolean(fieldError('studentBirthday'))}
                   max={new Date().toISOString().split('T')[0]}
                   className={inputCls}
+                />
+                {fieldError('studentBirthday') && <p className="mt-1 text-xs text-red-700">{fieldError('studentBirthday')}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="student-age" className={labelCls}>Age (automatic)</label>
+                <input
+                  id="student-age"
+                  type="text"
+                  readOnly
+                  aria-live="polite"
+                  value={calculatedAge === null ? '' : `${calculatedAge} years`}
+                  placeholder="Calculated from date of birth"
+                  className={`${inputCls} bg-slate-100 text-slate-700`}
                 />
               </div>
 
@@ -450,6 +490,7 @@ export function EntrySubmissionModal({
                   required
                   value={form.studentGrade}
                   onChange={(e) => set('studentGrade', e.target.value)}
+                  aria-invalid={Boolean(fieldError('studentGrade'))}
                   className={inputCls}
                 >
                   {eligibleGrades.map((g) => (
@@ -458,6 +499,7 @@ export function EntrySubmissionModal({
                     </option>
                   ))}
                 </select>
+                {fieldError('studentGrade') && <p className="mt-1 text-xs text-red-700">{fieldError('studentGrade')}</p>}
               </div>
             </div>
 
@@ -494,7 +536,7 @@ export function EntrySubmissionModal({
 
                 <p className="mt-1 text-xs leading-relaxed text-slate-700">
                   {ageEligibilityError ||
-                    `                    This competition accepts students in the {activeCompetition.ageCategory?.label ?? 'selected age group'}.`}
+                    `This competition accepts students in the ${activeCompetition.ageCategory?.label ?? 'selected age group'}.`}
                 </p>
               </div>
             )}
@@ -505,12 +547,16 @@ export function EntrySubmissionModal({
               <input
                 type="tel"
                 required
+                inputMode="numeric"
                 maxLength={20}
+                pattern="[0-9]{10}"
                 value={form.studentContact}
                 onChange={(e) => set('studentContact', e.target.value)}
-                placeholder="e.g. 077 123 4567"
+                aria-invalid={Boolean(fieldError('studentContact'))}
+                placeholder="0771234567"
                 className={inputCls}
               />
+              {fieldError('studentContact') && <p className="mt-1 text-xs text-red-700">{fieldError('studentContact')}</p>}
             </div>
           </div>
           </>
@@ -537,9 +583,11 @@ export function EntrySubmissionModal({
                 maxLength={160}
                 value={form.entryTitle}
                 onChange={(e) => set('entryTitle', e.target.value)}
+                aria-invalid={Boolean(fieldError('entryTitle'))}
                 placeholder="Give the work a short name"
                 className={inputCls}
               />
+              {fieldError('entryTitle') && <p className="mt-1 text-xs text-red-700">{fieldError('entryTitle')}</p>}
             </div>
 
             {/* Link to work */}
@@ -553,10 +601,12 @@ export function EntrySubmissionModal({
                   maxLength={2048}
                   value={form.submissionLink}
                   onChange={(e) => set('submissionLink', e.target.value)}
+                  aria-invalid={Boolean(fieldError('submissionLink'))}
                   placeholder="https://drive.google.com/... or https://youtu.be/..."
                   className={`${inputCls} pl-10`}
                 />
               </div>
+              {fieldError('submissionLink') && <p className="mt-1 text-xs text-red-700">{fieldError('submissionLink')}</p>}
               <p className="mt-1.5 text-[11px] text-slate-500">
                 Make sure anyone with the link can open and watch the work.
               </p>
@@ -580,9 +630,11 @@ export function EntrySubmissionModal({
                 maxLength={5000}
                 value={form.synopsis}
                 onChange={(e) => set('synopsis', e.target.value)}
+                aria-invalid={Boolean(fieldError('synopsis'))}
                 placeholder="What is the work about? What does the student want to show?"
                 className={`${inputCls} resize-y`}
               />
+              {fieldError('synopsis') && <p className="mt-1 text-xs text-red-700">{fieldError('synopsis')}</p>}
             </div>
 
 
@@ -608,6 +660,7 @@ export function EntrySubmissionModal({
                       rows={3}
                       value={customValues[field.id] ?? ''}
                       onChange={(event) => setCustomValue(field.id, event.target.value)}
+                      aria-invalid={Boolean(fieldError(`customValues.${field.id}`))}
                       placeholder={field.placeholder || 'Enter your answer'}
                       className={`${inputCls} resize-y`}
                     />
@@ -617,6 +670,7 @@ export function EntrySubmissionModal({
                       required={field.required}
                       value={customValues[field.id] ?? ''}
                       onChange={(event) => setCustomValue(field.id, event.target.value)}
+                      aria-invalid={Boolean(fieldError(`customValues.${field.id}`))}
                       className={inputCls}
                     >
                       <option value="" disabled={field.required}>{field.placeholder || 'Choose an option'}</option>
@@ -632,10 +686,12 @@ export function EntrySubmissionModal({
                       maxLength={2000}
                       value={customValues[field.id] ?? ''}
                       onChange={(event) => setCustomValue(field.id, event.target.value)}
+                      aria-invalid={Boolean(fieldError(`customValues.${field.id}`))}
                       placeholder={field.placeholder || 'Enter your answer'}
                       className={inputCls}
                     />
                   )}
+                  {fieldError(`customValues.${field.id}`) && <p className="mt-1 text-xs text-red-700">{fieldError(`customValues.${field.id}`)}</p>}
                   {field.helperText && (
                     <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">{field.helperText}</p>
                   )}
@@ -680,7 +736,7 @@ export function EntrySubmissionModal({
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 px-3.5 py-3">
               <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Work link</span>
               {form.submissionLink ? (
-                <a href={form.submissionLink} target="_blank" rel="noreferrer" className="max-w-full truncate text-xs font-semibold text-sky-800 underline underline-offset-2">
+                <a href={form.submissionLink} target="_blank" rel="noreferrer" className="max-w-full truncate text-xs font-semibold text-amber-800 underline underline-offset-2">
                   Check the link
                 </a>
               ) : (

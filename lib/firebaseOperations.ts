@@ -420,6 +420,11 @@ export async function firebaseUpdateSchoolStatus( id: string, status: 'active' |
 }
 
 export async function firebaseSubmitEntry( entry: NewSubmissionInput ): Promise<Submission> {
+  const studentAge = calculateAge(entry.studentBirthday);
+  if (studentAge === null) {
+    throw new Error('Enter a valid student birthday before submitting.');
+  }
+
   const newSub: Submission = {
     id: `sub_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     competitionId: entry.competitionId,
@@ -431,7 +436,7 @@ export async function firebaseSubmitEntry( entry: NewSubmissionInput ): Promise<
     studentName: entry.studentName,
     studentGrade: entry.studentGrade,
     studentBirthday: entry.studentBirthday,
-    studentAge: calculateAge(entry.studentBirthday) ?? 0,
+    studentAge,
     studentContact: entry.studentContact,
     entryTitle: entry.entryTitle,
     submissionLink: entry.submissionLink,

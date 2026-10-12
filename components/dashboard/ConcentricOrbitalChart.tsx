@@ -27,12 +27,12 @@ interface ConcentricOrbitalChartProps {
 }
 
 const CATEGORY_DEFAULT_COLORS: Record<string, string> = {
-  'Short Film & Cinematography': '#4f46e5',
-  'Photography': '#06b6d4',
-  'News Reading & Announcing': '#f59e0b',
+  'Short Film & Cinematography': '#3b82f6',
+  'Photography': '#f97316',
+  'News Reading & Announcing': '#14b8a6',
   'Radio Play & Audio Production': '#8b5cf6',
-  'Graphic Design & Digital Art': '#3b82f6',
-  'Live Media Reporting': '#10b981',
+  'Graphic Design & Digital Art': '#22c55e',
+  'Live Media Reporting': '#fb923c',
 };
 
 export function ConcentricOrbitalChart({
@@ -88,7 +88,7 @@ export function ConcentricOrbitalChart({
         const color =
           item.color ||
           CATEGORY_DEFAULT_COLORS[item.category] ||
-          '#6366f1';
+          '#64748b';
 
         result.push({ entry: item, cx, cy, color });
       });
@@ -107,7 +107,7 @@ export function ConcentricOrbitalChart({
       entries.forEach((e) => {
         const current = map.get(e.category) || {
           count: 0,
-          color: e.color || CATEGORY_DEFAULT_COLORS[e.category] || '#6366f1',
+          color: e.color || CATEGORY_DEFAULT_COLORS[e.category] || '#64748b',
         };
         current.count += 1;
         map.set(e.category, current);
@@ -129,7 +129,7 @@ export function ConcentricOrbitalChart({
       : 'No active submissions currently in adjudication pipeline');
 
   return (
-    <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs relative overflow-hidden flex flex-col justify-between h-full">
+    <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-sky-100/80 bg-white p-5 shadow-[0_8px_28px_rgba(59,130,246,0.07)]">
       {/* Header */}
       <div className="w-full text-left mb-2">
         <div className="flex items-center justify-between">
@@ -146,13 +146,13 @@ export function ConcentricOrbitalChart({
         <svg viewBox="0 0 260 260" className="w-full h-full">
           <defs>
             <linearGradient id="orbit-center-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#0f766e" />
-              <stop offset="50%" stopColor="#2563eb" />
-              <stop offset="100%" stopColor="#7c3aed" />
+              <stop offset="0%" stopColor="#c2410c" />
+              <stop offset="50%" stopColor="#ea580c" />
+              <stop offset="100%" stopColor="#9a3412" />
             </linearGradient>
             <radialGradient id="radar-sweep" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+              <stop offset="0%" stopColor="#f97316" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
             </radialGradient>
           </defs>
 

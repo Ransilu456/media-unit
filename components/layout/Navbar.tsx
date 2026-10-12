@@ -39,15 +39,14 @@ export function Navbar() {
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/competitions', label: 'Competitions' },
-    { href: '/#about', label: 'About' },
     { href: '/rules', label: 'Rules' },
   ];
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full px-3 pt-3 sm:px-6 bg-transparent">
-        <div className="mx-auto w-full max-w-7xl rounded-[1.35rem] border border-slate-200/80 bg-white/95 shadow-[0_8px_28px_rgba(15,23,42,0.07)] backdrop-blur-xl">
-          <div className="flex min-h-[68px] items-center justify-between gap-3 px-4 sm:px-6 xl:grid xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+      <header className="sticky top-0 z-50 px-3 pt-3 sm:px-6">
+        <div className="mx-auto max-w-7xl rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_4px_16px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+          <div className="flex min-h-16 items-center justify-between gap-3 px-4 sm:px-5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
             <Link href="/" className="group flex min-w-0 items-center gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sara-navy p-1.5">
                 <Image src="/Agradhi.png" alt="Agradhi Media Unit" width={27} height={27} className="object-contain" priority />
@@ -58,7 +57,7 @@ export function Navbar() {
               </span>
             </Link>
 
-            <nav aria-label="Main navigation" className="hidden items-center gap-1 rounded-full border border-slate-100 bg-slate-50/80 p-1 xl:flex">
+            <nav aria-label="Main navigation" className="hidden items-center gap-0.5 lg:flex">
               {navLinks.map(({ href, label }) => {
                 const active = pathname === href;
                 return (
@@ -66,8 +65,8 @@ export function Navbar() {
                     key={href}
                     href={href}
                     aria-current={active ? 'page' : undefined}
-                    className={`rounded-full px-3.5 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${
-                      active ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200/70' : 'text-slate-500 hover:bg-white/70 hover:text-slate-900'
+                    className={`rounded-lg px-3.5 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${
+                      active ? 'bg-orange-50 text-orange-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                     }`}
                   >
                     {label}
@@ -76,13 +75,13 @@ export function Navbar() {
               })}
             </nav>
 
-            <div className="hidden min-w-0 items-center justify-end gap-2 xl:flex">
+            <div className="hidden min-w-0 items-center justify-end gap-2 lg:flex">
               {isGuest && (
                 <>
-                  <Link href="/login" className="rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:text-slate-950 sm:text-sm">
+                  <Link href="/login" className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-950 sm:text-sm">
                     Teacher sign in
                   </Link>
-                  <Link href="/register" className="group inline-flex min-h-10 items-center gap-2 rounded-full bg-sara-navy px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 sm:px-5 sm:text-sm">
+                  <Link href="/register" className="group inline-flex min-h-10 items-center gap-2 rounded-xl bg-sara-navy px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 sm:px-4 sm:text-sm">
                     Register school <ArrowRight size={14} className="text-amber-300 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 </>
@@ -115,14 +114,14 @@ export function Navbar() {
               aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
               aria-expanded={mobileOpen}
               aria-controls="mobile-main-navigation"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:bg-slate-50 xl:hidden"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:bg-slate-50 lg:hidden"
             >
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
 
           {mobileOpen && (
-            <div id="mobile-main-navigation" className="border-t border-slate-100 px-4 pb-4 pt-3 xl:hidden">
+            <div id="mobile-main-navigation" className="border-t border-slate-100 px-4 pb-4 pt-3 lg:hidden">
               <nav aria-label="Mobile navigation" className="grid gap-1">
                 {navLinks.map(({ href, label }) => (
                   <Link

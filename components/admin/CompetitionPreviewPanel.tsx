@@ -39,13 +39,13 @@ export function CompetitionPreviewPanel({
 }) {
   return (
     <div className="space-y-5" aria-label="Competition preview">
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-700">
         Preview only. This is how the competition details and entry questions will appear to schools.
       </div>
 
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_4px_rgba(15,23,42,0.04)]">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <span className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-800">
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700">
             {competition.category}
           </span>
           <div className="flex items-center gap-2">

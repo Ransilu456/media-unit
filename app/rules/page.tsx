@@ -5,105 +5,87 @@ import { Footer } from '@/components/layout/Footer';
 import { ArrowRight, CheckCircle2, FileText, Link2, School, Trophy } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Rules & Regulations | Agradhi Media Unit',
-  description: 'Competition eligibility, entry requirements, and submission rules for the Agradhi Media Unit.',
+  title: 'How to Enter | Agradhi Media Unit',
+  description: 'A clear guide to school registration, competition requirements, and submitting student media entries.',
 };
 
-const rules = [
+const steps = [
   {
     title: 'Register your school',
-    description: 'A teacher or school media leader creates the school account. Wait for approval before signing in.',
+    description: 'A teacher or school media leader creates one account for the school. An administrator must approve it before sign-in and submissions are enabled.',
+    detail: 'One account for your school',
     icon: School,
+    color: 'bg-orange-100 text-orange-800',
   },
   {
-    title: 'Check the competition',
-    description: 'Before entering, check the accepted grades, language, deadline, and entry limit shown on that competition.',
+    title: 'Choose a competition',
+    description: 'Check the competition page for eligible grades, language, closing date, and how many entries your school may submit.',
+    detail: 'Check the entry requirements',
     icon: Trophy,
+    color: 'bg-amber-100 text-amber-900',
   },
   {
-    title: 'Enter one student at a time',
-    description: 'Choose a competition, then enter the student’s details and a short description of their work.',
+    title: 'Prepare the student entry',
+    description: 'Submit one student’s work at a time. Enter their details, give the work a title, and complete any questions required for that competition.',
+    detail: 'One student per entry',
     icon: FileText,
+    color: 'bg-amber-100 text-amber-800',
   },
   {
-    title: 'Share a working link',
-    description: 'Add a Google Drive, YouTube, or OneDrive link. Set it so anyone with the link can view the work.',
+    title: 'Share a viewable link',
+    description: 'Add a link to the finished work. For Drive, YouTube, or OneDrive, check the sharing settings so the review team can open it.',
+    detail: 'Test the link before submitting',
     icon: Link2,
+    color: 'bg-emerald-100 text-emerald-800',
   },
 ];
 
 export default function RulesPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-[#fbfaf7] text-slate-800">
+    <div className="flex min-h-screen flex-col bg-[#fffaf1] text-slate-800">
       <Navbar />
       <main className="flex-1">
-        <section className="relative isolate overflow-hidden border-b border-slate-200/70 bg-[#fffaf1] py-12 sm:py-16">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_85%_35%,rgba(222,210,255,0.5),transparent_38%),radial-gradient(ellipse_at_10%_0%,rgba(255,230,170,0.4),transparent_34%)]" />
-          <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-            <p className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/80 px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-violet-900 sm:text-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              Agradhi Media Unit · 2026
-            </p>
-            <div className="mt-5 grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-                  Simple steps to enter
-                </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-                  Follow these steps to submit student work through your school.
-                </p>
-              </div>
-              <span className="hidden h-20 w-20 items-center justify-center rounded-[1.75rem] border border-white/80 bg-white/70 text-violet-800 shadow-sm md:flex">
-                <FileText size={34} strokeWidth={1.5} />
-              </span>
-            </div>
+
+        <section className="mx-auto w-full max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
+          <div className="mb-7">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-orange-800">The entry process</p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Four steps to submit</h2>
           </div>
-        </section>
 
-        <section className="py-10 sm:py-14">
-          <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-            <div className="mb-5">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet-800">How to take part</p>
-              <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">Your entry, step by step</h2>
-            </div>
-            <ol className="grid gap-3 sm:grid-cols-2">
-              {rules.map(({ title, description, icon: Icon }, index) => (
-                <li
-                  key={title}
-                  className="group flex min-h-36 gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_6px_22px_rgba(15,23,42,0.035)] transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-[0_12px_28px_rgba(15,23,42,0.07)] sm:p-5"
-                >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-800 transition-colors group-hover:bg-violet-100">
-                    <Icon size={19} aria-hidden="true" />
+          <ol className="grid gap-4 md:grid-cols-2">
+            {steps.map(({ title, description, detail, icon: Icon, color }, index) => (
+              <li key={title} className="relative rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.04)] sm:p-6">
+                <div className="flex items-start gap-4">
+                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${color}`}>
+                    <Icon size={20} aria-hidden="true" />
+                  </span>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">Step {index + 1}</p>
+                    <h3 className="mt-1 text-base font-bold text-slate-950">{title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+                    <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-semibold text-slate-700">
+                      <CheckCircle2 size={13} className="text-emerald-700" />
+                      {detail}
+                    </p>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-700">Step {index + 1}</p>
-                    <h2 className="mt-1 text-sm font-bold text-slate-950 sm:text-base">
-                      {title}
-                    </h2>
-                    <p className="mt-1.5 text-xs leading-6 text-slate-600 sm:text-sm">{description}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-
-            <div className="mt-6 flex flex-col gap-5 overflow-hidden rounded-2xl bg-slate-950 p-5 text-white shadow-[0_16px_40px_rgba(15,23,42,0.12)] sm:flex-row sm:items-center sm:justify-between sm:px-7 sm:py-6">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 size={18} className="text-amber-400" aria-hidden="true" />
-                  <h2 className="text-base font-semibold">Ready to get started?</h2>
                 </div>
-                <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-300">
-                  Find an open competition and check its requirements before preparing an entry.
-                </p>
-              </div>
-              <Link
-                href="/competitions"
-                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition-colors hover:bg-violet-50"
-              >
-                View competitions <ArrowRight size={15} />
-              </Link>
+              </li>
+            ))}
+          </ol>
+
+          <aside className="mt-6 flex flex-col gap-4 rounded-3xl bg-orange-950 p-6 text-white sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-orange-200">Ready to begin?</p>
+              <h2 className="mt-1 text-lg font-bold">Find the right competition for your students.</h2>
+              <p className="mt-1 text-sm leading-6 text-orange-100/80">Each competition lists its own requirements and closing date.</p>
             </div>
-          </div>
+            <Link
+              href="/competitions"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-orange-950 transition hover:bg-orange-50"
+            >
+              View competitions <ArrowRight size={15} />
+            </Link>
+          </aside>
         </section>
       </main>
       <Footer />

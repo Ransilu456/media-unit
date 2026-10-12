@@ -14,17 +14,17 @@ export function StatusBadge({ status, label, size = 'sm' }: BadgeProps) {
 
   const styles: Record<string, { bg: string; text: string; border: string; dot: string; display: string }> = {
     submitted: {
-      bg: 'bg-blue-50',
-      text: 'text-blue-800',
-      border: 'border-blue-200',
-      dot: 'bg-blue-500',
+      bg: 'bg-orange-50',
+      text: 'text-orange-800',
+      border: 'border-orange-200',
+      dot: 'bg-orange-500',
       display: 'Awaiting review',
     },
     under_review: {
-      bg: 'bg-amber-50',
-      text: 'text-amber-800',
-      border: 'border-amber-200',
-      dot: 'bg-amber-500',
+      bg: 'bg-sky-50',
+      text: 'text-sky-800',
+      border: 'border-sky-200',
+      dot: 'bg-sky-500',
       display: 'Under review',
     },
     verified: {
@@ -35,17 +35,17 @@ export function StatusBadge({ status, label, size = 'sm' }: BadgeProps) {
       display: 'Accepted',
     },
     shortlisted: {
-      bg: 'bg-purple-50',
-      text: 'text-purple-800',
-      border: 'border-purple-200',
-      dot: 'bg-purple-500',
+      bg: 'bg-indigo-50',
+      text: 'text-indigo-800',
+      border: 'border-indigo-200',
+      dot: 'bg-indigo-500',
       display: 'Finalist',
     },
     winner: {
-      bg: 'bg-amber-100',
-      text: 'text-amber-900',
-      border: 'border-amber-300',
-      dot: 'bg-amber-600',
+      bg: 'bg-orange-50',
+      text: 'text-orange-900',
+      border: 'border-orange-200',
+      dot: 'bg-orange-600',
       display: 'Winner',
     },
     disqualified: {
@@ -70,10 +70,10 @@ export function StatusBadge({ status, label, size = 'sm' }: BadgeProps) {
       display: 'Closed',
     },
     judging: {
-      bg: 'bg-indigo-50',
-      text: 'text-indigo-800',
-      border: 'border-indigo-200',
-      dot: 'bg-indigo-500',
+      bg: 'bg-orange-50',
+      text: 'text-orange-800',
+      border: 'border-orange-200',
+      dot: 'bg-orange-500',
       display: 'In Jury Evaluation',
     },
     upcoming: {
@@ -91,10 +91,10 @@ export function StatusBadge({ status, label, size = 'sm' }: BadgeProps) {
       display: 'Active Delegation',
     },
     pending: {
-      bg: 'bg-amber-50',
-      text: 'text-amber-800',
-      border: 'border-amber-200',
-      dot: 'bg-amber-500',
+      bg: 'bg-orange-50',
+      text: 'text-orange-800',
+      border: 'border-orange-200',
+      dot: 'bg-orange-500',
       display: 'Pending Approval',
     },
     suspended: {

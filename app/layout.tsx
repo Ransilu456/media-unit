@@ -75,7 +75,8 @@ export default function RootLayout({
         />
       </head>
       <body
-        className="bg-slate-50 text-slate-600 antialiased flex flex-col min-h-screen font-sans selection:bg-amber-100 selection:text-amber-900"
+        className="text-slate-600 antialiased flex flex-col min-h-screen font-sans selection:bg-amber-100 selection:text-amber-950"
+        style={{ backgroundColor: "var(--hero-page-background, #fffaf1)" }}
         suppressHydrationWarning
       >
         <AuthProvider>

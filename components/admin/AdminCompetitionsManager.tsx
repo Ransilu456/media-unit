@@ -7,6 +7,14 @@ import { Competition } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Plus, Edit3, Eye, Trash2 } from 'lucide-react';
 
+const categoryTones = [
+  'border-sky-200 bg-sky-50 text-sky-800',
+  'border-orange-200 bg-orange-50 text-orange-800',
+  'border-teal-200 bg-teal-50 text-teal-800',
+  'border-violet-200 bg-violet-50 text-violet-800',
+  'border-emerald-200 bg-emerald-50 text-emerald-800',
+];
+
 const CompetitionFormEditorModal = dynamic(
   () => import('./CompetitionFormEditorModal').then((module) => module.CompetitionFormEditorModal),
   { loading: () => <div role="status" className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 text-sm text-white">Loading competition editor...</div> }
@@ -72,90 +80,81 @@ export function AdminCompetitionsManager() {
   const openCount = competitions.filter((competition) => competition.status === 'open').length;
 
   return (
-    <div className="space-y-6">
-      {/* Top Bar with Add Button */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
+    <div className="space-y-4">
+      <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-sky-100/80 bg-white p-4 shadow-[0_8px_26px_rgba(59,130,246,0.06)] sm:flex-row sm:items-center sm:p-5">
         <div>
-          <h3 className="text-xl font-serif font-bold text-slate-900 tracking-tight">
-            Competitions ({competitions.length})
-          </h3>
-          <p className="text-xs text-slate-500 mt-1">
-            {openCount} open for entries. Check eligibility, deadline, school entry limit, and form questions before opening a track.
-          </p>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900">
+            Competitions <span className="text-sm font-medium text-slate-400">({competitions.length})</span>
+          </h1>
+          <p className="mt-1 text-xs text-slate-500">{openCount} open</p>
         </div>
 
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-xs"
+          className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-orange-700 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-orange-800"
         >
           <Plus size={15} />
           <span>Add competition</span>
         </button>
       </div>
 
-      <section className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-white p-4 text-xs leading-5 text-slate-600 sm:grid-cols-3">
-        <p><strong className="text-slate-900">Open:</strong> schools can submit entries before the deadline.</p>
-        <p><strong className="text-slate-900">Closed:</strong> new entries are not accepted.</p>
-        <p><strong className="text-slate-900">Upcoming / judging:</strong> not accepting entries; set Open when ready to launch.</p>
-      </section>
-
       {/* Competitions Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {competitions.map((comp) => {
+      <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2">
+        {competitions.map((comp, index) => {
           const submissionCount = submissionCounts.get(comp.id) ?? 0;
 
           return (
             <div
               key={comp.id}
-              className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-md transition-all flex flex-col justify-between"
+              className="flex min-w-0 flex-col justify-between rounded-2xl border border-sky-100/80 bg-white p-4 shadow-[0_8px_26px_rgba(59,130,246,0.06)] transition-colors hover:border-sky-200 sm:p-5"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-mono text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${categoryTones[index % categoryTones.length]}`}>
                     {comp.category}
                   </span>
                   <StatusBadge status={comp.status} />
                 </div>
 
-                <h4 className="text-2xl font-serif font-bold text-slate-900 mb-2">
+                <h4 className="mb-2 text-lg font-semibold tracking-tight text-slate-900">
                   {comp.title}
                 </h4>
 
-                <p className="text-xs text-slate-600 line-clamp-2 mb-4 leading-relaxed font-light">
+                <p className="mb-3 line-clamp-2 text-xs leading-relaxed text-slate-600">
                   {comp.description}
                 </p>
 
-                <div className="space-y-1.5 py-3 border-y border-slate-100 text-xs text-slate-700 mb-4 font-mono">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Submission deadline:</span>
-                    <span className="text-amber-700 font-semibold">{new Date(`${comp.deadline}T00:00:00`).toLocaleDateString()}</span>
+                <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-50/80 p-3 text-xs text-slate-700 sm:grid-cols-3">
+                  <div className="min-w-0">
+                    <span className="block text-[10px] text-slate-400">Deadline</span>
+                    <span className="mt-0.5 block truncate font-medium text-slate-800">{new Date(`${comp.deadline}T00:00:00`).toLocaleDateString()}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Entries received:</span>
-                    <span className="text-slate-900 font-bold">{submissionCount}</span>
+                  <div>
+                    <span className="block text-[10px] text-slate-400">Entries</span>
+                    <span className="mt-0.5 block font-semibold text-slate-900">{submissionCount}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Eligibility:</span>
-                    <span className="text-slate-800">{comp.eligibility}</span>
+                  <div className="col-span-2 min-w-0 sm:col-span-1">
+                    <span className="block text-[10px] text-slate-400">Eligibility</span>
+                    <span className="mt-0.5 block truncate text-slate-800">{comp.eligibility}</span>
                   </div>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => void handleToggleStatus(
                       comp.id,
                       comp.status === 'open' ? 'closed' : 'open'
                     )}
-                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-medium"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
                   >
                     {comp.status === 'open' ? 'Close entries' : 'Open entries'}
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     onClick={() => handleOpenEdit(comp, true)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 font-medium transition-colors hover:bg-slate-50"
@@ -166,10 +165,10 @@ export function AdminCompetitionsManager() {
 
                   <button
                     onClick={() => handleOpenEdit(comp)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-xs text-amber-800 font-medium transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-900 transition-colors hover:bg-orange-100"
                   >
                     <Edit3 size={13} />
-                    <span>Edit Form</span>
+                    <span>Edit</span>
                   </button>
 
                   <button

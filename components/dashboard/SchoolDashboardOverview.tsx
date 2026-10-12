@@ -30,11 +30,11 @@ interface Props {
 }
 
 const categoryStyles: Record<string, { icon: typeof Camera; color: string; art: string }> = {
-  'Photography': { icon: Camera, color: 'bg-sky-100 text-sky-800', art: 'from-sky-100 to-cyan-50' },
+  'Photography': { icon: Camera, color: 'bg-amber-100 text-amber-800', art: 'from-amber-100 to-amber-50' },
   'News Reading & Announcing': { icon: Mic2, color: 'bg-rose-100 text-rose-800', art: 'from-rose-100 to-orange-50' },
-  'Radio Play & Audio Production': { icon: Radio, color: 'bg-violet-100 text-violet-800', art: 'from-violet-100 to-fuchsia-50' },
+  'Radio Play & Audio Production': { icon: Radio, color: 'bg-orange-100 text-orange-800', art: 'from-orange-100 to-rose-50' },
   'Short Film & Cinematography': { icon: Clapperboard, color: 'bg-amber-100 text-amber-900', art: 'from-amber-100 to-yellow-50' },
-  'Graphic Design & Digital Art': { icon: Sparkles, color: 'bg-emerald-100 text-emerald-800', art: 'from-emerald-100 to-teal-50' },
+  'Graphic Design & Digital Art': { icon: Sparkles, color: 'bg-emerald-100 text-emerald-800', art: 'from-emerald-100 to-amber-50' },
   'Live Media Reporting': { icon: Mic2, color: 'bg-orange-100 text-orange-800', art: 'from-orange-100 to-amber-50' },
 };
 
@@ -154,7 +154,7 @@ export function SchoolDashboardOverview({
           { label: 'Student entries', value: submissions.length, detail: 'All time', color: 'border-slate-200 bg-white', icon: Users, loading: !isSubmissionsLoaded },
           { label: 'Waiting for review', value: reviewCount, detail: 'Sent to the team', color: 'border-amber-200 bg-amber-50/70', icon: FilePlus2, loading: !isSubmissionsLoaded },
           { label: 'Competitions entered', value: enteredCompetitions.length, detail: 'Your school', color: 'border-emerald-200 bg-emerald-50/70', icon: Trophy, loading: !isCompetitionsLoaded || !isSubmissionsLoaded },
-          { label: 'Active entries', value: activeCount, detail: 'Not rejected', color: 'border-sky-200 bg-sky-50/70', icon: Sparkles, loading: !isSubmissionsLoaded },
+          { label: 'Active entries', value: activeCount, detail: 'Not rejected', color: 'border-amber-200 bg-amber-50/70', icon: Sparkles, loading: !isSubmissionsLoaded },
         ].map(({ label, value, detail, color, icon: Icon, loading }) => (
           <div key={label} className={`rounded-2xl border p-4 sm:p-5 ${color}`}>
             <div className="flex items-start justify-between gap-2">

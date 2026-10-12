@@ -51,7 +51,7 @@ export function SegmentedGauge({
   }, [categories, numCount]);
 
   return (
-    <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs relative overflow-hidden flex flex-col justify-between h-full">
+    <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-sky-100/80 bg-white p-5 shadow-[0_8px_28px_rgba(59,130,246,0.07)]">
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div>
