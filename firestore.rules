@@ -7,7 +7,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return signedIn()
-        && (request.auth.token.email == 'adminsara@scladmin.com' || request.auth.token.admin == true);
+        && 'admin' in request.auth.token
+        && request.auth.token.admin == true;
     }
 
     function isActiveSchool(schoolId) {

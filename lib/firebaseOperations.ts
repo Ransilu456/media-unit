@@ -52,18 +52,8 @@ export async function getFirebaseSession(user: FirebaseUser | null = auth.curren
 
   if (!user) return { type: 'guest' };
 
-  const adminResponse = await fetch('/api/auth/session', { cache: 'no-store' });
-
-  if (!adminResponse.ok) {
-    throw new Error('Unable to verify the website admin session.');
-  }
-
-  const adminResult = await adminResponse.json() as {
-    success: boolean;
-    data?: { type?: string; adminEmail?: string };
-  };
-
-  if (adminResult.success && adminResult.data?.type === 'admin' && user.email?.trim().toLowerCase() === adminResult.data.adminEmail) {
+  const tokenResult = await user.getIdTokenResult();
+  if (tokenResult.claims.admin === true) {
     return { type: 'admin' };
   }
 
@@ -158,28 +148,23 @@ export async function firebaseLoginAdmin(email: string, pass: string): Promise<b
 
   const cleanEmail = email.trim().toLowerCase();
 
-  const response = await fetch('/api/admin/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: cleanEmail, password: pass }),
-  });
-
-  const result = await response.json() as { success: boolean; error?: string };
-
-  if (!response.ok || !result.success) {
-    throw new Error(result.error || 'Invalid admin credentials.');
-  }
-
   try {
     const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+    const idToken = await cred.user.getIdToken(true);
+    const response = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    const result = await response.json() as { success: boolean; error?: string };
 
-    if (cred.user.email?.trim().toLowerCase() !== cleanEmail) {
-      throw new Error('The Firebase Authentication account does not match the admin email.');
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'This Firebase account does not have admin access.');
     }
-
   } catch (err: unknown) {
-
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await Promise.allSettled([
+      signOut(auth),
+      fetch('/api/auth/logout', { method: 'POST' }),
+    ]);
 
     const code = (err as { code?: string }).code ?? '';
 
@@ -193,7 +178,7 @@ export async function firebaseLoginAdmin(email: string, pass: string): Promise<b
       throw new Error('Email and password sign-in is not enabled for this Firebase project.');
     }
     if (code.startsWith('auth/')) {
-      throw new Error('Create this admin email and password in database for Authentication, then try again.');
+      throw new Error('Invalid Firebase email or password.');
     }
     throw err;
   }

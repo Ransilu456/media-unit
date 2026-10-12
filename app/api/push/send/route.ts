@@ -23,8 +23,7 @@ export async function POST(request: Request) {
     const notificationSnapshot = await database.collection('notifications').doc(body.notificationId).get();
     if (!notificationSnapshot.exists) return Response.json({ error: 'Notification not found.' }, { status: 404 });
     const notification = notificationSnapshot.data() as AppNotification;
-    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-    const isAdmin = Boolean(adminEmail) && decodedToken.email?.trim().toLowerCase() === adminEmail;
+    const isAdmin = decodedToken.admin === true;
     if (notification.target !== 'admin' && notification.target !== 'school') {
       return Response.json({ error: 'Invalid notification target.' }, { status: 400 });
     }

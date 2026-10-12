@@ -1,34 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  constantTimeStringEqual,
-  createSessionToken,
-  getAdminEmail,
-  SESSION_COOKIE_NAME,
-  sessionCookieOptions,
-} from '@/lib/auth';
+import { getFirebaseAdminAuth } from '@/lib/firebaseAdmin';
+import { createSessionToken, SESSION_COOKIE_NAME, sessionCookieOptions } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
-    const adminEmail = getAdminEmail();
-    const adminPassword = process.env.ADMIN_PASSWORD;
-
-    if (!adminEmail || !adminPassword || adminPassword.length < 12) {
-      console.error('[POST /api/admin/login] Admin credentials are not configured securely.');
+    const authorization = request.headers.get('authorization');
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
+    if (!token) {
       return NextResponse.json(
-        { success: false, error: 'Admin login is not configured. Contact the site administrator.' },
-        { status: 503 }
+        { success: false, error: 'Sign in with your Firebase account first.' },
+        { status: 401 }
       );
     }
-    if (
-      typeof email !== 'string' ||
-      typeof password !== 'string' ||
-      email.trim().toLowerCase() !== adminEmail ||
-      !constantTimeStringEqual(password, adminPassword)
-    ) {
+
+    const decodedToken = await getFirebaseAdminAuth().verifyIdToken(token, true);
+    if (decodedToken.admin !== true) {
       return NextResponse.json(
-        { success: false, error: 'Invalid admin credentials.' },
-        { status: 401 }
+        { success: false, error: 'This Firebase account does not have admin access.' },
+        { status: 403 }
       );
     }
 
@@ -42,7 +31,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('[POST /api/admin/login]', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error.' },
+      { success: false, error: 'Unable to verify admin access. Please sign in again.' },
       { status: 500 }
     );
   }

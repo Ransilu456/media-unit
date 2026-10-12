@@ -23,7 +23,7 @@ export function HeroSection() {
       <div aria-hidden="true" className="pointer-events-none absolute -left-20 top-24 -z-10 h-48 w-48 rounded-full border border-amber-200/60 sm:left-[8%] sm:top-32 sm:h-64 sm:w-64" />
       <div aria-hidden="true" className="pointer-events-none absolute -right-24 top-40 -z-10 h-56 w-56 rounded-full bg-orange-100/60 blur-3xl sm:right-[7%] sm:top-36 sm:h-72 sm:w-72" />
 
-      <div className="relative mx-auto flex min-h-147.5 w-full max-w-7xl flex-col items-center justify-center px-5 pb-16 pt-16 text-center sm:min-h-[660px] sm:px-8 sm:pb-20 sm:pt-20">
+      <div className="relative mx-auto flex min-h-147.5 w-full max-w-7xl flex-col items-center justify-center px-5 pb-16 pt-16 text-center sm:min-h-165 sm:px-8 sm:pb-20 sm:pt-20">
         <div aria-hidden="true" className="pointer-events-none absolute left-[8%] top-[23%] hidden -rotate-12 items-center justify-center rounded-[20px] border border-white bg-white/90 p-3 text-amber-800 shadow-[0_12px_35px_rgba(15,23,42,0.10)] md:flex">
           <Film size={25} strokeWidth={1.7} />
         </div>

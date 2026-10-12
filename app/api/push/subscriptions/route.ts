@@ -14,8 +14,7 @@ export async function POST(request: Request) {
     if (!token) return Response.json({ error: 'Authentication required.' }, { status: 401 });
 
     const decodedToken = await getFirebaseAdminAuth().verifyIdToken(token);
-    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-    const isAdmin = Boolean(adminEmail) && decodedToken.email?.trim().toLowerCase() === adminEmail;
+    const isAdmin = decodedToken.admin === true;
     const body = await request.json() as {
       endpoint?: unknown;
       expirationTime?: unknown;
