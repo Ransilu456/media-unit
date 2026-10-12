@@ -33,6 +33,30 @@ export function PortalSkeleton({ sections = 3 }: { sections?: number }) {
   );
 }
 
+export function PortalOverviewSkeleton() {
+  return (
+    <div role="status" aria-label="Loading dashboard content" aria-busy="true" className="w-full space-y-5">
+      <span className="sr-only">Loading dashboard content...</span>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <div className="min-h-56 animate-pulse rounded-3xl bg-slate-200 xl:col-span-8" />
+        <div className="min-h-56 animate-pulse rounded-3xl bg-white xl:col-span-4" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div key={index} className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="h-3 w-24 rounded bg-slate-100" />
+            <div className="mt-4 h-8 w-12 rounded bg-slate-200" />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+        <div className="h-72 animate-pulse rounded-3xl border border-slate-200 bg-white xl:col-span-8" />
+        <div className="h-72 animate-pulse rounded-3xl border border-slate-200 bg-white xl:col-span-4" />
+      </div>
+    </div>
+  );
+}
+
 export function FormSkeleton() {
   return (
     <div

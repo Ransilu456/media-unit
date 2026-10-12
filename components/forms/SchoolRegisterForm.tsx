@@ -25,9 +25,9 @@ const PROVINCE_DISTRICTS: Record<string, string[]> = {
 };
 
 const STEPS = [
-  { num: 1, label: 'School Details', icon: Building2 },
-  { num: 2, label: 'Teacher in Charge', icon: User },
-  { num: 3, label: 'Portal Security', icon: KeyRound },
+  { num: 1, label: 'School', icon: Building2 },
+  { num: 2, label: 'Contacts', icon: User },
+  { num: 3, label: 'Login', icon: KeyRound },
 ];
 
 const inputCls =
@@ -271,14 +271,14 @@ export function SchoolRegisterForm() {
         <div className="w-14 h-14 mx-auto mb-3 bg-slate-950 rounded-xl border border-slate-700 p-2 flex items-center justify-center shadow-xs">
           <Image src="/icons/icon-192.png" alt="Agradhi" width={44} height={44} unoptimized className="object-contain" />
         </div>
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Register Your School</h1>
-        <p className="text-xs text-slate-500 mt-1">Official Delegation Portal · Agradhi Media Assembly 2026</p>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Register your school</h1>
+        <p className="text-xs text-slate-500 mt-1">Three short steps to create a school account.</p>
       </div>
 
       <div className="flex items-start gap-3 p-3.5 mb-6 rounded-2xl bg-amber-50/70 border border-amber-200 text-amber-900 text-xs">
         <Info size={16} className="shrink-0 mt-0.5 text-amber-700" />
         <div className="leading-relaxed">
-          <strong>Are you a student competitor?</strong> Students do not register accounts directly. Your teacher-in-charge or school media club registers the school once, then submits all student entries.{' '}
+          <strong>Are you a student?</strong> Ask your teacher to register the school and submit your entry. Students do not need their own account.{' '}
           <Link href="/competitions" className="underline font-bold hover:text-amber-950">
             Browse open competition tracks →
           </Link>

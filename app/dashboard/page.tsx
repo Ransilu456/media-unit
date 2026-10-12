@@ -5,13 +5,28 @@ import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
 import { SchoolPortalLayout, SchoolTab } from '@/components/layout/SchoolPortalLayout';
-import { PortalSkeleton } from '@/components/ui/PortalSkeleton';
+import { PortalOverviewSkeleton } from '@/components/ui/PortalSkeleton';
 import { FirestoreNetworkError } from '@/components/ui/FirestoreNetworkError';
 
 const SchoolDashboardView = dynamic(
   () => import('@/components/dashboard/SchoolDashboardView').then((module) => module.SchoolDashboardView),
-  { loading: () => <PortalSkeleton sections={3} /> }
+  { loading: () => <PortalOverviewSkeleton /> }
 );
+
+const noop = () => {};
+
+function DashboardRouteSkeleton() {
+  return (
+    <SchoolPortalLayout
+      activeTab="overview"
+      onTabChange={noop}
+      searchQuery=""
+      onSearchQueryChange={noop}
+    >
+      <PortalOverviewSkeleton />
+    </SchoolPortalLayout>
+  );
+}
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -25,8 +40,6 @@ function DashboardContent() {
     retrySession,
     retryCompetitions,
     retrySubmissions,
-    isCompetitionsLoaded,
-    isSubmissionsLoaded,
   } = useMediaStore();
   const [activeTab, setActiveTab] = useState<SchoolTab>('overview');
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,24 +54,39 @@ function DashboardContent() {
     }
   }, [isLoaded, sessionError, session.type, router]);
 
-  if (!isLoaded) return <PortalSkeleton sections={3} />;
+  if (!isLoaded) {
+    return (
+      <SchoolPortalLayout
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        searchQuery={searchQuery}
+        onSearchQueryChange={handleSearchQueryChange}
+      >
+        <PortalOverviewSkeleton />
+      </SchoolPortalLayout>
+    );
+  }
   if (sessionError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">
-        <div className="w-full max-w-xl">
+      <SchoolPortalLayout
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        searchQuery={searchQuery}
+        onSearchQueryChange={handleSearchQueryChange}
+      >
+        <div className="mx-auto flex min-h-[50vh] w-full max-w-xl items-center justify-center px-2 py-8">
           <FirestoreNetworkError
             title="Unable to verify your session"
             message="Your school account could not be checked because Firebase is unreachable."
             onRetry={retrySession}
           />
         </div>
-      </main>
+      </SchoolPortalLayout>
     );
   }
   if (session.type !== 'school') return null;
 
   const entryComp = searchParams.get('entryComp') || undefined;
-  const isDataLoading = !isCompetitionsLoaded || !isSubmissionsLoaded;
 
   return (
     <SchoolPortalLayout
@@ -67,48 +95,40 @@ function DashboardContent() {
       searchQuery={searchQuery}
       onSearchQueryChange={handleSearchQueryChange}
     >
-      {isDataLoading ? (
-        <PortalSkeleton sections={3} />
-      ) : (
-        <>
-          <div className="mb-6 space-y-3">
-            {competitionsError && (
-              <FirestoreNetworkError
-                compact
-                title="Competition data is temporarily unavailable"
-                message={competitionsError}
-                onRetry={retryCompetitions}
-              />
-            )}
-            {submissionsError && (
-              <FirestoreNetworkError
-                compact
-                title="Submission data is temporarily unavailable"
-                message={submissionsError}
-                onRetry={retrySubmissions}
-              />
-            )}
-          </div>
-          <SchoolDashboardView
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            searchEntryQuery={searchQuery}
-            onSearchEntryQueryChange={setSearchQuery}
-            initialCompetitionId={entryComp}
-          />
-        </>
-      )}
+      <>
+        <div className="mb-6 space-y-3">
+          {competitionsError && (
+            <FirestoreNetworkError
+              compact
+              title="Competition data is temporarily unavailable"
+              message={competitionsError}
+              onRetry={retryCompetitions}
+            />
+          )}
+          {submissionsError && (
+            <FirestoreNetworkError
+              compact
+              title="Submission data is temporarily unavailable"
+              message={submissionsError}
+              onRetry={retrySubmissions}
+            />
+          )}
+        </div>
+        <SchoolDashboardView
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          searchEntryQuery={searchQuery}
+          onSearchEntryQueryChange={setSearchQuery}
+          initialCompetitionId={entryComp}
+        />
+      </>
     </SchoolPortalLayout>
   );
 }
 
 export default function DashboardPage() {
   return (
-    <React.Suspense fallback={
-      <main className="min-h-screen bg-[#f0f2f5] px-4 py-8 sm:px-6 lg:px-8">
-        <PortalSkeleton sections={3} />
-      </main>
-    }>
+    <React.Suspense fallback={<DashboardRouteSkeleton />}>
       <DashboardContent />
     </React.Suspense>
   );

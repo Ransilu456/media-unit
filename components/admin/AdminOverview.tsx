@@ -85,6 +85,23 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
     }));
   }, [submissions]);
 
+  const recentSubmissionGroups = useMemo(() => {
+    const groups = new Map<string, { schoolName: string; submissions: typeof submissions }>();
+    submissions.slice(0, 6).forEach((submission) => {
+      const schoolId = submission.schoolId || submission.schoolName;
+      const schoolName = schools.find((school) => school.id === submission.schoolId)?.name
+        ?? submission.schoolName
+        ?? 'Unregistered school';
+      const group = groups.get(schoolId);
+      if (group) {
+        group.submissions.push(submission);
+      } else {
+        groups.set(schoolId, { schoolName, submissions: [submission] });
+      }
+    });
+    return [...groups.entries()];
+  }, [schools, submissions]);
+
   const pendingSchools = schools.filter((school) => school.status === 'pending').length;
   const openCompetitions = competitions.filter((competition) => competition.status === 'open').length;
 
@@ -256,8 +273,8 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
         <div className="xl:col-span-7 rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
           <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">Recent student submissions</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Live status and judge evaluation</p>
+              <h2 className="text-sm font-semibold text-slate-900">Recent entries by school</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Submissions are grouped under each school</p>
             </div>
             <button
               type="button"
@@ -283,17 +300,25 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
             </div>
           ) : submissions.length ? (
             <div className="divide-y divide-slate-100">
-              {submissions.slice(0, 6).map((submission) => (
-                <div key={submission.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/50 transition-colors">
-                  <div className="h-9 w-9 shrink-0 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
-                    <FileText size={16} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900">{submission.entryTitle}</p>
-                    <p className="truncate text-xs text-slate-500">{submission.studentName} · {submission.schoolName}</p>
-                  </div>
-                  <StatusBadge status={submission.status} />
-                </div>
+              {recentSubmissionGroups.map(([schoolId, group]) => (
+                <section key={schoolId}>
+                  <h3 className="flex items-center justify-between gap-3 bg-slate-50 px-5 py-2.5 text-xs font-semibold text-slate-700">
+                    <span className="truncate">{group.schoolName}</span>
+                    <span className="shrink-0 font-medium text-slate-500">{group.submissions.length} entries</span>
+                  </h3>
+                  {group.submissions.map((submission) => (
+                    <div key={submission.id} className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50/50">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                        <FileText size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">{submission.entryTitle}</p>
+                        <p className="truncate text-xs text-slate-500">{submission.studentName}</p>
+                      </div>
+                      <StatusBadge status={submission.status} />
+                    </div>
+                  ))}
+                </section>
               ))}
             </div>
           ) : (

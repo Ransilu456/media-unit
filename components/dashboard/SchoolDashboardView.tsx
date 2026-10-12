@@ -218,8 +218,8 @@ function LegacySchoolDashboardView({
         <div className="space-y-6 sm:space-y-8">
           <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
           
-          <div className="relative isolate overflow-hidden rounded-3xl border border-amber-200/70 bg-gradient-to-br from-amber-100/80 via-white to-orange-50 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.05)] sm:p-8 lg:col-span-7">
-            <div className="pointer-events-none absolute -right-10 -top-20 -z-10 h-64 w-64 rounded-full border-[36px] border-white/60" />
+          <div className="relative isolate overflow-hidden rounded-3xl border border-amber-200/70 bg-linear-to-br from-amber-100/80 via-white to-orange-50 p-6 shadow-[0_12px_36px_rgba(15,23,42,0.05)] sm:p-8 lg:col-span-7">
+            <div className="pointer-events-none absolute -right-10 -top-20 -z-10 h-64 w-64 rounded-full border-36 border-white/60" />
             <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
               
               <div className="flex items-center gap-4 min-w-0">
@@ -1125,7 +1125,13 @@ function LegacySchoolDashboardView({
 }
 
 export function SchoolDashboardView(props: Props) {
-  const { session, competitions, submissions } = useMediaStore();
+  const {
+    session,
+    competitions,
+    submissions,
+    isCompetitionsLoaded,
+    isSubmissionsLoaded,
+  } = useMediaStore();
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
   const school = session.type === 'school' ? session.school : undefined;
 
@@ -1145,6 +1151,8 @@ export function SchoolDashboardView(props: Props) {
         school={school}
         competitions={competitions}
         submissions={submissions.filter((submission) => submission.schoolId === school.id)}
+        isCompetitionsLoaded={isCompetitionsLoaded}
+        isSubmissionsLoaded={isSubmissionsLoaded}
         onTabChange={props.onTabChange}
         onSelectCompetition={setSelectedCompetition}
       />

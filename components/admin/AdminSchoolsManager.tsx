@@ -372,48 +372,55 @@ export function AdminSchoolsManager() {
           <p className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
             No student entries have been submitted.
           </p>
-        ) : schoolEntries.map(({ school, competitions: schoolCompetitions }) => (
-          <article key={school.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <header className="border-b border-slate-100 bg-slate-50 px-5 py-4">
-              <h3 className="font-semibold text-slate-900">{school.name}</h3>
-              <p className="text-xs text-slate-500">{school.district} · {school.email}</p>
-            </header>
-            <div className="divide-y divide-slate-100">
-              {schoolCompetitions.map(({ competition, entries }) => (
-                <section key={competition.id} className="space-y-3 p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <h4 className="text-sm font-semibold text-slate-800">{competition.title}</h4>
-                    <span className="text-xs text-slate-500">
-                      {entries.length} / {competition.maxEntriesPerSchool} entries
-                    </span>
-                  </div>
-                  {entries.map((entry) => (
-                    <div key={entry.id} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {entry.studentName} <span className="font-normal text-slate-500">· {entry.entryTitle}</span>
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {entry.studentGrade} · {entry.status.replace('_', ' ')} · submitted {entry.submittedAt}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={workingId === entry.id || !isSubmissionsLoaded}
-                        onClick={() => void handleRemoveEntry(entry.id)}
-                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-800 hover:bg-rose-50 disabled:opacity-50"
-                      >
-                        <Trash2 size={13} />
-                        Remove & reopen slot
-                      </button>
+        ) : schoolEntries.map(({ school, competitions: schoolCompetitions }) => {
+          const entryCount = schoolCompetitions.reduce((total, group) => total + group.entries.length, 0);
+          return (
+            <details key={school.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 bg-white px-5 py-4 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold text-slate-900">{school.name}</span>
+                  <span className="mt-1 block truncate text-xs text-slate-500">{school.district} · {school.email}</span>
+                </span>
+                <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
+                </span>
+              </summary>
+              <div className="divide-y divide-slate-100 border-t border-slate-100 bg-slate-50/50">
+                {schoolCompetitions.map(({ competition, entries }) => (
+                  <section key={competition.id} className="space-y-3 p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <h4 className="text-sm font-semibold text-slate-800">{competition.title}</h4>
+                      <span className="shrink-0 text-xs text-slate-500">
+                        {entries.length} / {competition.maxEntriesPerSchool}
+                      </span>
                     </div>
-                  ))}
-                </section>
-
-              ))}
-            </div>
-          </article>
-        ))}
+                    {entries.map((entry) => (
+                      <div key={entry.id} className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {entry.studentName} <span className="font-normal text-slate-500">· {entry.entryTitle}</span>
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {entry.studentGrade} · {entry.status.replace('_', ' ')} · submitted {entry.submittedAt}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={workingId === entry.id || !isSubmissionsLoaded}
+                          onClick={() => void handleRemoveEntry(entry.id)}
+                          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-800 hover:bg-rose-50 disabled:opacity-50"
+                        >
+                          <Trash2 size={13} />
+                          Remove & reopen slot
+                        </button>
+                      </div>
+                    ))}
+                  </section>
+                ))}
+              </div>
+            </details>
+          );
+        })}
       </section>
 
       {approvalSchoolId && (() => {

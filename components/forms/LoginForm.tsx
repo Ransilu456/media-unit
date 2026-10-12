@@ -96,11 +96,9 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
         <div className="w-14 h-14 mx-auto mb-3 bg-slate-950 rounded-xl border border-slate-700 p-2 flex items-center justify-center shadow-xs auth-form-logo">
           <Image src="/icons/icon-192.png" alt="Agradhi" width={44} height={44} unoptimized className="object-contain" />
         </div>
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          {activeTab === 'school' ? 'Welcome back' : 'Welcome back'}
-        </h1>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Sign in</h1>
         <p className="text-xs text-slate-500 mt-1">
-          {activeTab === 'school' ? 'Sign in to your school portal' : 'Sign in to the admin dashboard'}
+          {activeTab === 'school' ? 'Open your school portal' : 'Open the admin dashboard'}
         </p>
       </div>
 
@@ -174,7 +172,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
           {/* Email */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-              {activeTab === 'school' ? 'Email address' : 'Admin email'}
+              {activeTab === 'school' ? 'School email' : 'Admin email'}
             </label>
             <div className="relative">
               <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -239,7 +237,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
               </>
             ) : (
               <>
-                <span>Sign in to {activeTab === 'school' ? 'School Dashboard' : 'Admin Panel'}</span>
+                <span>Continue</span>
                 <ArrowRight size={14} />
               </>
             )}

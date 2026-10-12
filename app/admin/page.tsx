@@ -42,7 +42,7 @@ export default function AdminPage() {
     isSubmissionsLoaded,
   } = useMediaStore();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTab>('submissions');
 
   React.useEffect(() => {
     if (isLoaded && !sessionError && session.type !== 'admin') {

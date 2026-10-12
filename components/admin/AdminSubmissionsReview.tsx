@@ -58,10 +58,11 @@ function getDecisionHelp(status: SubmissionStatus): string {
 }
 
 export function AdminSubmissionsReview() {
-  const { submissions, competitions, updateSubmissionStatus } = useMediaStore();
+  const { submissions, schools, competitions, updateSubmissionStatus } = useMediaStore();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
-  const [queueFilter, setQueueFilter] = useState<QueueFilter>('needs-review');
+  const [schoolFilter, setSchoolFilter] = useState('all');
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>('all');
   const [editingScores, setEditingScores] = useState<Record<string, number>>({});
   const [clearedScoreIds, setClearedScoreIds] = useState<string[]>([]);
   const [editingFeedback, setEditingFeedback] = useState<Record<string, string>>({});
@@ -80,18 +81,21 @@ export function AdminSubmissionsReview() {
     [competitions]
   );
 
-  const categories = [...new Set(submissions.map((submission) => submission.category))];
-  const awaitingReviewCount = submissions.filter(
+  const schoolSubmissions = schoolFilter === 'all'
+    ? submissions
+    : submissions.filter((submission) => submission.schoolId === schoolFilter);
+  const categories = [...new Set(schoolSubmissions.map((submission) => submission.category))];
+  const awaitingReviewCount = schoolSubmissions.filter(
     (submission) => submission.status === 'submitted'
   ).length;
-  const inProgressCount = submissions.filter(
+  const inProgressCount = schoolSubmissions.filter(
     (submission) => submission.status === 'under_review'
   ).length;
-  const decidedCount = submissions.filter(
+  const decidedCount = schoolSubmissions.filter(
     (submission) => !['submitted', 'under_review'].includes(submission.status)
   ).length;
 
-  const filtered = submissions.filter((submission) => {
+  const filtered = schoolSubmissions.filter((submission) => {
     const query = search.trim().toLowerCase();
     const matchesSearch = !query || [
       submission.entryTitle,
@@ -106,6 +110,22 @@ export function AdminSubmissionsReview() {
       || (queueFilter === 'decided' && !['submitted', 'under_review'].includes(submission.status));
     return matchesSearch && matchesCategory && matchesQueue;
   });
+  const schoolGroups = useMemo(() => {
+    const groups = new Map<string, { schoolId: string; schoolName: string; submissions: typeof filtered }>();
+    filtered.forEach((submission) => {
+      const schoolId = submission.schoolId || submission.schoolName;
+      const schoolName = schools.find((school) => school.id === submission.schoolId)?.name
+        ?? submission.schoolName
+        ?? 'Unregistered school';
+      const group = groups.get(schoolId);
+      if (group) {
+        group.submissions.push(submission);
+      } else {
+        groups.set(schoolId, { schoolId, schoolName, submissions: [submission] });
+      }
+    });
+    return [...groups.values()].sort((left, right) => left.schoolName.localeCompare(right.schoolName));
+  }, [filtered, schools]);
 
   const handleSaveReview = async (id: string, originalStatus: SubmissionStatus) => {
     const status = editingStatuses[id] ?? originalStatus;
@@ -183,7 +203,7 @@ export function AdminSubmissionsReview() {
     { id: 'needs-review', label: 'Awaiting review', count: awaitingReviewCount },
     { id: 'in-progress', label: 'In progress', count: inProgressCount },
     { id: 'decided', label: 'Decided', count: decidedCount },
-    { id: 'all', label: 'All entries', count: submissions.length },
+    { id: 'all', label: 'All entries', count: schoolSubmissions.length },
   ];
 
   return (
@@ -262,6 +282,22 @@ export function AdminSubmissionsReview() {
             />
           </label>
           <label>
+            <span className="sr-only">Filter by school</span>
+            <select
+              value={schoolFilter}
+              onChange={(event) => {
+                setSchoolFilter(event.target.value);
+                setCategoryFilter('All');
+              }}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-slate-400 sm:w-56"
+            >
+              <option value="all">All schools</option>
+              {[...schools].sort((left, right) => left.name.localeCompare(right.name)).map((school) => (
+                <option key={school.id} value={school.id}>{school.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
             <span className="sr-only">Filter by category</span>
             <select
               value={categoryFilter}
@@ -279,25 +315,40 @@ export function AdminSubmissionsReview() {
         <div className="flex items-center justify-between px-1">
           <p className="text-xs font-medium text-slate-500" aria-live="polite">
             {filtered.length
-              ? `Showing ${filtered.length} of ${submissions.length} ${submissions.length === 1 ? 'entry' : 'entries'}`
+              ? `Showing ${filtered.length} of ${schoolSubmissions.length} ${schoolSubmissions.length === 1 ? 'entry' : 'entries'}${schoolFilter === 'all' ? ' across all schools' : ''}`
               : 'No matching entries'}
           </p>
-          {(search || categoryFilter !== 'All') && (
+          {(search || categoryFilter !== 'All' || schoolFilter !== 'all') && (
             <button
               type="button"
               onClick={() => {
                 setSearch('');
                 setCategoryFilter('All');
+                setSchoolFilter('all');
               }}
               className="text-xs font-medium text-amber-800 underline underline-offset-2"
             >
-              Clear search
+              Clear filters
             </button>
           )}
         </div>
 
-        <div className="space-y-4">
-          {filtered.map((submission) => {
+        <div className="space-y-6">
+          {schoolGroups.map((group) => (
+            <section key={group.schoolId} aria-labelledby={`school-${group.schoolId}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70">
+              <header className="flex flex-col gap-1 border-b border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">School submissions</p>
+                  <h2 id={`school-${group.schoolId}`} className="mt-1 truncate text-base font-semibold text-slate-950 sm:text-lg">
+                    {group.schoolName}
+                  </h2>
+                </div>
+                <span className="inline-flex w-fit items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
+                  {group.submissions.length} {group.submissions.length === 1 ? 'entry' : 'entries'}
+                </span>
+              </header>
+              <div className="space-y-3 p-3 sm:p-4">
+                {group.submissions.map((submission) => {
             const currentStatus = editingStatuses[submission.id] ?? submission.status;
             const currentScore = clearedScoreIds.includes(submission.id)
               ? ''
@@ -728,7 +779,10 @@ export function AdminSubmissionsReview() {
                 )}
               </article>
             );
-          })}
+                })}
+              </div>
+            </section>
+          ))}
 
           {filtered.length === 0 && (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">

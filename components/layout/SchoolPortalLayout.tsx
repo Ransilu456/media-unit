@@ -33,7 +33,15 @@ export function SchoolPortalLayout({
   onSearchQueryChange,
 }: SchoolPortalLayoutProps) {
   const router = useRouter();
-  const { session, logout, submissions, competitions } = useMediaStore();
+  const {
+    session,
+    logout,
+    submissions,
+    competitions,
+    isLoaded,
+    isSubmissionsLoaded,
+    isCompetitionsLoaded,
+  } = useMediaStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const school = session.school;
@@ -61,9 +69,9 @@ export function SchoolPortalLayout({
   };
 
   const renderSidebar = () => (
-    <aside className="flex h-full w-[min(20rem,calc(100vw-1rem))] min-h-0 shrink-0 select-none flex-col bg-white lg:w-[260px] xl:w-[272px]">
+    <aside className="flex h-full w-[min(20rem,calc(100vw-1rem))] min-h-0 shrink-0 select-none flex-col bg-white lg:w-65 xl:w-68">
       {/* Brand Header */}
-      <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-slate-100 px-4 sm:px-5">
+      <div className="flex h-18 shrink-0 items-center justify-between border-b border-slate-100 px-4 sm:px-5">
         <Link href="/" className="flex items-center gap-3.5 group min-w-0">
           <div className="w-10 h-10 rounded-2xl bg-sara-navy p-1.5 flex items-center justify-center transition-transform group-hover:scale-105 shadow-sm shrink-0">
             <Image src="/Agradhi.png" alt="Agradhi Media" width={30} height={30} className="object-contain" />
@@ -138,14 +146,20 @@ export function SchoolPortalLayout({
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                {item.id === 'students' && mySubmissionsCount > 0 && (
+                {item.id === 'students' && (!isLoaded || !isSubmissionsLoaded) && (
+                  <span aria-label="Loading entry count" className="h-5 w-8 animate-pulse rounded-full bg-slate-200/80" />
+                )}
+                {item.id === 'students' && isLoaded && isSubmissionsLoaded && mySubmissionsCount > 0 && (
                   <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                     active ? 'bg-white text-amber-900' : 'bg-slate-100 text-slate-600'
                   }`}>
                     {mySubmissionsCount}
                   </span>
                 )}
-                {item.id === 'competitions' && openCompsCount > 0 && (
+                {item.id === 'competitions' && (!isLoaded || !isCompetitionsLoaded) && (
+                  <span aria-label="Loading competition count" className="h-5 w-8 animate-pulse rounded-full bg-emerald-100/80" />
+                )}
+                {item.id === 'competitions' && isLoaded && isCompetitionsLoaded && openCompsCount > 0 && (
                   <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                     active ? 'bg-white text-emerald-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
                   }`}>
@@ -159,7 +173,7 @@ export function SchoolPortalLayout({
       </nav>
 
       <div className="shrink-0 border-t border-slate-100 p-3 sm:p-4">
-        {school && (
+        {school ? (
           <div className="mb-3 flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sara-navy text-xs font-bold text-amber-300">
               {school.name.charAt(0).toUpperCase()}
@@ -170,7 +184,15 @@ export function SchoolPortalLayout({
             </span>
             <span className={`h-2 w-2 shrink-0 rounded-full ${school.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
           </div>
-        )}
+        ) : !isLoaded ? (
+          <div aria-hidden="true" className="mb-3 flex animate-pulse items-center gap-3 rounded-2xl bg-slate-50 p-3">
+            <span className="h-9 w-9 shrink-0 rounded-xl bg-slate-200" />
+            <span className="min-w-0 flex-1 space-y-2">
+              <span className="block h-3 w-3/4 rounded bg-slate-200" />
+              <span className="block h-2 w-1/2 rounded bg-slate-100" />
+            </span>
+          </div>
+        ) : null}
         <Link
           href="/"
           className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
@@ -214,7 +236,7 @@ export function SchoolPortalLayout({
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-3 py-3 shadow-[0_1px_8px_rgba(15,23,42,0.03)] backdrop-blur sm:px-6 sm:py-0 sm:min-h-[72px] xl:px-8">
+        <header className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-3 py-3 shadow-[0_1px_8px_rgba(15,23,42,0.03)] backdrop-blur sm:px-6 sm:py-0 sm:min-h-18 xl:px-8">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -242,14 +264,6 @@ export function SchoolPortalLayout({
                 className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-100"
               />
             </label>
-            <button
-              type="button"
-              onClick={() => onTabChange('apply')}
-              className="inline-flex min-h-10 items-center gap-2 rounded-full bg-sara-navy px-3 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 sm:px-5"
-            >
-              <FilePlus size={15} />
-              <span className="hidden min-[420px]:inline">Submit entry</span>
-            </button>
             <DashboardNotifications />
             {school && (
               <div className="relative">
@@ -304,7 +318,7 @@ export function SchoolPortalLayout({
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto bg-[#f7f7f4] p-3 sm:p-6 xl:p-8">
-          <div className="mx-auto w-full max-w-[1600px]">{children}</div>
+          <div className="mx-auto w-full max-w-400">{children}</div>
         </main>
       </div>
     </div>

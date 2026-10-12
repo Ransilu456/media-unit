@@ -44,7 +44,6 @@ export function Footer() {
             © 2026 {MEDIA_UNIT_INFO.name}.
           </p>
         </div>
-
       </div>
     </footer>
   );
