@@ -6,6 +6,7 @@ import { useMediaStore } from '@/lib/store';
 import { Competition } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Plus, Edit3, Eye, Trash2 } from 'lucide-react';
+import { getCompetitionMedium } from '@/lib/competitionUtils';
 
 const categoryTones = [
   'border-sky-200 bg-sky-50 text-sky-800',
@@ -119,6 +120,12 @@ export function AdminCompetitionsManager() {
                 <h4 className="mb-2 text-lg font-semibold tracking-tight text-slate-900">
                   {comp.title}
                 </h4>
+
+                {getCompetitionMedium(comp) !== 'None' && (
+                  <span className="mb-3 inline-flex rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-800">
+                    {getCompetitionMedium(comp)}
+                  </span>
+                )}
 
                 <p className="mb-3 line-clamp-2 text-xs leading-relaxed text-slate-600">
                   {comp.description}

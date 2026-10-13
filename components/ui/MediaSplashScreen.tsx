@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import Image from 'next/image';
+import React, { useEffect, useState, useRef } from 'react';
+import gsap from 'gsap';
 import { usePathname, useRouter } from 'next/navigation';
 
 export const SPLASH_SESSION_KEY = 'agradhi_media_splash_viewed_v1';
@@ -14,6 +14,7 @@ export interface MediaSplashScreenProps {
 export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashScreenProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const splashRef = useRef<HTMLDivElement>(null);
 
   const [dismissed, setDismissed] = useState(false);
   const [fading, setFading] = useState(false);
@@ -24,25 +25,6 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
     pathname.startsWith('/register') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/dashboard');
-
-  const dismissSplash = useCallback(() => {
-    setFading(true);
-    setTimeout(() => {
-      setDismissed(true);
-      try {
-        if (!isTestRoute) {
-          window.sessionStorage.setItem(SPLASH_SESSION_KEY, 'true');
-        }
-      } catch {
-        // ignore storage errors
-      }
-      if (typeof document !== 'undefined') {
-        document.documentElement.classList.remove('splash-active');
-        document.documentElement.classList.add('no-splash');
-      }
-      onFinish?.();
-    }, 280);
-  }, [isTestRoute, onFinish]);
 
   useEffect(() => {
     if (!forceShow && isAuthOrAdmin) {
@@ -83,7 +65,7 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
 
       const fadeTimer = setTimeout(() => {
         setFading(true);
-      }, 950);
+      }, 4650);
 
       const dismissTimer = setTimeout(() => {
         setDismissed(true);
@@ -97,7 +79,7 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
         document.documentElement.classList.remove('splash-active');
         document.documentElement.classList.add('no-splash');
         if (onFinish) onFinish();
-      }, 1250);
+      }, 5000);
 
       return () => {
         clearTimeout(fadeTimer);
@@ -109,45 +91,58 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
     }
   }, [pathname, forceShow, router, isAuthOrAdmin, isTestRoute, onFinish]);
 
+  useEffect(() => {
+    if (!splashRef.current || (isAuthOrAdmin && !forceShow)) return;
+
+    const animation = gsap.fromTo(
+      splashRef.current.querySelectorAll('[data-splash-word]'),
+      { autoAlpha: 0, y: 12 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        duration: 1,
+        stagger: 0.42,
+        ease: 'power2.out',
+      }
+    );
+
+    return () => {
+      animation.kill();
+    };
+  }, [forceShow, isAuthOrAdmin, pathname]);
+
   if ((dismissed || isAuthOrAdmin) && !forceShow) return null;
+
+  const sinhalaWords = 'පඤ්ඥා ධයාති රථනං'.split(' ');
+  const englishWords = 'Wisdom is a precious jewel.'.split(' ');
 
   return (
     <div
+      ref={splashRef}
       id="agradhi-splash-root"
       role="status"
-      aria-label="Welcome to Agradhi Media Unit"
+      aria-label="පඤ්ඥා ධයාති රථනං. Wisdom is a precious jewel."
       aria-live="polite"
-      onClick={dismissSplash}
-      className={`fixed inset-0 z-99999 flex flex-col items-center justify-center bg-slate-950 text-white transition-opacity duration-300 ease-out select-none cursor-pointer ${
+      className={`fixed inset-0 z-99999 flex items-center justify-center bg-[#081426] px-6 text-center text-white transition-opacity duration-300 ease-out select-none ${
         fading ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-amber-600/15 via-transparent to-transparent pointer-events-none" />
-
-      <div className="relative flex flex-col items-center text-center px-6">
-        <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white/5 p-3.5 backdrop-blur-md border border-white/10 shadow-2xl">
-          <Image
-            src="/Agradhi.png"
-            alt="Agradhi Media Unit Crest"
-            width={72}
-            height={72}
-            priority
-            className="h-full w-full object-contain drop-shadow"
-          />
-        </div>
-
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-serif">
-          Agradhi Media Unit
-        </h1>
-        <p className="mt-1 text-xs font-medium text-amber-300/80 tracking-wide uppercase">
-          Saranath College
+      <div className="flex w-full max-w-[96vw] flex-col items-center gap-8 sm:gap-12">
+        <p className="flex flex-wrap justify-center gap-x-4 gap-y-2 font-serif text-[clamp(2.75rem,10vw,8rem)] leading-[1.35] text-white sm:gap-x-8">
+          {sinhalaWords.map((word, index) => (
+            <span key={`si-${index}`} data-splash-word className="inline-block">
+              {word}
+            </span>
+          ))}
         </p>
-
-        <div className="mt-6 w-36 h-1 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-full bg-linear-to-r from-amber-500 to-amber-300 animate-[progress_1s_ease-out_forwards]" />
-        </div>
+        <p className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 font-serif text-[clamp(1.5rem,4.5vw,3.5rem)] leading-relaxed tracking-[0.08em] text-slate-300 sm:gap-x-4">
+          {englishWords.map((word, index) => (
+            <span key={`en-${index}`} data-splash-word className="inline-block">
+              {word}
+            </span>
+          ))}
+        </p>
       </div>
     </div>
   );
 }
-

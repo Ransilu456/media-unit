@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
 import { DashboardNotifications } from './DashboardNotifications';
 import { LayoutDashboard, Users, Trophy, FilePlus, LogOut, Menu, X, Search, ChevronDown } from 'lucide-react';
+import Link from 'next/link';
 
 export type SchoolTab = 'overview' | 'students' | 'competitions' | 'apply';
 
@@ -71,7 +72,7 @@ export function SchoolPortalLayout({
     <aside className="flex h-full w-[min(20rem,calc(100vw-1rem))] min-h-0 shrink-0 select-none flex-col bg-white lg:w-65 xl:w-68">
       {/* Brand Header */}
       <div className="flex h-18 shrink-0 items-center justify-between border-b border-slate-100 px-4 sm:px-5">
-        <div className="flex min-w-0 items-center gap-3.5">
+        <Link href="/" aria-label="Agradhi Media Unit homepage" className="group flex min-w-0 items-center gap-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 p-1.5 transition-colors group-hover:bg-orange-100">
             <Image src="/Agradhi.png" alt="Agradhi Media" width={30} height={30} className="object-contain" />
           </div>
@@ -79,7 +80,7 @@ export function SchoolPortalLayout({
             <span className="block truncate text-sm font-bold tracking-tight text-slate-900">Agradhi Media Unit</span>
             <span className="block text-[11px] font-medium text-slate-400">School portal</span>
           </div>
-        </div>
+        </Link>
         <button
           onClick={() => setMobileOpen(false)}
           aria-label="Close navigation"
@@ -193,24 +194,23 @@ export function SchoolPortalLayout({
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="z-20 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-3 py-3 shadow-[0_1px_8px_rgba(15,23,42,0.03)] backdrop-blur sm:px-6 sm:py-0 sm:min-h-18 xl:px-8">
-          <div className="flex items-center gap-3 min-w-0">
+        <header className="z-20 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b border-slate-200/80 bg-white px-3 py-3 sm:flex sm:min-h-16 sm:justify-between sm:gap-4 sm:px-6 sm:py-0 xl:px-8">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
               aria-expanded={mobileOpen}
-              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-colors"
+              className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 lg:hidden"
               aria-label="Open sidebar"
             >
               <Menu size={20} />
             </button>
 
-            <h1 className="max-w-[42vw] truncate text-sm font-semibold text-slate-700">{activeNavigation.label}</h1>
+            <h1 className="truncate text-sm font-semibold text-slate-800">{activeNavigation.label}</h1>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <label className="relative hidden md:block w-52 lg:w-72 xl:w-96">
-              <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <label className="relative hidden w-52 md:block lg:w-72 xl:w-80">
+              <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="search"
                 value={searchQuery}
@@ -218,9 +218,11 @@ export function SchoolPortalLayout({
                 onFocus={() => onTabChange('students')}
                 placeholder="Search entries..."
                 aria-label="Search student entries"
-                className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-100"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-10 pr-3.5 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
               />
-            </label>
+          </label>
+
+          <div className="col-start-2 row-start-1 flex items-center justify-self-end gap-2 sm:ml-auto sm:gap-3">
             <DashboardNotifications />
             {school && (
               <div className="relative">
@@ -229,9 +231,9 @@ export function SchoolPortalLayout({
                   onClick={() => setProfileOpen((open) => !open)}
                   aria-expanded={profileOpen}
                   aria-label="Open school profile menu"
-                  className="flex items-center gap-2 rounded-full p-1.5 pr-2 sm:pr-3 transition-colors hover:bg-slate-50"
+                  className="flex items-center gap-2 rounded-xl p-1 transition-colors hover:bg-slate-50 sm:pl-2"
                 >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-200 bg-amber-100 text-sm font-bold text-amber-900">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-sm font-bold text-orange-900">
                     {school.name.charAt(0).toUpperCase()}
                   </span>
                   <span className="hidden max-w-32 text-left md:block">
@@ -260,7 +262,7 @@ export function SchoolPortalLayout({
               </div>
             )}
           </div>
-          <label className="relative block w-full md:hidden">
+          <label className="relative col-span-2 row-start-2 block w-full md:hidden">
             <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
@@ -269,7 +271,7 @@ export function SchoolPortalLayout({
               onFocus={() => onTabChange('students')}
               placeholder="Search student entries"
               aria-label="Search student entries"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-100"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-10 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100"
             />
           </label>
         </header>
