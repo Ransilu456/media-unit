@@ -1,9 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMediaStore } from '@/lib/store';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Search, Filter, Trash2, Clock3, ShieldCheck, X, School, FileText } from 'lucide-react';
+
+type SchoolStatus = 'active' | 'pending' | 'suspended' | 'banned';
+
+function formatRegistrationDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Registration date unavailable';
+  return `Registered ${new Intl.DateTimeFormat('en', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date)}`;
+}
 
 export function AdminSchoolsManager() {
   const {
@@ -20,18 +34,29 @@ export function AdminSchoolsManager() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'suspended' | 'banned'>('all');
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [approvalSchoolId, setApprovalSchoolId] = useState<string | null>(null);
+  const [statusDialog, setStatusDialog] = useState<{ schoolId: string; status: SchoolStatus } | null>(null);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
+
+  useEffect(() => {
+    if (!statusDialog) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && workingId !== statusDialog.schoolId) {
+        setStatusDialog(null);
+      }
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [statusDialog, workingId]);
 
   const saveSchoolStatus = async (
     id: string,
-    status: 'active' | 'pending' | 'suspended' | 'banned'
+    status: SchoolStatus
   ) => {
     setWorkingId(id);
     setActionError(null);
     try {
       await updateSchoolStatus(id, status);
-      if (status === 'active') setApprovalSchoolId(null);
+      setStatusDialog(null);
     } catch (error: unknown) {
       setActionError(error instanceof Error ? error.message : 'Unable to save the school status.');
     } finally {
@@ -41,18 +66,11 @@ export function AdminSchoolsManager() {
 
   const requestSchoolStatusUpdate = (
     id: string,
-    status: 'active' | 'pending' | 'suspended' | 'banned',
-    schoolName: string
+    status: SchoolStatus,
   ) => {
-    if (status === 'active') {
-      setActionError(null);
-      setReviewConfirmed(false);
-      setApprovalSchoolId(id);
-      return;
-    }
-    if (window.confirm(`Change ${schoolName}'s account status to ${status}?`)) {
-      void saveSchoolStatus(id, status);
-    }
+    setActionError(null);
+    setReviewConfirmed(false);
+    setStatusDialog({ schoolId: id, status });
   };
 
   const pendingReplacementRequests = notifications.filter(
@@ -291,9 +309,13 @@ export function AdminSchoolsManager() {
                     {school.badgeCode}
                   </span>
                   <StatusBadge status={school.status} />
-                  <span className="text-[11px] text-slate-400">
-                    {school.registeredAt}
-                  </span>
+                  <time
+                    dateTime={school.registeredAt}
+                    className="text-[11px] text-slate-500"
+                    title={new Date(school.registeredAt).toLocaleString()}
+                  >
+                    {formatRegistrationDate(school.registeredAt)}
+                  </time>
                 </div>
 
                 <h3 className="text-lg font-semibold tracking-tight text-slate-950 sm:text-xl">
@@ -332,7 +354,7 @@ export function AdminSchoolsManager() {
               {/* Status Action Buttons */}
               <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                 <button
-                  onClick={() => requestSchoolStatusUpdate(school.id, 'active', school.name)}
+                  onClick={() => requestSchoolStatusUpdate(school.id, 'active')}
                   disabled={school.status === 'active' || workingId === school.id}
                   title={school.status === 'pending' ? 'Review and approve this school registration.' : undefined}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -344,7 +366,7 @@ export function AdminSchoolsManager() {
                   {school.status === 'banned' || school.status === 'suspended' ? 'Restore / Active' : 'Review & approve'}
                 </button>
                 <button
-                  onClick={() => requestSchoolStatusUpdate(school.id, 'pending', school.name)}
+                  onClick={() => requestSchoolStatusUpdate(school.id, 'pending')}
                   disabled={school.status === 'pending' || workingId === school.id}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                     school.status === 'pending'
@@ -355,7 +377,7 @@ export function AdminSchoolsManager() {
                   Pending
                 </button>
                 <button
-                  onClick={() => requestSchoolStatusUpdate(school.id, 'suspended', school.name)}
+                  onClick={() => requestSchoolStatusUpdate(school.id, 'suspended')}
                   disabled={school.status === 'suspended' || workingId === school.id}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                     school.status === 'suspended'
@@ -366,7 +388,7 @@ export function AdminSchoolsManager() {
                   Suspend
                 </button>
                 <button
-                  onClick={() => requestSchoolStatusUpdate(school.id, 'banned', school.name)}
+                  onClick={() => requestSchoolStatusUpdate(school.id, 'banned')}
                   disabled={school.status === 'banned' || workingId === school.id}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                     school.status === 'banned'
@@ -474,15 +496,46 @@ export function AdminSchoolsManager() {
         })}
       </section>
 
-      {approvalSchoolId && (() => {
-        const school = schools.find((entry) => entry.id === approvalSchoolId);
+      {statusDialog && (() => {
+        const school = schools.find((entry) => entry.id === statusDialog.schoolId);
         if (!school) return null;
+        const statusCopy: Record<SchoolStatus, { title: string; description: string; impact: string; action: string; tone: string }> = {
+          active: {
+            title: 'Review school registration',
+            description: 'Approval immediately enables sign-in and submissions.',
+            impact: 'This school will be able to sign in and submit competition entries.',
+            action: 'Confirm and activate',
+            tone: 'bg-emerald-700 hover:bg-emerald-800',
+          },
+          pending: {
+            title: 'Move school to pending',
+            description: 'The account will require review before it can be used.',
+            impact: 'Sign-in and new submissions will be unavailable until the school is activated.',
+            action: 'Set as pending',
+            tone: 'bg-orange-700 hover:bg-orange-800',
+          },
+          suspended: {
+            title: 'Suspend school account',
+            description: 'Temporarily disable this school’s portal access.',
+            impact: 'The school will be unable to sign in or submit entries until restored.',
+            action: 'Suspend account',
+            tone: 'bg-rose-700 hover:bg-rose-800',
+          },
+          banned: {
+            title: 'Ban school account',
+            description: 'Disable this school’s portal access until it is restored.',
+            impact: 'The school will be unable to sign in or submit entries. This can be reversed later.',
+            action: 'Ban account',
+            tone: 'bg-red-800 hover:bg-red-900',
+          },
+        };
+        const copy = statusCopy[statusDialog.status];
         return (
           <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/50 p-4" role="presentation">
             <section
               role="dialog"
               aria-modal="true"
-              aria-labelledby="approve-school-title"
+              aria-labelledby="school-status-title"
               className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_16px_48px_rgba(15,23,42,0.14)]"
             >
               <div className="flex items-start justify-between gap-4">
@@ -491,15 +544,15 @@ export function AdminSchoolsManager() {
                     <ShieldCheck size={20} />
                   </span>
                   <div>
-                    <h2 id="approve-school-title" className="text-lg font-semibold text-slate-950">Review school registration</h2>
-                    <p className="text-xs text-slate-500">Approval immediately enables sign-in and submissions.</p>
+                    <h2 id="school-status-title" className="text-lg font-semibold text-slate-950">{copy.title}</h2>
+                    <p className="text-xs text-slate-500">{copy.description}</p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setApprovalSchoolId(null)}
-                  disabled={workingId === approvalSchoolId}
-                  aria-label="Close approval dialog"
+                  onClick={() => setStatusDialog(null)}
+                  disabled={workingId === statusDialog.schoolId}
+                  aria-label="Close school status dialog"
                   className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
                 >
                   <X size={18} />
@@ -515,6 +568,9 @@ export function AdminSchoolsManager() {
                 <p className="mt-1 text-xs text-slate-600">
                   Media president: {school.mediaPresident} · {school.presidentPhone}
                 </p>
+                <p className="mt-3 rounded-lg border border-orange-100 bg-orange-50/70 p-3 text-xs leading-relaxed text-slate-700">
+                  {copy.impact}
+                </p>
               </div>
               {actionError && (
                 <p role="alert" className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
@@ -528,24 +584,24 @@ export function AdminSchoolsManager() {
                   onChange={(event) => setReviewConfirmed(event.target.checked)}
                   className="mt-0.5 accent-orange-700"
                 />
-                I have reviewed these school details and confirm this registration should be activated.
+                I understand this change will take effect immediately.
               </label>
               <div className="mt-5 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setApprovalSchoolId(null)}
-                  disabled={workingId === approvalSchoolId}
+                  onClick={() => setStatusDialog(null)}
+                  disabled={workingId === statusDialog.schoolId}
                   className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  onClick={() => void saveSchoolStatus(school.id, 'active')}
+                  onClick={() => void saveSchoolStatus(school.id, statusDialog.status)}
                   disabled={!reviewConfirmed || workingId === school.id}
-                  className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={`rounded-lg px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${copy.tone}`}
                 >
-                  {workingId === school.id ? 'Activating…' : 'Confirm and activate'}
+                  {workingId === school.id ? 'Saving…' : copy.action}
                 </button>
               </div>
             </section>

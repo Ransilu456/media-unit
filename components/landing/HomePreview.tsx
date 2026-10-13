@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useMediaStore } from '@/lib/store';
+import { getCompetitionMedium } from '@/lib/competitionUtils';
 import { FirestoreNetworkError } from '@/components/ui/FirestoreNetworkError';
 import {
   ArrowLeft,
@@ -116,7 +117,7 @@ export function HomePreview() {
                           <Icon size={38} strokeWidth={1.5} className={style.ink} />
                         </span>
                         <span className="absolute left-3 top-3 rounded-full border border-white/80 bg-white/85 px-2.5 py-1 text-[9px] font-bold text-slate-600">
-                          {competition.medium === 'None' ? 'Any language' : competition.medium}
+                          {getCompetitionMedium(competition) === 'None' ? 'Any language' : getCompetitionMedium(competition)}
                         </span>
                         <span className="absolute bottom-3 right-3 rounded-full bg-white/80 px-2.5 py-1 text-[9px] font-semibold text-slate-600">
                           {competition.status === 'open' ? 'Entries open' : competition.status}

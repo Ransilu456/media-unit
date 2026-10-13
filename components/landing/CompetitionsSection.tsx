@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useMediaStore } from '@/lib/store';
+import { getCompetitionMedium } from '@/lib/competitionUtils';
 import { StatusBadge } from '@/components/ui/Badge';
 import { FirestoreNetworkError } from '@/components/ui/FirestoreNetworkError';
 import { Competition } from '@/lib/types';
@@ -82,8 +83,10 @@ export function CompetitionsSection({
 
       const matchesMedium =
         selectedMedium === 'All' ||
-        comp.medium === selectedMedium ||
-        (selectedMedium === 'Open' && (comp.medium === 'None' || !comp.medium));
+        getCompetitionMedium(comp) === selectedMedium ||
+        (getCompetitionMedium(comp) === 'Sinhala & English'
+          && ['Sinhala', 'English'].includes(selectedMedium)) ||
+        (selectedMedium === 'Open' && getCompetitionMedium(comp) === 'None');
 
       return matchesSearch && matchesCategory && matchesMedium;
     });
@@ -268,7 +271,7 @@ export function CompetitionsSection({
                         {icon}
                       </span>
                       <span className="absolute left-3 top-3 rounded-full border border-white/80 bg-white/85 px-2.5 py-1 text-[9px] font-bold text-slate-600">
-                        {comp.medium === 'None' ? 'Any language' : comp.medium}
+                        {getCompetitionMedium(comp) === 'None' ? 'Any language' : getCompetitionMedium(comp)}
                       </span>
                       <span className="absolute bottom-3 right-3"><StatusBadge status={comp.status} /></span>
                     </div>

@@ -1,5 +1,7 @@
 import React from 'react';
 import { StatusBadge } from '@/components/ui/Badge';
+import { DropdownSelect } from '@/components/ui/DropdownSelect';
+import { getCompetitionMedium } from '@/lib/competitionUtils';
 import type { Competition, FormField } from '@/lib/types';
 
 type CompetitionPreviewData = Omit<Competition, 'id'>;
@@ -18,12 +20,17 @@ function PreviewField({ field }: { field: FormField }) {
       {field.type === 'textarea' ? (
         <textarea disabled rows={2} placeholder={placeholder} className={previewInputClass} />
       ) : field.type === 'select' ? (
-        <select disabled defaultValue="" className={previewInputClass}>
-          <option value="">{placeholder}</option>
-          {(field.options ?? []).map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
+        <DropdownSelect
+          value=""
+          onChange={() => undefined}
+          ariaLabel={field.label}
+          disabled
+          options={[
+            { value: '', label: placeholder },
+            ...(field.options ?? []).map((option) => ({ value: option, label: option })),
+          ]}
+          className={previewInputClass}
+        />
       ) : (
         <input disabled type={field.type} placeholder={placeholder} className={previewInputClass} />
       )}
@@ -37,6 +44,8 @@ export function CompetitionPreviewPanel({
 }: {
   competition: CompetitionPreviewData;
 }) {
+  const medium = getCompetitionMedium(competition);
+
   return (
     <div className="space-y-5" aria-label="Competition preview">
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-700">
@@ -49,9 +58,9 @@ export function CompetitionPreviewPanel({
             {competition.category}
           </span>
           <div className="flex items-center gap-2">
-            {competition.medium !== 'None' && (
+            {medium !== 'None' && (
               <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600">
-                {competition.medium}
+                {medium}
               </span>
             )}
             <StatusBadge status={competition.status} />
@@ -115,9 +124,14 @@ export function CompetitionPreviewPanel({
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-slate-700">Current grade *</label>
-            <select disabled defaultValue="" className={previewInputClass}>
-              <option value="">Choose a grade</option>
-            </select>
+            <DropdownSelect
+              value=""
+              onChange={() => undefined}
+              ariaLabel="Current grade"
+              disabled
+              options={[{ value: '', label: 'Choose a grade' }]}
+              className={previewInputClass}
+            />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-slate-700">Student / parent contact *</label>

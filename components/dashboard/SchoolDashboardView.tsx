@@ -7,6 +7,7 @@ import { useMediaStore } from '@/lib/store';
 import { Competition } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/Badge';
 import { SchoolTab } from '@/components/layout/SchoolPortalLayout';
+import { getCompetitionMedium } from '@/lib/competitionUtils';
 import { Trophy, ExternalLink, ShieldCheck, Users, Star, AlertCircle, Mic, Camera, Radio, Newspaper, ArrowRight, Plus, Search, Phone, Mail, Building2 } from 'lucide-react';
 
 import { ConcentricOrbitalChart } from './ConcentricOrbitalChart';
@@ -60,6 +61,13 @@ const CATEGORY_ART: Record<string, string> = {
 };
 
 function MediumChip({ medium }: { medium: string }) {
+  if (medium === 'Sinhala & English') {
+    return (
+      <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
+        Sinhala & English
+      </span>
+    );
+  }
   if (medium === 'Sinhala') {
     return (
       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-100">
@@ -969,7 +977,7 @@ function LegacySchoolDashboardView({
                       <span className="absolute -right-7 -top-14 h-44 w-44 rounded-full border-[22px] border-white/50 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110" />
                       <span className="absolute -bottom-12 -left-6 h-32 w-32 rounded-full bg-white/50 blur-xl" />
                       <span className="absolute left-3 top-3 rounded-full border border-white/80 bg-white/85 px-2.5 py-1 text-[9px] font-semibold text-slate-600">
-                        {comp.medium === 'None' ? 'Any language' : comp.medium}
+                        {getCompetitionMedium(comp) === 'None' ? 'Any language' : getCompetitionMedium(comp)}
                       </span>
                       <span className="absolute right-3 top-3"><StatusBadge status={comp.status} /></span>
                       <span className="relative flex h-[68px] w-[68px] items-center justify-center rounded-[24px] border border-white/80 bg-white/85 text-slate-800 shadow-[0_12px_30px_rgba(15,23,42,0.10)] transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110">
@@ -1062,7 +1070,7 @@ function LegacySchoolDashboardView({
                       <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 text-slate-700 flex items-center justify-center">
                         <CatIcon size={18} />
                       </div>
-                      {comp.medium && <MediumChip medium={comp.medium} />}
+                      {comp.medium && <MediumChip medium={getCompetitionMedium(comp)} />}
                     </div>
 
                     <h4 className="text-sm font-bold text-slate-900 mb-1">{comp.title}</h4>

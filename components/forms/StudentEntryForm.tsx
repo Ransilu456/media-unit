@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AlertCircle, ArrowRight, LockKeyhole, Trophy } from 'lucide-react';
 import { EntrySubmissionModal } from '@/components/forms/EntrySubmissionModal';
 import { useMediaStore } from '@/lib/store';
+import { getCompetitionMedium } from '@/lib/competitionUtils';
 import type { Competition } from '@/lib/types';
 
 const inputClassName =
@@ -124,8 +125,8 @@ export function StudentEntryForm() {
             <p className="text-sm font-semibold text-slate-900">{selectedOpenCompetition.title}</p>
             <p className="mt-1 text-xs text-slate-500">
               {selectedOpenCompetition.category}
-              {selectedOpenCompetition.medium !== 'None'
-                ? ` · ${selectedOpenCompetition.medium} medium`
+              {getCompetitionMedium(selectedOpenCompetition) !== 'None'
+                ? ` · ${getCompetitionMedium(selectedOpenCompetition)} medium`
                 : ''}
             </p>
             {selectedOpenCompetition.ageCategory && (

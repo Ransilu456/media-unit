@@ -3,12 +3,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useMediaStore } from '@/lib/store';
 import type { Competition, NewSubmissionInput, RegisteredSchool } from '@/lib/types';
-import { calculateAge, validateSubmissionInput } from '@/lib/validation';
+import { calculateAge, gradeFromAge, validateSubmissionInput } from '@/lib/validation';
+import { getCompetitionMedium } from '@/lib/competitionUtils';
 import {
   X,
   ArrowRight,
   AlertCircle,
   CheckCircle2,
+  Info,
   Trophy,
   Link as LinkIcon,
   FileText,
@@ -24,16 +26,7 @@ interface Props {
   onSubmitted?: () => void | Promise<void>;
 }
 
-const ALL_GRADES = [
-  'Grade 6',
-  'Grade 7',
-  'Grade 8',
-  'Grade 9',
-  'Grade 10',
-  'Grade 11',
-  'Grade 12',
-  'Grade 13',
-];
+const CONFIRMATION_WARNING = 'Please confirm that the details are correct before you send this entry.';
 
 const inputCls =
   'min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-xs transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20';
@@ -56,11 +49,10 @@ export function EntrySubmissionModal({
     return competitions.find((c) => c.id === selectedCompId) || initialCompetition;
   }, [competitions, selectedCompId, initialCompetition]);
 
-  const competitionMedium = activeCompetition.medium;
+  const competitionMedium = getCompetitionMedium(activeCompetition);
 
   const [form, setForm] = useState({
     studentName: '',
-    studentGrade: ALL_GRADES[4], 
     studentBirthday: '',
     studentContact: '',
     entryTitle: '',
@@ -106,6 +98,7 @@ export function EntrySubmissionModal({
   const calculatedAge = useMemo(() => {
     return calculateAge(form.studentBirthday);
   }, [form.studentBirthday]);
+  const calculatedGrade = calculatedAge === null ? null : gradeFromAge(calculatedAge);
 
   // Strict Competition Age Eligibility Check
   const ageEligibilityError = useMemo(() => {
@@ -116,19 +109,6 @@ export function EntrySubmissionModal({
     }
     return null;
   }, [calculatedAge, activeCompetition]);
-
-  const eligibleGrades = useMemo(() => {
-    if (activeCompetition.ageCategory?.grades && activeCompetition.ageCategory.grades.length > 0) {
-      return ALL_GRADES.filter((g) => activeCompetition.ageCategory!.grades.includes(g));
-    }
-    return ALL_GRADES;
-  }, [activeCompetition]);
-
-  useEffect(() => {
-    if (eligibleGrades.length > 0 && !eligibleGrades.includes(form.studentGrade)) {
-      setForm((f) => ({ ...f, studentGrade: eligibleGrades[0] }));
-    }
-  }, [eligibleGrades, form.studentGrade]);
 
   const synopsisWords = useMemo(() => {
     return form.synopsis.trim() ? form.synopsis.trim().split(/\s+/).length : 0;
@@ -147,12 +127,12 @@ export function EntrySubmissionModal({
   const submissionInput: NewSubmissionInput = {
     competitionId: activeCompetition.id,
     competitionTitle: activeCompetition.title,
-    competitionMedium: activeCompetition.medium,
+    competitionMedium,
     schoolId: school.id,
     schoolName: school.name,
     category: activeCompetition.category,
     studentName: form.studentName.trim(),
-    studentGrade: form.studentGrade,
+    studentGrade: calculatedGrade ?? '',
     studentBirthday: form.studentBirthday,
     studentContact: form.studentContact.trim(),
     entryTitle: form.entryTitle.trim(),
@@ -241,9 +221,7 @@ export function EntrySubmissionModal({
       return Object.values(dataErrors)[0];
     }
 
-    if (!certified) {
-      return 'Please confirm that the details are correct before you send this entry.';
-    }
+    if (!certified) return CONFIRMATION_WARNING;
 
     return null;
   };
@@ -331,8 +309,17 @@ export function EntrySubmissionModal({
         {/* Status Alerts */}
         <div className="px-4 pt-4 sm:px-7">
           {error && (
-            <div role="alert" className="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 animate-in fade-in-50">
-              <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-600" />
+            <div
+              role={error === CONFIRMATION_WARNING ? 'status' : 'alert'}
+              className={`mb-4 flex items-start gap-2.5 rounded-xl border p-3.5 text-xs animate-in fade-in-50 ${
+                error === CONFIRMATION_WARNING
+                  ? 'border-amber-200 bg-amber-50 text-amber-900'
+                  : 'border-red-200 bg-red-50 text-red-800'
+              }`}
+            >
+              {error === CONFIRMATION_WARNING
+                ? <Info size={16} className="mt-0.5 shrink-0 text-amber-700" />
+                : <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-600" />}
               <span>{error}</span>
             </div>
           )}
@@ -404,6 +391,11 @@ export function EntrySubmissionModal({
                   {competitionMedium === 'English' && (
                     <span className="inline-flex items-center gap-1 text-orange-700">
                       <span className="w-2 h-2 rounded-full bg-orange-600" /> English
+                    </span>
+                  )}
+                  {competitionMedium === 'Sinhala & English' && (
+                    <span className="inline-flex items-center gap-1 text-orange-700">
+                      <span className="w-2 h-2 rounded-full bg-orange-600" /> Sinhala & English
                     </span>
                   )}
                   {(competitionMedium === 'None' || !competitionMedium) && (
@@ -485,20 +477,17 @@ export function EntrySubmissionModal({
               </div>
 
               <div>
-                <label className={labelCls}>Grade *</label>
-                <select
+                <label htmlFor="student-grade" className={labelCls}>Grade (automatic) *</label>
+                <input
+                  id="student-grade"
+                  type="text"
                   required
-                  value={form.studentGrade}
-                  onChange={(e) => set('studentGrade', e.target.value)}
+                  readOnly
+                  value={calculatedGrade ?? ''}
+                  placeholder="Calculated from date of birth"
                   aria-invalid={Boolean(fieldError('studentGrade'))}
-                  className={inputCls}
-                >
-                  {eligibleGrades.map((g) => (
-                    <option key={g} value={g}>
-                      {g}
-                    </option>
-                  ))}
-                </select>
+                  className={`${inputCls} bg-slate-100 text-slate-700`}
+                />
                 {fieldError('studentGrade') && <p className="mt-1 text-xs text-red-700">{fieldError('studentGrade')}</p>}
               </div>
             </div>
@@ -718,7 +707,7 @@ export function EntrySubmissionModal({
                 ['Competition', activeCompetition.title],
                 ['Category', activeCompetition.category],
                 ['Student', form.studentName || 'Not added'],
-                ['Grade', form.studentGrade || 'Not selected'],
+                ['Grade', calculatedGrade || 'Not available'],
                 ['Work title', form.entryTitle || 'Not added'],
                 ['Language', competitionMedium === 'None' ? 'Any language' : competitionMedium],
                 ['School', school.name],

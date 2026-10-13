@@ -6,7 +6,7 @@ export type CategoryType =
   | 'Radio Play & Audio Production'
   | 'Live Media Reporting';
 
-export type MediumType = 'Sinhala' | 'English' | 'None';
+export type MediumType = 'Sinhala' | 'English' | 'Sinhala & English' | 'None';
 
 export type SubmissionStatus =
   | 'submitted'

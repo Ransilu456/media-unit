@@ -14,6 +14,19 @@ const COLLECTIONS = {
   notifications: 'notifications',
 };
 
+function removeUndefinedValues<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => removeUndefinedValues(item)) as T;
+  }
+  if (typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
+    const entries = Object.entries(value).filter(([, item]) => item !== undefined);
+    return Object.fromEntries(
+      entries.map(([key, item]) => [key, removeUndefinedValues(item)])
+    ) as T;
+  }
+  return value;
+}
+
 export type NotificationKind = 'registration' | 'submission' | 'update' | 'disqualification' | 'entry_replacement_request';
 
 export interface AppNotification {
@@ -376,8 +389,9 @@ export async function firebaseAddCompetition( data: Omit<Competition, 'id'> ): P
 }
 
 export async function firebaseUpdateCompetition( id: string, updates: Partial<Competition> ): Promise<void> {
+  const safeUpdates = removeUndefinedValues(updates);
   await withFirestoreErrorReporting(() =>
-    updateDoc(doc(db, COLLECTIONS.competitions, id), updates)
+    updateDoc(doc(db, COLLECTIONS.competitions, id), safeUpdates)
   );
 }
 

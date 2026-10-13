@@ -1,5 +1,6 @@
 import { PROVINCE_DISTRICTS, SRI_LANKA_PROVINCES } from './constants';
 import type { DbData, JsonValue } from './db';
+import { getCompetitionMedium } from './competitionUtils';
 import type { CategoryType, Competition, MediumType, NewSubmissionInput, RegisteredSchool, Submission, SubmissionStatus, } from './types';
 
 export type ValidationErrors = Record<string, string>;
@@ -46,7 +47,7 @@ const CATEGORIES: readonly CategoryType[] = [
   'Radio Play & Audio Production',
   'Live Media Reporting',
 ];
-const MEDIUMS: readonly MediumType[] = ['Sinhala', 'English', 'None'];
+const MEDIUMS: readonly MediumType[] = ['Sinhala', 'English', 'Sinhala & English', 'None'];
 const ALLOWED_SCHOOL_FIELDS = new Set([
   'name', 'province', 'district', 'teacherInCharge',
   'teacherPhone', 'mediaPresident', 'presidentPhone', 'email', 'password',
@@ -218,6 +219,11 @@ export function calculateAge(birthday: string, now = new Date()): number | null 
   return age;
 }
 
+export function gradeFromAge(age: number): string | null {
+  if (!Number.isInteger(age) || age < 11 || age > 18) return null;
+  return `Grade ${age - 5}`;
+}
+
 function validPhone(value: string): boolean {
   return /^\d{10}$/.test(value);
 }
@@ -303,7 +309,7 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
     errors.competitionTitle = 'Competition title does not match the selected competition.';
   }
 
-  if (value.competitionMedium !== undefined && (typeof value.competitionMedium !== 'string' || (competition && value.competitionMedium !== competition.medium))) {
+  if (value.competitionMedium !== undefined && (typeof value.competitionMedium !== 'string' || (competition && value.competitionMedium !== getCompetitionMedium(competition)))) {
     errors.competitionMedium = 'Competition medium does not match the selected competition.';
   }
 
@@ -326,27 +332,29 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
     }
   }
 
-  if (typeof value.studentGrade === 'string'
-    && !/^Grade (?:[6-9]|1[0-3])$/.test(value.studentGrade)) {
-    errors.studentGrade = 'Choose a grade from 6 to 13.';
-  } else if (typeof value.studentGrade === 'string'
-    && competition?.ageCategory
-    && !competition.ageCategory.grades.includes(value.studentGrade)) {
-    errors.studentGrade = 'This grade is not eligible for the selected competition.';
-  }
   if (typeof value.studentContact === 'string' && !validPhone(value.studentContact)) {
     errors.studentContact = 'Enter exactly 10 digits with no spaces or symbols.';
   }
+  let studentAge: number | null = null;
   if (!validDate(value.studentBirthday)) {
     errors.studentBirthday = 'Enter a valid date of birth.';
   } else {
     const age = calculateAge(value.studentBirthday);
+    studentAge = age;
     if (age === null || age < 5 || age > 25 || new Date(`${value.studentBirthday}T00:00:00.000Z`) > new Date()) {
       errors.studentBirthday = 'The student must be between 5 and 25 years old.';
     } else if (competition?.ageCategory
       && (age < competition.ageCategory.minAge || age > competition.ageCategory.maxAge)) {
       errors.studentBirthday = `This competition is for students aged ${competition.ageCategory.minAge} to ${competition.ageCategory.maxAge}.`;
     }
+  }
+  const expectedGrade = studentAge === null ? null : gradeFromAge(studentAge);
+  if (expectedGrade === null) {
+    errors.studentGrade = 'A student aged 11 to 18 is required to determine a grade from the date of birth.';
+  } else if (value.studentGrade !== expectedGrade) {
+    errors.studentGrade = `A student aged ${studentAge} should be in ${expectedGrade}.`;
+  } else if (competition?.ageCategory && !competition.ageCategory.grades.includes(expectedGrade)) {
+    errors.studentGrade = 'This grade is not eligible for the selected competition.';
   }
 
   if (typeof value.submissionLink === 'string' && isText(value.submissionLink, 8, 2048)) {

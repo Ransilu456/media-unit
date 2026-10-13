@@ -11,6 +11,8 @@ import type {
 } from '@/lib/types';
 import { AlertCircle, Plus, Trash2, X } from 'lucide-react';
 import { CompetitionPreviewPanel } from './CompetitionPreviewPanel';
+import { DropdownSelect } from '@/components/ui/DropdownSelect';
+import { getCompetitionMedium } from '@/lib/competitionUtils';
 
 interface FormEditorModalProps {
   isOpen: boolean;
@@ -55,7 +57,9 @@ export function CompetitionFormEditorModal({
   const [category, setCategory] = useState<CategoryType>(
     competitionToEdit?.category ?? 'Short Film & Cinematography'
   );
-  const [medium, setMedium] = useState<MediumType>(competitionToEdit?.medium ?? 'None');
+  const [medium, setMedium] = useState<MediumType>(
+    competitionToEdit ? getCompetitionMedium(competitionToEdit) : 'None'
+  );
   const [description, setDescription] = useState(competitionToEdit?.description ?? '');
   const [eligibility, setEligibility] = useState(competitionToEdit?.eligibility ?? 'Grades 9 - 13');
   const [deadline, setDeadline] = useState(competitionToEdit?.deadline ?? '2026-11-25');
@@ -262,26 +266,51 @@ export function CompetitionFormEditorModal({
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
                   <label htmlFor="competition-category" className={labelClassName}>Category track *</label>
-                  <select id="competition-category" value={category} onChange={(event) => setCategory(event.target.value as CategoryType)} className={controlClassName}>
-                    {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-                  </select>
+                  <DropdownSelect
+                    id="competition-category"
+                    value={category}
+                    onChange={(nextCategory) => {
+                      setCategory(nextCategory);
+                      if (nextCategory === 'News Reading & Announcing' && medium === 'None') {
+                        setMedium('Sinhala & English');
+                      }
+                    }}
+                    ariaLabel="Category track"
+                    options={categories.map((item) => ({ value: item, label: item }))}
+                    className={controlClassName}
+                  />
                 </div>
                 <div>
                   <label htmlFor="competition-medium" className={labelClassName}>Medium *</label>
-                  <select id="competition-medium" value={medium} onChange={(event) => setMedium(event.target.value as MediumType)} className={controlClassName}>
-                    <option value="None">All / None</option>
-                    <option value="Sinhala">Sinhala</option>
-                    <option value="English">English</option>
-                  </select>
+                  <DropdownSelect
+                    id="competition-medium"
+                    value={medium}
+                    onChange={setMedium}
+                    ariaLabel="Medium"
+                    options={[
+                      { value: 'None', label: 'All / None' },
+                      { value: 'Sinhala', label: 'Sinhala' },
+                      { value: 'English', label: 'English' },
+                      { value: 'Sinhala & English', label: 'Sinhala & English' },
+                    ]}
+                    className={controlClassName}
+                  />
                 </div>
                 <div>
                   <label htmlFor="competition-status" className={labelClassName}>Status *</label>
-                  <select id="competition-status" value={status} onChange={(event) => setStatus(event.target.value as CompetitionStatus)} className={controlClassName}>
-                    <option value="open">Submissions open</option>
-                    <option value="judging">Under adjudication</option>
-                    <option value="closed">Closed</option>
-                    <option value="upcoming">Upcoming</option>
-                  </select>
+                  <DropdownSelect
+                    id="competition-status"
+                    value={status}
+                    onChange={setStatus}
+                    ariaLabel="Competition status"
+                    options={[
+                      { value: 'open', label: 'Submissions open' },
+                      { value: 'judging', label: 'Under adjudication' },
+                      { value: 'closed', label: 'Closed' },
+                      { value: 'upcoming', label: 'Upcoming' },
+                    ]}
+                    className={controlClassName}
+                  />
                 </div>
               </div>
 
@@ -426,13 +455,20 @@ export function CompetitionFormEditorModal({
                         </div>
                         <div>
                           <label htmlFor={`field-type-${field.id}`} className={labelClassName}>Answer type *</label>
-                          <select id={`field-type-${field.id}`} value={field.type} onChange={(event) => updateField(field.id, { type: event.target.value as FormField['type'] })} className={controlClassName}>
-                            <option value="text">Short answer</option>
-                            <option value="textarea">Long answer</option>
-                            <option value="url">Link</option>
-                            <option value="number">Number</option>
-                            <option value="select">Dropdown</option>
-                          </select>
+                          <DropdownSelect
+                            id={`field-type-${field.id}`}
+                            value={field.type}
+                            onChange={(type) => updateField(field.id, { type })}
+                            ariaLabel="Answer type"
+                            options={[
+                              { value: 'text', label: 'Short answer' },
+                              { value: 'textarea', label: 'Long answer' },
+                              { value: 'url', label: 'Link' },
+                              { value: 'number', label: 'Number' },
+                              { value: 'select', label: 'Dropdown' },
+                            ]}
+                            className={controlClassName}
+                          />
                         </div>
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">

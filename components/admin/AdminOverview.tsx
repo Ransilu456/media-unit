@@ -7,16 +7,21 @@ import type { AdminTab } from '@/components/layout/AdminPortalLayout';
 import { StatusBadge } from '@/components/ui/Badge';
 import { RadialMetricCard } from '@/components/dashboard/RadialMetricCard';
 import { SegmentedGauge } from '@/components/dashboard/SegmentedGauge';
-import { ConcentricOrbitalChart } from '@/components/dashboard/ConcentricOrbitalChart';
 import { DotMatrixChart } from '@/components/dashboard/DotMatrixChart';
 import { StackedBarChart } from '@/components/dashboard/StackedBarChart';
 
-const categoryColors = ['#3b82f6', '#f97316', '#14b8a6', '#8b5cf6', '#22c55e', '#fb923c'];
+const categoryColors = ['#f97316', '#3b82f6', '#14b8a6', '#22c55e', '#fb923c', '#0ea5e9'];
+
+function formatSubmissionDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Date unavailable';
+  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(date);
+}
 
 export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) => void }) {
   const { schools, competitions, submissions, isSchoolsLoaded, isSubmissionsLoaded } = useMediaStore();
 
-  const { pending, verifiedCount, shares, clearancePct, monthlyData, categoryBreakdown } = useMemo(() => {
+  const { pending, verifiedCount, shares, monthlyData, categoryBreakdown } = useMemo(() => {
     let pendingCount = 0;
     let verified = 0;
     const countsByCategory = new Map<string, number>();
@@ -41,8 +46,6 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
     });
 
     const total = Math.max(submissions.length, 1);
-    const clearance = submissions.length > 0 ? Math.round((verified / submissions.length) * 100) : 0;
-
     // Build last-6-month labels regardless of data
     const last6: { month: string; count: number }[] = [];
     const now = new Date();
@@ -63,7 +66,6 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
     return {
       pending: pendingCount,
       verifiedCount: verified,
-      clearancePct: clearance,
       shares: [...countsByCategory].map(([name, count], index) => ({
         name,
         percentage: Math.round((count / total) * 100),
@@ -74,39 +76,31 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
     };
   }, [submissions]);
 
-  const radarEntries = useMemo(() => {
-    return submissions.map((s, idx) => ({
-      id: s.id,
-      title: s.entryTitle,
-      studentName: s.studentName,
-      category: s.category,
-      status: s.status,
-      color: categoryColors[idx % categoryColors.length],
-    }));
-  }, [submissions]);
-
   const recentSubmissionGroups = useMemo(() => {
     const groups = new Map<string, {
       schoolName: string;
       competitions: Map<string, { title: string; submissions: typeof submissions }>;
     }>();
-    submissions.slice(0, 8).forEach((submission) => {
-      const schoolId = submission.schoolId || submission.schoolName;
-      const schoolName = schools.find((school) => school.id === submission.schoolId)?.name
-        ?? submission.schoolName
-        ?? 'Unregistered school';
-      let group = groups.get(schoolId);
-      if (!group) {
-        group = { schoolName, competitions: new Map() };
-        groups.set(schoolId, group);
-      }
-      const competition = group.competitions.get(submission.competitionId);
-      if (competition) competition.submissions.push(submission);
-      else group.competitions.set(submission.competitionId, {
-        title: submission.competitionTitle,
-        submissions: [submission],
+    [...submissions]
+      .sort((left, right) => (Date.parse(right.submittedAt) || 0) - (Date.parse(left.submittedAt) || 0))
+      .slice(0, 8)
+      .forEach((submission) => {
+        const schoolId = submission.schoolId || submission.schoolName;
+        const schoolName = schools.find((school) => school.id === submission.schoolId)?.name
+          ?? submission.schoolName
+          ?? 'Unregistered school';
+        let group = groups.get(schoolId);
+        if (!group) {
+          group = { schoolName, competitions: new Map() };
+          groups.set(schoolId, group);
+        }
+        const competition = group.competitions.get(submission.competitionId);
+        if (competition) competition.submissions.push(submission);
+        else group.competitions.set(submission.competitionId, {
+          title: submission.competitionTitle,
+          submissions: [submission],
+        });
       });
-    });
     return [...groups.entries()].map(([schoolId, group]) => [
       schoolId,
       {
@@ -202,28 +196,14 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
         />
       </section>
 
-      {/* Visual Analytics Showcase: Concentric Orbital Radar + Segmented Gauge */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="min-w-0">
-          <ConcentricOrbitalChart
-            percentage={clearancePct}
-            label="Adjudication Clearance Radar"
-            sublabel={submissions.length > 0 ? `${verifiedCount} of ${submissions.length} reviewed` : 'No entries yet'}
-            entries={radarEntries}
-            categories={categoryBreakdown}
-            totalSubmissions={submissions.length}
-          />
-        </div>
-
-        <div className="min-w-0">
-          <SegmentedGauge
-            title="Category distribution"
-            subtitle={`${openCompetitions} open`}
-            totalCount={submissions.length}
-            countLabel="Entries"
-            categories={shares}
-          />
-        </div>
+      <section className="min-w-0">
+        <SegmentedGauge
+          title="Category distribution"
+          subtitle={`${openCompetitions} competitions open`}
+          totalCount={submissions.length}
+          countLabel="Entries"
+          categories={shares}
+        />
       </section>
 
       {/* Stacked Bar Chart for Competition Velocity */}
@@ -238,13 +218,14 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
         />
       </section>
 
-      {/* Activity Heatmap & Recent Submissions Grid */}
+      {/* Recent submissions and monthly activity */}
       <section className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
         {/* Left: Recent Submissions Feed */}
         <div className="overflow-hidden rounded-2xl border border-sky-100/80 bg-white shadow-[0_8px_28px_rgba(59,130,246,0.07)] xl:col-span-7">
-          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-orange-50/70 via-white to-sky-50/70 px-4 py-4 sm:px-5">
             <div>
               <h2 className="text-sm font-semibold text-slate-900">Recent entries by school</h2>
+              <p className="mt-1 text-xs text-slate-500">Latest submissions, grouped by school and competition</p>
             </div>
             <button
               type="button"
@@ -271,24 +252,29 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
           ) : submissions.length ? (
             <div className="divide-y divide-slate-100">
               {recentSubmissionGroups.map(([schoolId, group]) => (
-                <section key={schoolId}>
-                  <h3 className="flex items-center justify-between gap-3 bg-slate-50/80 px-5 py-2.5 text-xs font-semibold text-slate-700">
-                    <span className="truncate">{group.schoolName}</span>
-                    <span className="shrink-0 font-medium text-slate-500">
+                <section key={schoolId} className="border-b border-slate-100 last:border-0">
+                  <h3 className="flex items-center justify-between gap-3 bg-slate-50/70 px-5 py-3 text-xs font-semibold text-slate-800">
+                    <span className="flex min-w-0 items-center gap-2 truncate">
+                      <School size={14} className="shrink-0 text-sky-700" />
+                      <span className="truncate">{group.schoolName}</span>
+                    </span>
+                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 font-medium text-slate-600 ring-1 ring-slate-200">
                       {group.competitions.reduce((total, [, competition]) => total + competition.submissions.length, 0)} entries
                     </span>
                   </h3>
                   {group.competitions.map(([competitionId, competition]) => (
-                    <div key={competitionId} className="border-t border-slate-100">
-                      <p className="bg-white px-5 py-2 text-[11px] font-medium text-slate-500">{competition.title}</p>
+                    <div key={competitionId} className="border-t border-slate-100/80">
+                      <p className="flex items-center gap-2 bg-white px-5 py-2 text-[11px] font-medium text-slate-500">
+                        <Trophy size={12} className="text-orange-600" /> {competition.title}
+                      </p>
                       {competition.submissions.map((submission) => (
-                        <div key={submission.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50/50">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
+                        <div key={submission.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-orange-50/30">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 text-orange-700">
                             <FileText size={15} />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-slate-900">{submission.entryTitle}</p>
-                            <p className="truncate text-xs text-slate-500">{submission.studentName}</p>
+                            <p className="truncate text-xs text-slate-500">{submission.studentName} <span className="px-1 text-slate-300">·</span> {formatSubmissionDate(submission.submittedAt)}</p>
                           </div>
                           <StatusBadge status={submission.status} />
                         </div>

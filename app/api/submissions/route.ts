@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getRequestSession } from '@/lib/auth';
 import { readDb, mutateDb } from '@/lib/db';
 import { Submission, SubmissionStatus } from '@/lib/types';
+import { getCompetitionMedium } from '@/lib/competitionUtils';
 import {
   InvalidRequestError,
   calculateAge,
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
       id: `sub-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
       competitionId: competition.id,
       competitionTitle: competition.title,
-      competitionMedium: competition.medium,
+      competitionMedium: getCompetitionMedium(competition),
       schoolId: school.id,
       schoolName: school.name,
       category: competition.category,

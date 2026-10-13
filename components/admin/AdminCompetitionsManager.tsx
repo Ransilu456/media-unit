@@ -11,8 +11,8 @@ const categoryTones = [
   'border-sky-200 bg-sky-50 text-sky-800',
   'border-orange-200 bg-orange-50 text-orange-800',
   'border-teal-200 bg-teal-50 text-teal-800',
-  'border-violet-200 bg-violet-50 text-violet-800',
   'border-emerald-200 bg-emerald-50 text-emerald-800',
+  'border-amber-200 bg-amber-50 text-amber-900',
 ];
 
 const CompetitionFormEditorModal = dynamic(
@@ -106,7 +106,7 @@ export function AdminCompetitionsManager() {
           return (
             <div
               key={comp.id}
-              className="flex min-w-0 flex-col justify-between rounded-2xl border border-sky-100/80 bg-white p-4 shadow-[0_8px_26px_rgba(59,130,246,0.06)] transition-colors hover:border-sky-200 sm:p-5"
+              className="flex min-w-0 flex-col justify-between rounded-2xl border border-orange-100/80 bg-white p-4 shadow-[0_8px_26px_rgba(249,115,22,0.06)] transition-colors hover:border-orange-200 sm:p-5"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">

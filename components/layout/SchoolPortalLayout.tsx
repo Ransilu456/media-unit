@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
 import { DashboardNotifications } from './DashboardNotifications';
-import { LayoutDashboard, Users, Trophy, FilePlus, LogOut, Menu, X, Globe, Search, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Users, Trophy, FilePlus, LogOut, Menu, X, Search, ChevronDown } from 'lucide-react';
 
 export type SchoolTab = 'overview' | 'students' | 'competitions' | 'apply';
 
@@ -18,11 +18,11 @@ interface SchoolPortalLayoutProps {
   onSearchQueryChange: (query: string) => void;
 }
 
-const NAV: { id: SchoolTab; label: string; icon: React.ElementType; description: string; }[] = [
-  { id: 'overview',     label: 'Overview',         icon: LayoutDashboard, description: 'Dashboard summary' },
-  { id: 'students',     label: 'Student Entries',  icon: Users,           description: 'Your submissions' },
-  { id: 'competitions', label: 'All Competitions', icon: Trophy,          description: 'Browse open tracks' },
-  { id: 'apply',        label: 'Submit New Entry', icon: FilePlus,        description: 'Add a new entry' },
+const NAV: { id: SchoolTab; label: string; icon: React.ElementType; }[] = [
+  { id: 'overview',     label: 'Overview',         icon: LayoutDashboard },
+  { id: 'students',     label: 'Student entries',  icon: Users },
+  { id: 'competitions', label: 'Competitions', icon: Trophy },
+  { id: 'apply',        label: 'Submit an entry', icon: FilePlus },
 ];
 
 export function SchoolPortalLayout({
@@ -73,12 +73,12 @@ export function SchoolPortalLayout({
       {/* Brand Header */}
       <div className="flex h-18 shrink-0 items-center justify-between border-b border-slate-100 px-4 sm:px-5">
         <Link href="/" className="flex items-center gap-3.5 group min-w-0">
-          <div className="w-10 h-10 rounded-2xl bg-sara-navy p-1.5 flex items-center justify-center transition-transform group-hover:scale-105 shadow-sm shrink-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 p-1.5 transition-colors group-hover:bg-orange-100">
             <Image src="/Agradhi.png" alt="Agradhi Media" width={30} height={30} className="object-contain" />
           </div>
           <div className="min-w-0">
-            <span className="text-base font-bold text-slate-900 tracking-tight block truncate">Agradhi</span>
-            <span className="text-[11px] text-slate-400 font-medium block">Media Unit · 2026</span>
+            <span className="block truncate text-sm font-bold tracking-tight text-slate-900">Agradhi Media Unit</span>
+            <span className="block text-[11px] font-medium text-slate-400">School portal</span>
           </div>
         </Link>
         <button
@@ -90,16 +90,10 @@ export function SchoolPortalLayout({
         </button>
       </div>
 
-      <nav aria-label="School dashboard" className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 py-4">
-        <div className="px-3 pb-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Workspace</p>
-          <p className="mt-1 text-xs text-slate-500">Manage your school activity</p>
-        </div>
-
+      <nav aria-label="School dashboard" className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain px-3 py-5">
         {NAV.map((item) => {
           const Icon = item.icon;
           const active = activeTab === item.id;
-          const isApply = item.id === 'apply';
 
           return (
             <button
@@ -109,40 +103,30 @@ export function SchoolPortalLayout({
                 setMobileOpen(false);
               }}
               aria-current={active ? 'page' : undefined}
-              title={item.description}
-              className={`relative w-full flex min-h-12 items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-all group ${
+              className={`relative flex min-h-12 w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors group ${
                 active
-                  ? isApply
-                    ? 'border-sara-navy bg-sara-navy text-white font-semibold shadow-sm'
-                      : 'border-amber-200 bg-amber-50 text-slate-950 font-semibold shadow-sm'
-                  : isApply
-                  ? 'border-transparent bg-sara-navy text-white shadow-[0_10px_22px_rgba(15,23,42,0.15)] hover:bg-slate-800'
+                  ? 'border-orange-100 bg-orange-50 font-semibold text-slate-950'
                   : 'border-transparent text-slate-600 hover:border-slate-100 hover:bg-slate-50 hover:text-slate-950'
               }`}
             >
               {active && (
-                <span className={`absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full ${isApply ? 'bg-amber-300' : 'bg-amber-500'}`} />
+                <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-orange-500" />
               )}
 
-              <div className="flex min-w-0 items-center gap-3 pl-1">
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                  active ? 'bg-white text-amber-800 shadow-sm' : isApply ? 'bg-white/10 text-amber-300' : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-700'
+              <div className="flex min-w-0 items-center gap-3 pl-1.5">
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                  active ? 'bg-white text-orange-700 shadow-sm' : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-slate-700'
                 }`}>
                 <Icon
                   size={17}
                   className={`shrink-0 transition-colors ${
                     active
-                      ? 'text-amber-800'
-                      : isApply
-                      ? 'text-amber-300'
+                      ? 'text-orange-700'
                       : 'text-slate-400 group-hover:text-slate-600'
                   }`}
                 />
                 </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold">{item.label}</span>
-                  <span className={`mt-0.5 hidden truncate text-[10px] 2xl:block ${active && isApply ? 'text-white/65' : 'text-slate-400'}`}>{item.description}</span>
-                </span>
+                <span className="block truncate text-sm font-semibold">{item.label}</span>
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0 ml-2">
@@ -173,33 +157,7 @@ export function SchoolPortalLayout({
       </nav>
 
       <div className="shrink-0 border-t border-slate-100 p-3 sm:p-4">
-        {school ? (
-          <div className="mb-3 flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sara-navy text-xs font-bold text-amber-300">
-              {school.name.charAt(0).toUpperCase()}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[11px] font-bold text-slate-800">{school.name}</span>
-              <span className="mt-0.5 block truncate text-[9px] text-slate-500">{school.district} · {school.status === 'active' ? 'Active' : 'Waiting for approval'}</span>
-            </span>
-            <span className={`h-2 w-2 shrink-0 rounded-full ${school.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-          </div>
-        ) : !isLoaded ? (
-          <div aria-hidden="true" className="mb-3 flex animate-pulse items-center gap-3 rounded-2xl bg-slate-50 p-3">
-            <span className="h-9 w-9 shrink-0 rounded-xl bg-slate-200" />
-            <span className="min-w-0 flex-1 space-y-2">
-              <span className="block h-3 w-3/4 rounded bg-slate-200" />
-              <span className="block h-2 w-1/2 rounded bg-slate-100" />
-            </span>
-          </div>
-        ) : null}
-        <Link
-          href="/"
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
-        >
-          <Globe size={15} className="text-slate-400" />
-          <span>Public Website</span>
-        </Link>
+
         <button
           type="button"
           onClick={() => void handleLogout()}

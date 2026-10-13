@@ -114,7 +114,6 @@ export function SchoolDashboardOverview({
           </div>
           <div className="pointer-events-none absolute bottom-8 right-9 hidden h-24 w-28 items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.06] text-amber-300/90 lg:flex">
             <Trophy size={43} strokeWidth={1.2} />
-            <Sparkles size={17} className="absolute -right-2 -top-2 text-amber-200" />
           </div>
         </section>
 

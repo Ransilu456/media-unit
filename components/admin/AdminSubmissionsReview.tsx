@@ -5,6 +5,7 @@ import type { SubmissionStatus } from '@/lib/types';
 import { useMediaStore } from '@/lib/store';
 import { EntryStatusGuide } from '@/components/dashboard/EntryStatusGuide';
 import { StatusBadge } from '@/components/ui/Badge';
+import { DropdownSelect } from '@/components/ui/DropdownSelect';
 import {
   BadgeCheck,
   Check,
@@ -35,7 +36,7 @@ const statusTone: Record<SubmissionStatus, string> = {
   submitted: 'border-orange-200 bg-orange-50 text-orange-900',
   under_review: 'border-sky-200 bg-sky-50 text-sky-800',
   verified: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  shortlisted: 'border-indigo-200 bg-indigo-50 text-indigo-800',
+  shortlisted: 'border-sky-200 bg-sky-50 text-sky-800',
   winner: 'border-orange-200 bg-orange-50 text-orange-900',
   disqualified: 'border-rose-200 bg-rose-50 text-rose-800',
 };
@@ -308,32 +309,34 @@ export function AdminSubmissionsReview() {
           </label>
           <label>
             <span className="sr-only">Filter by school</span>
-            <select
+            <DropdownSelect
               value={schoolFilter}
-              onChange={(event) => {
-                setSchoolFilter(event.target.value);
+              onChange={(value) => {
+                setSchoolFilter(value);
                 setCategoryFilter('All');
               }}
+              ariaLabel="Filter by school"
+              options={[
+                { value: 'all', label: 'All schools' },
+                ...[...schools]
+                  .sort((left, right) => left.name.localeCompare(right.name))
+                  .map((school) => ({ value: school.id, label: school.name })),
+              ]}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-56"
-            >
-              <option value="all">All schools</option>
-              {[...schools].sort((left, right) => left.name.localeCompare(right.name)).map((school) => (
-                <option key={school.id} value={school.id}>{school.name}</option>
-              ))}
-            </select>
+            />
           </label>
           <label>
             <span className="sr-only">Filter by category</span>
-            <select
+            <DropdownSelect
               value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
+              onChange={setCategoryFilter}
+              ariaLabel="Filter by category"
+              options={[
+                { value: 'All', label: 'All categories' },
+                ...categories.map((category) => ({ value: category, label: category })),
+              ]}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-56"
-            >
-              <option value="All">All categories</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
+            />
           </label>
         </div>
 
@@ -652,23 +655,24 @@ export function AdminSubmissionsReview() {
                               </label>
                               <StatusBadge status={currentStatus} />
                             </div>
-                            <select
+                            <DropdownSelect
                               id={`status-${submission.id}`}
                               value={currentStatus}
-                              onChange={(event) => {
+                              onChange={(status) => {
                                 setEditingStatuses((previous) => ({
                                   ...previous,
-                                  [submission.id]: event.target.value as SubmissionStatus,
+                                  [submission.id]: status,
                                 }));
                                 clearSaveMessage(submission.id);
                               }}
-                              aria-describedby={`decision-help-${submission.id}`}
+                              ariaLabel={`Adjudication decision for ${submission.entryTitle}`}
+                              options={(Object.keys(statusLabels) as SubmissionStatus[]).map((status) => ({
+                                value: status,
+                                label: statusLabels[status],
+                              }))}
+                              ariaDescribedBy={`decision-help-${submission.id}`}
                               className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:bg-white"
-                            >
-                              {(Object.keys(statusLabels) as SubmissionStatus[]).map((status) => (
-                                <option key={status} value={status}>{statusLabels[status]}</option>
-                              ))}
-                            </select>
+                            />
                           </div>
                           <p id={`decision-help-${submission.id}`} className="mt-3 flex items-start gap-1.5 text-[11px] leading-4 text-slate-500 pt-2 border-t border-slate-100">
                             {currentStatus === 'submitted' || currentStatus === 'under_review'
