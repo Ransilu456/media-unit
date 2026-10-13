@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
@@ -72,7 +71,7 @@ export function SchoolPortalLayout({
     <aside className="flex h-full w-[min(20rem,calc(100vw-1rem))] min-h-0 shrink-0 select-none flex-col bg-white lg:w-65 xl:w-68">
       {/* Brand Header */}
       <div className="flex h-18 shrink-0 items-center justify-between border-b border-slate-100 px-4 sm:px-5">
-        <Link href="/" className="flex items-center gap-3.5 group min-w-0">
+        <div className="flex min-w-0 items-center gap-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 p-1.5 transition-colors group-hover:bg-orange-100">
             <Image src="/Agradhi.png" alt="Agradhi Media" width={30} height={30} className="object-contain" />
           </div>
@@ -80,7 +79,7 @@ export function SchoolPortalLayout({
             <span className="block truncate text-sm font-bold tracking-tight text-slate-900">Agradhi Media Unit</span>
             <span className="block text-[11px] font-medium text-slate-400">School portal</span>
           </div>
-        </Link>
+        </div>
         <button
           onClick={() => setMobileOpen(false)}
           aria-label="Close navigation"

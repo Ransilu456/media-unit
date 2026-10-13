@@ -79,6 +79,7 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
   const recentSubmissionGroups = useMemo(() => {
     const groups = new Map<string, {
       schoolName: string;
+      schoolLocation: string;
       competitions: Map<string, { title: string; submissions: typeof submissions }>;
     }>();
     [...submissions]
@@ -89,9 +90,16 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
         const schoolName = schools.find((school) => school.id === submission.schoolId)?.name
           ?? submission.schoolName
           ?? 'Unregistered school';
+        const schoolRecord = schools.find((school) => school.id === submission.schoolId);
         let group = groups.get(schoolId);
         if (!group) {
-          group = { schoolName, competitions: new Map() };
+          group = {
+            schoolName,
+            schoolLocation: schoolRecord
+              ? [schoolRecord.district, schoolRecord.province].filter(Boolean).join(', ')
+              : '',
+            competitions: new Map(),
+          };
           groups.set(schoolId, group);
         }
         const competition = group.competitions.get(submission.competitionId);
@@ -105,6 +113,7 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
       schoolId,
       {
         schoolName: group.schoolName,
+        schoolLocation: group.schoolLocation,
         competitions: [...group.competitions.entries()],
       },
     ] as const);
@@ -222,17 +231,19 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
       <section className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
         {/* Left: Recent Submissions Feed */}
         <div className="overflow-hidden rounded-2xl border border-sky-100/80 bg-white shadow-[0_8px_28px_rgba(59,130,246,0.07)] xl:col-span-7">
-          <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-orange-50/70 via-white to-sky-50/70 px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-orange-50/60 via-white to-sky-50/60 px-4 py-4 sm:px-5">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">Recent entries by school</h2>
-              <p className="mt-1 text-xs text-slate-500">Latest submissions, grouped by school and competition</p>
+              <h2 className="text-sm font-semibold text-slate-900">Recent submissions</h2>
+              <p className="mt-1 text-xs text-slate-500">Latest entries, organized by school and competition</p>
             </div>
             <button
               type="button"
               onClick={() => onTabChange('submissions')}
-              className="text-xs font-semibold text-slate-700 hover:text-slate-950 underline underline-offset-4"
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-orange-900 shadow-sm transition-colors hover:bg-orange-50"
             >
-              {pending ? `Review ${pending} entries` : 'View all'}
+              <span>{pending ? 'Review queue' : 'All submissions'}</span>
+              {pending > 0 && <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] tabular-nums text-orange-900">{pending}</span>}
+              <ArrowRight size={13} />
             </button>
           </div>
 
@@ -251,38 +262,56 @@ export function AdminOverview({ onTabChange }: { onTabChange: (tab: AdminTab) =>
             </div>
           ) : submissions.length ? (
             <div className="divide-y divide-slate-100">
-              {recentSubmissionGroups.map(([schoolId, group]) => (
-                <section key={schoolId} className="border-b border-slate-100 last:border-0">
-                  <h3 className="flex items-center justify-between gap-3 bg-slate-50/70 px-5 py-3 text-xs font-semibold text-slate-800">
-                    <span className="flex min-w-0 items-center gap-2 truncate">
-                      <School size={14} className="shrink-0 text-sky-700" />
-                      <span className="truncate">{group.schoolName}</span>
+              {recentSubmissionGroups.map(([schoolId, group]) => {
+                const entryCount = group.competitions.reduce(
+                  (total, [, competition]) => total + competition.submissions.length,
+                  0
+                );
+                return (
+                <section key={schoolId} className="px-3 py-3 sm:px-4">
+                  <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5 sm:px-4">
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-700">
+                        <School size={15} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-semibold text-slate-900">{group.schoolName}</span>
+                        {group.schoolLocation && <span className="mt-0.5 block truncate text-[10px] text-slate-500">{group.schoolLocation}</span>}
+                      </span>
                     </span>
-                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 font-medium text-slate-600 ring-1 ring-slate-200">
-                      {group.competitions.reduce((total, [, competition]) => total + competition.submissions.length, 0)} entries
+                    <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-medium text-slate-600">
+                      {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
                     </span>
-                  </h3>
+                  </div>
                   {group.competitions.map(([competitionId, competition]) => (
-                    <div key={competitionId} className="border-t border-slate-100/80">
-                      <p className="flex items-center gap-2 bg-white px-5 py-2 text-[11px] font-medium text-slate-500">
-                        <Trophy size={12} className="text-orange-600" /> {competition.title}
+                    <div key={competitionId} className="mb-2 last:mb-0">
+                      <p className="mb-1 flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                        <Trophy size={12} className="text-orange-600" />
+                        <span className="truncate">{competition.title}</span>
                       </p>
-                      {competition.submissions.map((submission) => (
-                        <div key={submission.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-orange-50/30">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 text-orange-700">
-                            <FileText size={15} />
+                      <div className="overflow-hidden rounded-xl border border-slate-100 bg-white">
+                        {competition.submissions.map((submission, index) => (
+                          <div key={submission.id} className={`flex items-center gap-3 px-3 py-3 transition-colors hover:bg-orange-50/30 sm:px-4 ${index > 0 ? 'border-t border-slate-100' : ''}`}>
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-orange-100 bg-orange-50 text-orange-700">
+                              <FileText size={15} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-slate-900">{submission.entryTitle}</p>
+                              <p className="mt-0.5 truncate text-xs text-slate-500">
+                                {submission.studentName}
+                                <span className="px-1.5 text-slate-300">·</span>
+                                {formatSubmissionDate(submission.submittedAt)}
+                              </p>
+                            </div>
+                            <StatusBadge status={submission.status} />
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-slate-900">{submission.entryTitle}</p>
-                            <p className="truncate text-xs text-slate-500">{submission.studentName} <span className="px-1 text-slate-300">·</span> {formatSubmissionDate(submission.submittedAt)}</p>
-                          </div>
-                          <StatusBadge status={submission.status} />
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </section>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="px-5 py-12 text-center">
