@@ -8,9 +8,26 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Noto Sans Sinhala";
+  src: url("/fonts/noto-sans-sinhala-400.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Noto Sans Sinhala";
+  src: url("/fonts/noto-sans-sinhala-700.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 @theme {
   --font-body: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-serif: "Georgia", "Times New Roman", serif;
+  --font-sinhala: "Noto Sans Sinhala", sans-serif;
 
   --color-sara-navy: #0f172a;
   --color-sara-dark: #020617;
@@ -27,6 +44,32 @@ html.no-splash #agradhi-splash-root {
 
 html.splash-active {
   overflow: hidden !important;
+}
+
+#agradhi-splash-root [data-splash-word] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.agradhi-splash-backdrop {
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(28, 54, 82, 0.55), transparent 54%),
+    radial-gradient(ellipse at 50% 0%, rgba(217, 119, 6, 0.14), transparent 48%),
+    linear-gradient(135deg, #071324 0%, #0d1b2e 55%, #081426 100%);
+}
+
+.splash-sinhala {
+  font-family: var(--font-sinhala);
+}
+
+.splash-english {
+  font-family: "Poppins", sans-serif;
+}
+
+.splash-progress {
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: splash-progress 5s linear forwards;
 }
 
 @layer base {
@@ -120,6 +163,12 @@ html.splash-active {
     }
     100% {
       width: 100%;
+    }
+  }
+
+  @keyframes splash-progress {
+    to {
+      transform: scaleX(1);
     }
   }
 
