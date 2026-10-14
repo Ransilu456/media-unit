@@ -110,8 +110,8 @@ export function HomePreview() {
                       href="/competitions"
                       className={`group overflow-hidden rounded-[28px] border border-slate-100 bg-white p-2.5 shadow-[0_8px_28px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(15,23,42,0.10)] sm:p-3`}
                     >
-                      <div className={`relative flex h-40 items-center justify-center overflow-hidden rounded-[22px] bg-gradient-to-br ${style.art} sm:h-44`}>
-                        <span className="absolute -right-6 -top-12 h-40 w-40 rounded-full border-[20px] border-white/45 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110" />
+                      <div className={`relative flex h-40 items-center justify-center overflow-hidden rounded-[22px] bg-linear-to-br ${style.art} sm:h-44`}>
+                        <span className="absolute -right-6 -top-12 h-40 w-40 rounded-full border-20 border-white/45 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110" />
                         <span className="absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-white/50 blur-xl" />
                         <span className={`relative flex h-20 w-20 items-center justify-center rounded-[26px] ${style.color} shadow-[0_14px_34px_rgba(15,23,42,0.10)] transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110`}>
                           <Icon size={38} strokeWidth={1.5} className={style.ink} />

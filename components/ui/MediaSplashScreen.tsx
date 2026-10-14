@@ -5,7 +5,10 @@ import gsap from 'gsap';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 
-export const SPLASH_SESSION_KEY = 'agradhi_media_splash_viewed_v1';
+export const SPLASH_SESSION_KEY = 'agradhi_media_splash_viewed_v2';
+
+const SPLASH_DURATION = 4200;
+const SPLASH_FADE_START = 3800;
 
 export interface MediaSplashScreenProps {
   forceShow?: boolean;
@@ -64,11 +67,11 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
         // ignore
       }
 
-      const fadeTimer = setTimeout(() => {
+      const fadeTimer = window.setTimeout(() => {
         setFading(true);
-      }, 9650);
+      }, SPLASH_FADE_START);
 
-      const dismissTimer = setTimeout(() => {
+      const dismissTimer = window.setTimeout(() => {
         setDismissed(true);
         try {
           if (!isTestRoute) {
@@ -80,7 +83,7 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
         document.documentElement.classList.remove('splash-active');
         document.documentElement.classList.add('no-splash');
         if (onFinish) onFinish();
-      }, 10000);
+      }, SPLASH_DURATION);
 
       return () => {
         clearTimeout(fadeTimer);
@@ -101,8 +104,8 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
       {
         autoAlpha: 1,
         y: 0,
-        duration: 2,
-        stagger: 0.26,
+        duration: 1.1,
+        stagger: 0.18,
         ease: 'power2.out',
       }
     );
@@ -114,60 +117,49 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
 
   if ((dismissed || isAuthOrAdmin) && !forceShow) return null;
 
-  const sinhalaWords = 'ප්‍රඤ්ඥා ධයාති රථනං'.split(' ');
-  const englishWords = 'Wisdom is a precious jewel.'.split(' ');
-
   return (
     <div
       ref={splashRef}
       id="agradhi-splash-root"
       role="status"
-      aria-label="ප්‍රඤ්ඥා ධයාති රථනං. Wisdom is a precious jewel."
+      aria-label="Agradhi Media Unit, Saranath College"
       aria-live="polite"
       className={`agradhi-splash-backdrop fixed inset-0 z-99999 flex items-center justify-center overflow-hidden px-6 text-center text-white transition-opacity duration-300 ease-out select-none ${
         fading ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
-      <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 h-[min(86vw,42rem)] w-[min(86vw,42rem)] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/6">
-        <span className="absolute inset-[8%] rounded-full border border-white/6" />
-        <span className="absolute inset-[18%] rounded-full border border-amber-300/8" />
+      <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 h-[min(84vw,38rem)] w-[min(84vw,38rem)] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/4.5">
+        <span className="absolute inset-[10%] rounded-full border border-white/4.5" />
+        <span className="absolute inset-[21%] rounded-full border border-amber-200/[0.07]" />
       </div>
 
-      <div className="relative z-10 flex w-full max-w-[96vw] flex-col items-center">
-        <div data-splash-word style={{ opacity: 0, visibility: 'hidden' }} className="mb-7 flex h-24 w-24 items-center justify-center rounded-full border border-amber-200/40 bg-[#101e49]/80 p-1.5 shadow-[0_0_50px_rgba(245,158,11,0.14)] sm:mb-8 sm:h-28 sm:w-28">
+      <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-200/5.5 blur-3xl sm:h-72 sm:w-72" />
+
+      <div className="relative z-10 flex w-full flex-col items-center">
+        <div data-splash-word style={{ opacity: 0, visibility: 'hidden' }} className="relative mb-8 flex h-28 w-28 items-center justify-center rounded-full border border-amber-100/35 bg-[#090f19]/85 p-2 shadow-[0_0_70px_rgba(245,158,11,0.12)] sm:mb-9 sm:h-32 sm:w-32">
           <Image
             src="/Agradhi.png"
             alt="Agradhi Media Unit logo"
-            width={112}
-            height={112}
+            width={128}
+            height={128}
             priority
             className="h-full w-full rounded-full object-contain"
           />
         </div>
-        <div data-splash-word style={{ opacity: 0, visibility: 'hidden' }} className="mb-8 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-200/85 sm:mb-10 sm:text-xs">
-          <span aria-hidden="true" className="h-px w-8 bg-amber-300/60 sm:w-12" />
-          Saranath College · Media Unit
-          <span aria-hidden="true" className="h-px w-8 bg-amber-300/60 sm:w-12" />
+        <div data-splash-word style={{ opacity: 0, visibility: 'hidden' }} className="flex flex-col items-center gap-3 text-amber-50/75">
+          <span aria-hidden="true" className="h-px w-8 bg-amber-200/55" />
+          <span className="text-[10px] font-medium uppercase tracking-[0.32em] sm:text-[11px]">
+            Saranath College
+          </span>
+          <span className="text-[9px] font-medium uppercase tracking-[0.42em] text-amber-200/55">
+            Media Unit
+          </span>
         </div>
-        <p aria-hidden="true" className="splash-sinhala flex flex-wrap justify-center gap-x-4 gap-y-2 text-[clamp(2.75rem,10vw,7rem)] font-semibold leading-normal text-white sm:gap-x-8">
-          {sinhalaWords.map((word, index) => (
-            <span key={`si-${index}`} data-splash-word style={{ opacity: 0, visibility: 'hidden' }} className="inline-block">
-              {word}
-            </span>
-          ))}
-        </p>
-        <span aria-hidden="true" className="my-5 h-px w-12 bg-linear-to-r from-transparent via-amber-300/70 to-transparent sm:my-7 sm:w-16" />
-        <p aria-hidden="true" className="splash-english flex flex-wrap justify-center gap-x-2.5 gap-y-1 text-[clamp(1.25rem,4.5vw,3rem)] font-medium leading-relaxed tracking-[0.06em] text-slate-300 sm:gap-x-4">
-          {englishWords.map((word, index) => (
-            <span key={`en-${index}`} data-splash-word style={{ opacity: 0, visibility: 'hidden' }} className="inline-block">
-              {word}
-            </span>
-          ))}
-        </p>
-      </div>
-      <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-white/10">
-        <span className="splash-progress block h-full w-full bg-linear-to-r from-amber-300 via-amber-100 to-white" />
-      </div>
+        </div>
+
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-px bg-white/10">
+          <span className="splash-progress block h-full w-full bg-linear-to-r from-amber-300 via-amber-100 to-white" />
+        </div>
     </div>
   );
 }

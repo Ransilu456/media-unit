@@ -53,23 +53,15 @@ html.splash-active {
 
 .agradhi-splash-backdrop {
   background:
-    radial-gradient(ellipse at 50% 42%, rgba(28, 54, 82, 0.55), transparent 54%),
-    radial-gradient(ellipse at 50% 0%, rgba(217, 119, 6, 0.14), transparent 48%),
-    linear-gradient(135deg, #071324 0%, #0d1b2e 55%, #081426 100%);
-}
-
-.splash-sinhala {
-  font-family: var(--font-sinhala);
-}
-
-.splash-english {
-  font-family: "Poppins", sans-serif;
+    radial-gradient(ellipse at 50% 48%, rgba(30, 42, 58, 0.42), transparent 48%),
+    radial-gradient(ellipse at 50% 100%, rgba(217, 119, 6, 0.075), transparent 45%),
+    linear-gradient(145deg, #070a10 0%, #0c1119 52%, #080b11 100%);
 }
 
 .splash-progress {
   transform: scaleX(0);
   transform-origin: left;
-  animation: splash-progress 10s linear forwards;
+  animation: splash-progress 4.2s linear forwards;
 }
 
 @layer base {

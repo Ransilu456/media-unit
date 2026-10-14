@@ -62,7 +62,7 @@ export default function RootLayout({
               try {
                 var p = window.location.pathname;
                 var isAuth = p.startsWith('/login') || p.startsWith('/register') || p.startsWith('/admin') || p.startsWith('/dashboard');
-                var viewed = window.sessionStorage.getItem('agradhi_media_splash_viewed_v1');
+                var viewed = window.sessionStorage.getItem('agradhi_media_splash_viewed_v2');
                 var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                 if (isAuth || viewed || reduce) {
                   document.documentElement.classList.add('no-splash');

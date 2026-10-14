@@ -48,7 +48,7 @@ const creativeTracks = [
 export function Cards() {
   return (
     <>
-      <div className="mx-auto mt-12 max-w-5xl mb-8">
+      <div className="mx-auto mt-12 mb-8 max-w-5xl px-4 sm:px-0">
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
             <h2 className="mt-1 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">What will you create?</h2>

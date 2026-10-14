@@ -138,7 +138,6 @@ function useMediaStoreState() {
       setPublicSchools([]);
       setSubmissions([]);
       setNotifications([]);
-      setIsCompetitionsLoaded(false);
       setIsSchoolsLoaded(false);
       setIsSubmissionsLoaded(false);
       setSessionError(null);
