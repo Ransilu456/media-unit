@@ -105,7 +105,9 @@ export function EntrySubmissionModal({
     if (calculatedAge === null || !activeCompetition.ageCategory) return null;
     const { minAge, maxAge } = activeCompetition.ageCategory;
     if (calculatedAge < minAge || calculatedAge > maxAge) {
-      return `This competition is for students aged ${minAge} to ${maxAge}. The student is ${calculatedAge}.`;
+      return calculatedAge < minAge
+        ? `This competition requires students to be at least ${minAge} years old.`
+        : 'The student does not meet this competition’s age eligibility requirements.';
     }
     return null;
   }, [calculatedAge, activeCompetition]);
@@ -187,7 +189,9 @@ export function EntrySubmissionModal({
     }
 
     if (currentStep === 1 && (synopsisWords < 20 || synopsisWords > 1000)) {
-      setError('Please describe the work in 20 to 1,000 words.');
+      setError(synopsisWords < 20
+        ? 'Please describe the work in at least 20 words.'
+        : 'The description is too long.');
       return;
     }
 
@@ -610,7 +614,7 @@ export function EntrySubmissionModal({
                     synopsisWords < 20 || synopsisWords > 1000 ? 'text-amber-700' : 'text-emerald-700'
                   }`}
                 >
-                  {synopsisWords} words (20 to 1,000 required) {synopsisWords < 20 || synopsisWords > 1000 ? '' : '✓'}
+                  {synopsisWords} words {synopsisWords < 20 ? '(20 minimum)' : synopsisWords > 1000 ? '(description is too long)' : '✓'}
                 </span>
               </div>
               <textarea

@@ -117,6 +117,12 @@ function isText(
     && (allowEmpty ? value.trim().length === 0 || value.trim().length >= minimum : value.trim().length >= minimum);
 }
 
+function textLengthError(label: string, value: unknown, minimum: number, maximum: number): string {
+  return typeof value === 'string' && value.trim().length > maximum
+    ? `${label} is too long.`
+    : `${label} must be at least ${minimum} characters.`;
+}
+
 function validDate(value: unknown): value is string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00.000Z`);
@@ -133,7 +139,7 @@ export function validateCompetitionInput(value: unknown): ValidationErrors {
     'guidelines', 'customFields',
   ]);
   if (!hasOnlyFields(value, allowedFields)) errors.form = 'Competition contains unsupported fields.';
-  if (!isText(value.title, 2, 160)) errors.title = 'Title must be between 2 and 160 characters.';
+  if (!isText(value.title, 2, 160)) errors.title = textLengthError('Title', value.title, 2, 160);
   if (!(CATEGORIES as readonly unknown[]).includes(value.category)) errors.category = 'Select a valid category.';
   if (!(MEDIUMS as readonly unknown[]).includes(value.medium)) errors.medium = 'Select a valid medium.';
   if (typeof value.slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.slug) || value.slug.length > 180) {
@@ -252,7 +258,7 @@ export function validateSchoolRegistration(value: unknown): ValidationErrors {
         ? typeof value[field] === 'string' && value[field].length > maximum
           ? 'Password is too long.'
           : 'Password must be at least 6 characters.'
-        : `${label} must be between ${minimum} and ${maximum} characters.`;
+        : textLengthError(label, value[field], minimum, maximum);
     }
   }
 
@@ -314,7 +320,7 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
   }
 
   if (value.schoolName !== undefined && !isText(value.schoolName, 2, 120)) {
-    errors.schoolName = 'School name must be between 2 and 120 characters.';
+    errors.schoolName = textLengthError('School name', value.schoolName, 2, 120);
   }
 
   const boundedText: Array<[string, string, number, number]> = [
@@ -328,7 +334,7 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
   ];
   for (const [field, label, minimum, maximum] of boundedText) {
     if (!isText(value[field], minimum, maximum)) {
-      errors[field] = `${label} must be between ${minimum} and ${maximum} characters.`;
+      errors[field] = textLengthError(label, value[field], minimum, maximum);
     }
   }
 
@@ -342,15 +348,21 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
     const age = calculateAge(value.studentBirthday);
     studentAge = age;
     if (age === null || age < 5 || age > 25 || new Date(`${value.studentBirthday}T00:00:00.000Z`) > new Date()) {
-      errors.studentBirthday = 'The student must be between 5 and 25 years old.';
+      errors.studentBirthday = age !== null && age > 25
+        ? 'The student does not meet the age eligibility requirements.'
+        : 'The student must be at least 5 years old.';
     } else if (competition?.ageCategory
       && (age < competition.ageCategory.minAge || age > competition.ageCategory.maxAge)) {
-      errors.studentBirthday = `This competition is for students aged ${competition.ageCategory.minAge} to ${competition.ageCategory.maxAge}.`;
+      errors.studentBirthday = age < competition.ageCategory.minAge
+        ? `This competition requires students to be at least ${competition.ageCategory.minAge} years old.`
+        : 'The student does not meet this competition’s age eligibility requirements.';
     }
   }
   const expectedGrade = studentAge === null ? null : gradeFromAge(studentAge);
   if (expectedGrade === null) {
-    errors.studentGrade = 'A student aged 11 to 18 is required to determine a grade from the date of birth.';
+    errors.studentGrade = studentAge !== null && studentAge > 18
+      ? 'A grade cannot be determined for students older than school age.'
+      : 'A student must be at least 11 years old to determine a grade from the date of birth.';
   } else if (value.studentGrade !== expectedGrade) {
     errors.studentGrade = `A student aged ${studentAge} should be in ${expectedGrade}.`;
   } else if (competition?.ageCategory && !competition.ageCategory.grades.includes(expectedGrade)) {
@@ -371,7 +383,9 @@ export function validateSubmissionInput(value: unknown, competitions: Competitio
   if (typeof value.synopsis === 'string' && isText(value.synopsis, 20, 10000)) {
     const words = value.synopsis.trim().split(/\s+/);
     if (words.length < 20 || words.length > 1000) {
-      errors.synopsis = 'Write a description between 20 and 1,000 words.';
+      errors.synopsis = words.length < 20
+        ? 'Write a description of at least 20 words.'
+        : 'The description is too long.';
     }
   }
 

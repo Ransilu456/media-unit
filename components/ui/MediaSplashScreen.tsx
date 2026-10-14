@@ -66,7 +66,7 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
 
       const fadeTimer = setTimeout(() => {
         setFading(true);
-      }, 4650);
+      }, 9650);
 
       const dismissTimer = setTimeout(() => {
         setDismissed(true);
@@ -80,7 +80,7 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
         document.documentElement.classList.remove('splash-active');
         document.documentElement.classList.add('no-splash');
         if (onFinish) onFinish();
-      }, 5000);
+      }, 10000);
 
       return () => {
         clearTimeout(fadeTimer);
@@ -101,7 +101,7 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
       {
         autoAlpha: 1,
         y: 0,
-        duration: 0.8,
+        duration: 2,
         stagger: 0.26,
         ease: 'power2.out',
       }
@@ -122,7 +122,7 @@ export function MediaSplashScreen({ forceShow = false, onFinish }: MediaSplashSc
       ref={splashRef}
       id="agradhi-splash-root"
       role="status"
-      aria-label="පඤ්ඥා ධයාති රථනං. Wisdom is a precious jewel."
+      aria-label="ප්‍රඤ්ඥා ධයාති රථනං. Wisdom is a precious jewel."
       aria-live="polite"
       className={`agradhi-splash-backdrop fixed inset-0 z-99999 flex items-center justify-center overflow-hidden px-6 text-center text-white transition-opacity duration-300 ease-out select-none ${
         fading ? 'opacity-0 pointer-events-none' : 'opacity-100'

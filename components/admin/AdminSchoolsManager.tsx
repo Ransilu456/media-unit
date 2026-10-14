@@ -118,6 +118,15 @@ export function AdminSchoolsManager() {
 
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
     return matchesSearch && matchesStatus;
+  }).sort((left, right) => {
+    if (left.status === 'pending' && right.status !== 'pending') return -1;
+    if (right.status === 'pending' && left.status !== 'pending') return 1;
+
+    const leftRegistration = Date.parse(left.registeredAt);
+    const rightRegistration = Date.parse(right.registeredAt);
+    const leftTime = Number.isNaN(leftRegistration) ? 0 : leftRegistration;
+    const rightTime = Number.isNaN(rightRegistration) ? 0 : rightRegistration;
+    return rightTime - leftTime;
   });
   const pendingCount = schools.filter((school) => school.status === 'pending').length;
   const activeCount = schools.filter((school) => school.status === 'active').length;

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
+import { GlossyButton } from '@/components/ui/GlossyButton';
 import { ArrowRight, ChevronRight, LogOut, Menu, ShieldCheck, X } from 'lucide-react';
 
 export function Navbar() {
@@ -81,16 +82,16 @@ export function Navbar() {
                   <Link href="/login" className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-950 sm:text-sm">
                     Teacher sign in
                   </Link>
-                  <Link href="/register" className="group inline-flex min-h-10 items-center gap-2 rounded-xl bg-sara-navy px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 sm:px-4 sm:text-sm">
-                    Register school <ArrowRight size={14} className="text-amber-300 transition-transform group-hover:translate-x-0.5" />
-                  </Link>
+                  <GlossyButton href="/register" compact className="group text-xs sm:text-sm">
+                    Register school <ArrowRight size={14} className="text-white/75 transition-transform group-hover:translate-x-0.5" />
+                  </GlossyButton>
                 </>
               )}
               {isSchool && session.school && (
                 <>
-                  <Link href="/dashboard" className="inline-flex max-w-52 items-center gap-2 rounded-full bg-sara-navy px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-slate-800 sm:text-sm">
-                    <span className="truncate">School dashboard</span><ChevronRight size={14} className="shrink-0 text-amber-300" />
-                  </Link>
+                  <GlossyButton href="/dashboard" compact className="max-w-52 gap-2 text-xs sm:text-sm">
+                    <span className="truncate">School dashboard</span><ChevronRight size={14} className="shrink-0 text-white/75" />
+                  </GlossyButton>
                   <button type="button" onClick={() => void handleLogout()} aria-label="Sign out" title="Sign out" className="rounded-full p-2.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-700">
                     <LogOut size={16} />
                   </button>
@@ -98,9 +99,9 @@ export function Navbar() {
               )}
               {isAdmin && (
                 <>
-                  <Link href="/admin" className="inline-flex items-center gap-2 rounded-full bg-sara-navy px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-slate-800 sm:text-sm">
-                    <ShieldCheck size={15} className="text-amber-300" /> Admin dashboard
-                  </Link>
+                  <GlossyButton href="/admin" compact className="gap-2 text-xs sm:text-sm">
+                    <ShieldCheck size={15} className="text-white/75" /> Admin dashboard
+                  </GlossyButton>
                   <button type="button" onClick={() => void handleLogout()} aria-label="Sign out" title="Sign out" className="rounded-full p-2.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-700">
                     <LogOut size={16} />
                   </button>
@@ -142,16 +143,16 @@ export function Navbar() {
                   <Link href="/login" onClick={() => setMobileOpen(false)} className="rounded-xl border border-slate-200 px-3 py-3 text-center text-xs font-semibold text-slate-700 hover:bg-slate-50">
                     Teacher sign in
                   </Link>
-                  <Link href="/register" onClick={() => setMobileOpen(false)} className="rounded-xl bg-sara-navy px-3 py-3 text-center text-xs font-semibold text-white hover:bg-slate-800">
+                  <GlossyButton href="/register" onClick={() => setMobileOpen(false)} fullWidth>
                     Register school
-                  </Link>
+                  </GlossyButton>
                 </div>
               )}
               {isSchool && session.school && (
                 <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3">
-                  <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="rounded-xl bg-sara-navy px-4 py-3 text-center text-xs font-semibold text-white">
+                  <GlossyButton href="/dashboard" onClick={() => setMobileOpen(false)} fullWidth>
                     Open {session.school.name} dashboard
-                  </Link>
+                  </GlossyButton>
                   <button type="button" onClick={() => void handleLogout()} className="rounded-xl px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50">
                     Sign out
                   </button>
@@ -159,9 +160,9 @@ export function Navbar() {
               )}
               {isAdmin && (
                 <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
-                  <Link href="/admin" onClick={() => setMobileOpen(false)} className="rounded-xl bg-sara-navy px-3 py-3 text-center text-xs font-semibold text-white">
+                  <GlossyButton href="/admin" onClick={() => setMobileOpen(false)} fullWidth>
                     Admin dashboard
-                  </Link>
+                  </GlossyButton>
                   <button type="button" onClick={() => void handleLogout()} className="rounded-xl border border-slate-200 px-3 py-3 text-xs font-semibold text-slate-700">
                     Sign out
                   </button>

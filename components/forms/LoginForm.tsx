@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useMediaStore } from '@/lib/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { isFirebaseConnectionError } from '@/lib/firestoreErrors';
+import { GlossyButton } from '@/components/ui/GlossyButton';
 import {
   GraduationCap,
   ShieldCheck,
@@ -223,15 +224,16 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
             </div>
           </div>
 
-          <button
+          <GlossyButton
             type="submit"
             id="login-submit"
+            fullWidth
             disabled={loading || !rateLimitInitialized || rateLimited}
-            className="auth-submit w-full py-3 rounded-xl text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="auth-submit mt-2 text-xs"
           >
             {loading ? (
               <>
-                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span aria-hidden="true" className="w-3.5 h-3.5 border-2 border-white/55 border-t-white rounded-full animate-spin" />
                 Signing in...
               </>
             ) : !rateLimitInitialized ? (
@@ -247,7 +249,7 @@ export function LoginForm({ initialTab = 'school' }: LoginFormProps) {
                 <ArrowRight size={14} />
               </>
             )}
-          </button>
+          </GlossyButton>
         </form>
 
 

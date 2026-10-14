@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useMediaStore } from '@/lib/store';
+import { GlossyButton } from '@/components/ui/GlossyButton';
 import {
   ArrowDownRight,
   ArrowRight,
@@ -92,11 +93,11 @@ const showcases = [
     caption: 'NOTICE · FRAME · CAPTURE',
     pageColor: '#fff9f2',
     pageGlow: 'radial-gradient(ellipse at 78% 42%, rgba(255, 205, 160, 0.62), transparent 38%), radial-gradient(ellipse at 14% 4%, rgba(255, 230, 170, 0.55), transparent 32%)',
+    buttonTheme: 'orange' as const,
     backdropRingClass: 'border-orange-200/70',
     badgeClass: 'border-orange-200 text-orange-900',
     headlineClass: 'text-orange-700',
     underlineClass: 'text-rose-400',
-    primaryButtonClass: 'bg-orange-700 shadow-[0_12px_28px_rgba(194,91,42,0.22)] hover:bg-orange-800 focus-visible:outline-orange-700',
     secondaryButtonClass: 'hover:border-orange-200 hover:bg-orange-50 focus-visible:outline-orange-700',
     checkClass: 'text-orange-700',
     tagClass: 'bg-amber-100 text-amber-900',
@@ -120,11 +121,11 @@ const showcases = [
     caption: 'PLAN · FILM · SHARE',
     pageColor: '#fffaf1',
     pageGlow: 'radial-gradient(ellipse at 78% 42%, rgba(222, 210, 255, 0.68), transparent 38%), radial-gradient(ellipse at 14% 4%, rgba(255, 230, 170, 0.55), transparent 32%)',
+    buttonTheme: 'violet' as const,
     backdropRingClass: 'border-violet-200/60',
     badgeClass: 'border-violet-200 text-violet-900',
     headlineClass: 'text-violet-800',
     underlineClass: 'text-amber-400',
-    primaryButtonClass: 'bg-violet-800 shadow-[0_12px_28px_rgba(91,55,160,0.22)] hover:bg-violet-900 focus-visible:outline-violet-800',
     secondaryButtonClass: 'hover:border-violet-200 hover:bg-violet-50 focus-visible:outline-violet-800',
     checkClass: 'text-emerald-700',
     tagClass: 'bg-violet-100 text-violet-800',
@@ -148,11 +149,11 @@ const showcases = [
     caption: 'ASK · WRITE · REPORT',
     pageColor: '#f4faff',
     pageGlow: 'radial-gradient(ellipse at 78% 42%, rgba(145, 211, 245, 0.58), transparent 38%), radial-gradient(ellipse at 14% 4%, rgba(255, 231, 178, 0.5), transparent 32%)',
+    buttonTheme: 'sky' as const,
     backdropRingClass: 'border-sky-200/70',
     badgeClass: 'border-sky-200 text-sky-900',
     headlineClass: 'text-sky-800',
     underlineClass: 'text-yellow-400',
-    primaryButtonClass: 'bg-sky-800 shadow-[0_12px_28px_rgba(37,99,145,0.22)] hover:bg-sky-900 focus-visible:outline-sky-800',
     secondaryButtonClass: 'hover:border-sky-200 hover:bg-sky-50 focus-visible:outline-sky-800',
     checkClass: 'text-sky-700',
     tagClass: 'bg-sky-100 text-sky-800',
@@ -176,11 +177,11 @@ const showcases = [
     caption: 'LISTEN · RECORD · CREATE',
     pageColor: '#f2fbf6',
     pageGlow: 'radial-gradient(ellipse at 78% 42%, rgba(137, 224, 184, 0.54), transparent 38%), radial-gradient(ellipse at 14% 4%, rgba(255, 230, 170, 0.5), transparent 32%)',
+    buttonTheme: 'emerald' as const,
     backdropRingClass: 'border-emerald-200/70',
     badgeClass: 'border-emerald-200 text-emerald-900',
     headlineClass: 'text-emerald-800',
     underlineClass: 'text-lime-400',
-    primaryButtonClass: 'bg-emerald-800 shadow-[0_12px_28px_rgba(28,112,83,0.22)] hover:bg-emerald-900 focus-visible:outline-emerald-800',
     secondaryButtonClass: 'hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-emerald-800',
     checkClass: 'text-emerald-700',
     tagClass: 'bg-emerald-100 text-emerald-800',
@@ -262,13 +263,15 @@ export function HeroSection() {
           </p>
 
           <div className="mt-8 flex flex-col items-stretch justify-center gap-3 min-[460px]:flex-row lg:justify-start">
-            <Link
+            <GlossyButton
               href="/competitions"
-              className={`group inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 text-sm font-semibold text-white transition hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 ${showcase.primaryButtonClass}`}
+              theme={showcase.buttonTheme}
+              pill
+              className="group min-h-12 text-sm"
             >
               Explore competitions
               <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-            </Link>
+            </GlossyButton>
             <Link
               href={schoolSignedIn ? '/dashboard' : '/register'}
               className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/90 px-6 text-sm font-semibold text-slate-800 transition focus-visible:outline-2 focus-visible:outline-offset-2 ${showcase.secondaryButtonClass}`}

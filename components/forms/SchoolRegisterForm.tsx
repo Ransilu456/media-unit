@@ -9,8 +9,9 @@ import { MEDIA_UNIT_INFO, PROVINCE_DISTRICTS, SRI_LANKA_PROVINCES } from '@/lib/
 import { validateSchoolRegistration } from '@/lib/validation';
 import { auth } from '@/lib/firebase';
 import { requestDeviceNotificationPermission } from '@/lib/browserNotifications';
+import { GlossyButton } from '@/components/ui/GlossyButton';
 import { signOut } from 'firebase/auth';
-import { Building2, User, KeyRound, CheckCircle2, AlertCircle, ChevronRight, ChevronLeft, Info, Eye, EyeOff, ShieldCheck, Check, Mail } from 'lucide-react';
+import { Building2, User, KeyRound, CheckCircle2, AlertCircle, ChevronRight, ChevronLeft, Info, Eye, EyeOff, ShieldCheck, Check, Mail, BadgeCheck } from 'lucide-react';
 
 const STEPS = [
   { num: 1, label: 'School', icon: Building2 },
@@ -20,7 +21,7 @@ const STEPS = [
 
 const inputCls =
   'w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition-all shadow-xs';
-const labelCls = 'block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5';
+const labelCls = 'block text-sm font-bold text-slate-600 mb-2';
 
 export function SchoolRegisterForm() {
   const router = useRouter();
@@ -178,6 +179,8 @@ export function SchoolRegisterForm() {
       setLoading(false);
     }
   };
+  const errorIsShownByField = error !== null
+    && (Object.keys(form) as Array<keyof typeof form>).some((field) => fieldError(field) === error);
 
   if (submissionResult) {
     const registrationSucceeded = submissionResult === 'success';
@@ -239,13 +242,13 @@ export function SchoolRegisterForm() {
                   <p className="mt-2 text-xs text-slate-600">This browser does not support device notifications.</p>
                 )}
               </div>
-              <button
+              <GlossyButton
                 type="button"
                 onClick={handleContinueToSignIn}
-                className="mt-4 inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800"
+                className="mt-4 text-sm"
               >
                 Continue to sign in
-              </button>
+              </GlossyButton>
             </>
           ) : (
             <>
@@ -287,17 +290,17 @@ export function SchoolRegisterForm() {
   }
 
   return (
-    <div className="w-full max-w-xl mx-auto auth-register-form">
+    <div className="w-full max-w-5xl mx-auto auth-register-form">
       <div className="text-center mb-8">
         <div className="w-14 h-14 mx-auto mb-3 bg-slate-950 rounded-xl border border-slate-700 p-2 flex items-center justify-center shadow-xs">
           <Image src="/icons/icon-192.png" alt="Agradhi" width={44} height={44} unoptimized className="object-contain" />
         </div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Register your school</h1>
-        <p className="text-xs text-slate-500 mt-1">Three short steps to create a school account.</p>
+        <p className="text-sm text-slate-500 mt-1">Three short steps to create a school account.</p>
       </div>
 
-      <div className="flex items-start gap-3 p-3.5 mb-6 rounded-2xl bg-amber-50/70 border border-amber-200 text-amber-900 text-xs">
-        <Info size={16} className="shrink-0 mt-0.5 text-amber-700" />
+      <div className="flex items-start gap-3 p-4 mb-5 rounded-2xl bg-amber-50/70 border border-amber-200 text-amber-900 text-sm">
+        <Info size={19} className="shrink-0 mt-0.5 text-amber-700" />
         <div className="leading-relaxed">
           <strong>Are you a student?</strong> Ask your teacher to register the school and submit your entry. Students do not need their own account.{' '}
           <Link href="/competitions" className="underline font-bold hover:text-amber-950">
@@ -306,7 +309,7 @@ export function SchoolRegisterForm() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-8 px-4">
+      <div className="flex items-center justify-between mb-5 px-4">
         {STEPS.map((s, i) => {
           const Icon = s.icon;
           const done = step > s.num;
@@ -315,7 +318,7 @@ export function SchoolRegisterForm() {
             <React.Fragment key={s.num}>
               <div className="flex flex-col items-center gap-1.5">
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 transition-all font-bold text-xs ${
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-all font-bold text-sm ${
                     done
                       ? 'bg-amber-600 border-amber-600 text-white'
                       : active
@@ -326,7 +329,7 @@ export function SchoolRegisterForm() {
                   {done ? <Check size={16} /> : <Icon size={16} />}
                 </div>
                 <span
-                  className={`text-[11px] font-bold uppercase tracking-wider ${
+                  className={`text-sm font-bold uppercase tracking-wider ${
                     active ? 'text-amber-800' : done ? 'text-slate-600' : 'text-slate-400'
                   }`}
                 >
@@ -346,8 +349,8 @@ export function SchoolRegisterForm() {
       </div>
 
       {/* Main Card */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 sm:p-8">
-        {error && (
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 sm:p-8 lg:p-9">
+        {error && !errorIsShownByField && (
           <div className="flex items-start gap-2.5 p-3.5 mb-5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs animate-in fade-in-50">
             <AlertCircle size={15} className="shrink-0 mt-0.5 text-red-600" />
             <span>{error}</span>
@@ -358,8 +361,8 @@ export function SchoolRegisterForm() {
         {step === 1 && (
           <div className="space-y-4">
             <div className="border-b border-slate-100 pb-3 mb-4">
-              <h2 className="text-base font-bold text-slate-900">1. School Information</h2>
-              <p className="text-xs text-slate-500">Enter the official recognized name and location of the school.</p>
+              <h2 className="text-lg font-bold text-slate-900">1. School Information</h2>
+              <p className="text-sm text-slate-500">Enter the official recognized name and location of the school.</p>
             </div>
 
             <div>
@@ -427,72 +430,74 @@ export function SchoolRegisterForm() {
               <p className="text-xs text-slate-500">Contact details for communications, verification, and awards.</p>
             </div>
 
-            <div>
-              <label className={labelCls}>Teacher-in-Charge Full Name *</label>
-              <input
-                type="text"
-                required
-                maxLength={100}
-                value={form.teacherName}
-                onChange={(e) => set('teacherName', e.target.value)}
-                onBlur={() => setTouched((current) => ({ ...current, teacherName: true }))}
-                aria-invalid={Boolean(fieldError('teacherName'))}
-                placeholder="e.g. Mrs. Chandrika Jayawardena"
-                className={inputCls}
-              />
-              {fieldError('teacherName') && <p className="mt-1 text-xs text-red-700">{fieldError('teacherName')}</p>}
-            </div>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+              <div>
+                <label className={labelCls}>Teacher-in-Charge Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  maxLength={100}
+                  value={form.teacherName}
+                  onChange={(e) => set('teacherName', e.target.value)}
+                  onBlur={() => setTouched((current) => ({ ...current, teacherName: true }))}
+                  aria-invalid={Boolean(fieldError('teacherName'))}
+                  placeholder="e.g. Mrs. Chandrika Jayawardena"
+                  className={inputCls}
+                />
+                {fieldError('teacherName') && <p className="mt-1 text-sm text-red-700">{fieldError('teacherName')}</p>}
+              </div>
 
-            <div>
-              <label className={labelCls}>Teacher Contact Phone *</label>
-              <input
-                type="tel"
-                required
-                inputMode="numeric"
-                maxLength={20}
-                pattern="[0-9]{10}"
-                value={form.teacherPhone}
-                onChange={(e) => set('teacherPhone', e.target.value)}
-                onBlur={() => setTouched((current) => ({ ...current, teacherPhone: true }))}
-                aria-invalid={Boolean(fieldError('teacherPhone'))}
-                placeholder="0771234567"
-                className={inputCls}
-              />
-              {fieldError('teacherPhone') && <p className="mt-1 text-xs text-red-700">{fieldError('teacherPhone')}</p>}
-            </div>
+              <div>
+                <label className={labelCls}>Teacher Contact Phone *</label>
+                <input
+                  type="tel"
+                  required
+                  inputMode="numeric"
+                  maxLength={20}
+                  pattern="[0-9]{10}"
+                  value={form.teacherPhone}
+                  onChange={(e) => set('teacherPhone', e.target.value)}
+                  onBlur={() => setTouched((current) => ({ ...current, teacherPhone: true }))}
+                  aria-invalid={Boolean(fieldError('teacherPhone'))}
+                  placeholder="0771234567"
+                  className={inputCls}
+                />
+                {fieldError('teacherPhone') && <p className="mt-1 text-sm text-red-700">{fieldError('teacherPhone')}</p>}
+              </div>
 
-            <div className="pt-2 border-t border-slate-100">
-              <label className={labelCls}>Media Club President </label>
-              <input
-                type="text"
-                required
-                maxLength={100}
-                value={form.presidentName}
-                onChange={(e) => set('presidentName', e.target.value)}
-                onBlur={() => setTouched((current) => ({ ...current, presidentName: true }))}
-                aria-invalid={Boolean(fieldError('presidentName'))}
-                placeholder="e.g. Senura Perera"
-                className={inputCls}
-              />
-              {fieldError('presidentName') && <p className="mt-1 text-xs text-red-700">{fieldError('presidentName')}</p>}
-            </div>
+              <div>
+                <label className={labelCls}>Media Club President </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={100}
+                  value={form.presidentName}
+                  onChange={(e) => set('presidentName', e.target.value)}
+                  onBlur={() => setTouched((current) => ({ ...current, presidentName: true }))}
+                  aria-invalid={Boolean(fieldError('presidentName'))}
+                  placeholder="e.g. Senura Perera"
+                  className={inputCls}
+                />
+                {fieldError('presidentName') && <p className="mt-1 text-sm text-red-700">{fieldError('presidentName')}</p>}
+              </div>
 
-            <div>
-              <label className={labelCls}>President Contact Phone </label>
-              <input
-                type="tel"
-                required
-                inputMode="numeric"
-                maxLength={20}
-                pattern="[0-9]{10}"
-                value={form.presidentPhone}
-                onChange={(e) => set('presidentPhone', e.target.value)}
-                onBlur={() => setTouched((current) => ({ ...current, presidentPhone: true }))}
-                aria-invalid={Boolean(fieldError('presidentPhone'))}
-                placeholder="0719876543"
-                className={inputCls}
-              />
-              {fieldError('presidentPhone') && <p className="mt-1 text-xs text-red-700">{fieldError('presidentPhone')}</p>}
+              <div>
+                <label className={labelCls}>President Contact Phone </label>
+                <input
+                  type="tel"
+                  required
+                  inputMode="numeric"
+                  maxLength={20}
+                  pattern="[0-9]{10}"
+                  value={form.presidentPhone}
+                  onChange={(e) => set('presidentPhone', e.target.value)}
+                  onBlur={() => setTouched((current) => ({ ...current, presidentPhone: true }))}
+                  aria-invalid={Boolean(fieldError('presidentPhone'))}
+                  placeholder="0719876543"
+                  className={inputCls}
+                />
+                {fieldError('presidentPhone') && <p className="mt-1 text-sm text-red-700">{fieldError('presidentPhone')}</p>}
+              </div>
             </div>
           </div>
         )}
@@ -505,87 +510,102 @@ export function SchoolRegisterForm() {
               <p className="text-xs text-slate-500">These credentials will be used to log into the school dashboard.</p>
             </div>
 
-            <div>
-              <label className={labelCls}>Official School Contact Email *</label>
-              <input
-                type="email"
-                required
-                maxLength={254}
-                value={form.email}
-                onChange={(e) => set('email', e.target.value)}
-                onBlur={() => setTouched((current) => ({ ...current, email: true }))}
-                aria-invalid={Boolean(fieldError('email'))}
-                placeholder="e.g. media@yourschool.sch.lk"
-                className={inputCls}
-              />
-              {fieldError('email') && <p className="mt-1 text-xs text-red-700">{fieldError('email')}</p>}
-              <p className="mt-1 text-[11px] text-slate-400">Use an email address the school can be contacted at. The Agradhi administrator will review your registration before activation.</p>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className={labelCls.replace('mb-1.5', '')}>Create Portal Password *</label>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((p) => !p)}
-                  className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1"
-                >
-                  {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
-                  <span>{showPassword ? 'Hide' : 'Show'}</span>
-                </button>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className={labelCls}>Official School Contact Email *</label>
+                <input
+                  type="email"
+                  required
+                  maxLength={254}
+                  value={form.email}
+                  onChange={(e) => set('email', e.target.value)}
+                  onBlur={() => setTouched((current) => ({ ...current, email: true }))}
+                  aria-invalid={Boolean(fieldError('email'))}
+                  placeholder="e.g. media@yourschool.sch.lk"
+                  className={inputCls}
+                />
+                {fieldError('email') && <p className="mt-1 text-xs text-red-700">{fieldError('email')}</p>}
+                <p className="mt-1 text-xs text-slate-400">Use an email address the school can be contacted at. The Agradhi administrator will review your registration before activation.</p>
               </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                minLength={6}
-                maxLength={128}
-                value={form.password}
-                onChange={(e) => set('password', e.target.value)}
-                onBlur={() => setTouched((current) => ({ ...current, password: true }))}
-                aria-invalid={Boolean(fieldError('password'))}
-                placeholder="At least 6 characters"
-                className={inputCls}
-              />
-              {fieldError('password') && <p className="mt-1 text-xs text-red-700">{fieldError('password')}</p>}
-              <div className="mt-2" aria-live="polite">
-                <div className="flex gap-1" aria-label={`Password strength ${passwordStrength} of 4`}>
-                  {passwordRequirements.map((requirement, index) => (
-                    <span
-                      key={requirement.label}
-                      className={`h-1.5 flex-1 rounded-full ${index < passwordStrength ? 'bg-emerald-500' : 'bg-slate-200'}`}
-                    />
-                  ))}
+
+              <div className="md:col-span-1">
+                <div className="flex items-center justify-between mb-2">
+                  <label className={labelCls.replace('mb-2', '')}>Create Portal Password *</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    <span>{showPassword ? 'Hide' : 'Show'}</span>
+                  </button>
                 </div>
-                <ul className="mt-2 grid grid-cols-1 gap-1 text-[11px] text-slate-500 sm:grid-cols-2">
-                  {passwordRequirements.map((requirement) => (
-                    <li key={requirement.label} className={`flex items-center gap-1.5 ${requirement.met ? 'text-emerald-700' : ''}`}>
-                      <Check size={12} className={requirement.met ? '' : 'text-slate-300'} />
-                      {requirement.label}
-                    </li>
-                  ))}
-                </ul>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  maxLength={128}
+                  value={form.password}
+                  onChange={(e) => set('password', e.target.value)}
+                  onBlur={() => setTouched((current) => ({ ...current, password: true }))}
+                  aria-invalid={Boolean(fieldError('password'))}
+                  placeholder="At least 6 characters"
+                  className={inputCls}
+                />
+                {fieldError('password') && <p className="mt-1 text-xs text-red-700">{fieldError('password')}</p>}
               </div>
-            </div>
 
-            <div>
-              <label className={labelCls}>Confirm Password *</label>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                minLength={6}
-                maxLength={128}
-                value={form.confirmPassword}
-                onChange={(e) => set('confirmPassword', e.target.value)}
-                onBlur={() => setTouched((current) => ({ ...current, confirmPassword: true }))}
-                aria-invalid={Boolean(fieldError('confirmPassword'))}
-                placeholder="Re-enter your password"
-                className={inputCls}
-              />
-              {fieldError('confirmPassword') && <p className="mt-1 text-xs text-red-700">{fieldError('confirmPassword')}</p>}
-            </div>
+              <div>
+                <label className={labelCls}>Confirm Password *</label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  maxLength={128}
+                  value={form.confirmPassword}
+                  onChange={(e) => set('confirmPassword', e.target.value)}
+                  onBlur={() => setTouched((current) => ({ ...current, confirmPassword: true }))}
+                  aria-invalid={Boolean(fieldError('confirmPassword'))}
+                  placeholder="Re-enter your password"
+                  className={inputCls}
+                />
+                {fieldError('confirmPassword') && <p className="mt-1 text-xs text-red-700">{fieldError('confirmPassword')}</p>}
+              </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
-              Upon registration, a unique <strong>Agradhi Delegation Badge Code</strong> (e.g. AMU-SCL-022) will be generated for your school.
+              <section className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4" aria-label="Password requirements">
+                <div aria-live="polite">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-slate-700">Password requirements</span>
+                    <span className="text-xs font-medium text-slate-500">{passwordStrength} of 4 met</span>
+                  </div>
+                  <div className="mt-3 flex gap-1.5" aria-label={`Password strength ${passwordStrength} of 4`}>
+                    {passwordRequirements.map((requirement, index) => (
+                      <span
+                        key={requirement.label}
+                        className={`h-1.5 flex-1 rounded-full ${index < passwordStrength ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                      />
+                    ))}
+                  </div>
+                  <ul className="mt-4 grid grid-cols-1 gap-x-5 gap-y-3 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
+                    {passwordRequirements.map((requirement) => (
+                      <li key={requirement.label} className={`flex min-w-0 items-start gap-2 leading-5 ${requirement.met ? 'text-emerald-700' : ''}`}>
+                        <Check size={16} className={`mt-0.5 shrink-0 ${requirement.met ? '' : 'text-slate-300'}`} />
+                        {requirement.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+
+              <aside className="md:col-span-2 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-900">
+                <BadgeCheck size={20} className="mt-0.5 shrink-0 text-amber-700" />
+                <p className="leading-6">
+                  <span className="font-semibold">School delegation code</span>
+                  <span className="mt-0.5 block text-amber-800">
+                    A unique Agradhi Delegation Badge Code will be generated for your school after registration.
+                  </span>
+                </p>
+              </aside>
             </div>
           </div>
         )}
@@ -609,23 +629,25 @@ export function SchoolRegisterForm() {
           )}
 
           {step < STEPS.length ? (
-            <button
+            <GlossyButton
               type="button"
+              compact
               onClick={next}
-              className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-sm"
+              className="text-xs"
             >
               Next Step <ChevronRight size={16} />
-            </button>
+            </GlossyButton>
           ) : (
-            <button
+            <GlossyButton
               type="button"
+              compact
               disabled={loading}
               onClick={submit}
-              className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors shadow-xs disabled:opacity-50"
+              className="text-xs"
             >
               {loading ? (
                 <>
-                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span aria-hidden="true" className="w-3.5 h-3.5 border-2 border-white/55 border-t-white rounded-full animate-spin" />
                   Registering...
                 </>
               ) : (
@@ -634,7 +656,7 @@ export function SchoolRegisterForm() {
                   Complete Registration
                 </>
               )}
-            </button>
+            </GlossyButton>
           )}
         </div>
       </div>
